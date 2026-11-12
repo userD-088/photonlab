@@ -77,4 +77,4 @@ und Extinktion spürbar ungenau; GUI und CLI weisen darauf hin.
 | Ring-Extinktion | `(1 − ta)²/(a − t)²` | 3e-4 dB |
 | Kritische Kopplung | `T_min = 0` | < 1e-12 |
 | Bandpass | `1/(1 + x^{2n})`, 3 dB an den Bandkanten | relativ 1e-10 |
-| 10.000-Punkte-Sweep | < 1 s | etwa 0,03 s (ein Thread) |
+| 10.000-Punkte-Sweep | < 1 s | etwa 0,01 s (ein Thread) |
