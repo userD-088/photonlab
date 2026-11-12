@@ -15,6 +15,11 @@ int ComponentType::port_index(std::string_view port) const {
   return -1;
 }
 
+bool ComponentType::is_left_port(int port) const {
+  if (left_port_count >= 0) return port < left_port_count;
+  return port_names[static_cast<std::size_t>(port)].rfind("in", 0) == 0;
+}
+
 const ParamSpec* ComponentType::find_param(std::string_view param) const {
   for (const auto& p : params)
     if (p.name == param) return &p;

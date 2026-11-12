@@ -23,6 +23,11 @@ struct ComponentType {
   std::vector<std::string> port_names;  // Reihenfolge = Zeilen/Spalten der S-Matrix
   std::vector<ParamSpec> params;
   std::function<std::unique_ptr<Component>(const ParamMap&)> create;
+  // Schaltplan-Darstellung: so viele der ersten Ports liegen links, die übrigen rechts.
+  // -1 = Namenskonvention (Ports, deren Name mit "in" beginnt, liegen links).
+  int left_port_count = -1;
+
+  bool is_left_port(int port) const;
 
   int port_index(std::string_view port) const;  // -1, wenn unbekannt
   const ParamSpec* find_param(std::string_view param) const;

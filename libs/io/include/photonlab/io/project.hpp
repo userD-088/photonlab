@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 
+#include "photonlab/circuit/monte_carlo.hpp"
 #include "photonlab/circuit/netlist.hpp"
 #include "photonlab/circuit/sweep.hpp"
 
@@ -19,7 +20,11 @@ struct Project {
   circuit::Circuit circuit;
   double wavelength = 1550e-9;  // Arbeitswellenlänge für Einzelrechnungen [m]
   circuit::SweepSettings sweep;
+  circuit::MonteCarloSettings monte_carlo;
 };
+
+// Projekt aus einem Referenz-Design (photonlab/circuit/reference_designs.hpp); wirft CircuitError.
+Project reference_project(std::string_view name);
 
 inline constexpr int project_format_version = 1;
 

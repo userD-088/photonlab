@@ -9,6 +9,8 @@
 #include <string_view>
 #include <vector>
 
+#include "photonlab/circuit/analysis.hpp"
+#include "photonlab/circuit/monte_carlo.hpp"
 #include "photonlab/circuit/reference_designs.hpp"
 #include "photonlab/circuit/registry.hpp"
 #include "photonlab/circuit/solver.hpp"
@@ -34,9 +36,12 @@ void print_usage() {
       "  photonlab_cli --info                         Konstanten und ein Interferenz-Beispiel\n"
       "  photonlab_cli components                     alle Bauteiltypen mit Ports und Parametern\n"
       "  photonlab_cli example <name>                 Referenz-Design als .plab.json ausgeben (mzi, "
-      "mzi_unbalanced)\n"
+      "mzi_unbalanced,\n"
+      "                                               ring_allpass, ring_adddrop)\n"
       "  photonlab_cli run <datei.plab.json>          Schaltung bei der Arbeitswellenlänge rechnen\n"
       "  photonlab_cli run <datei> --sweep [--csv <aus.csv>]   Wellenlängen-Sweep aus der Datei\n"
+      "  photonlab_cli run <datei> --resonances       Sweep auswerten: Resonanzen, FSR, Güte, Extinktion\n"
+      "  photonlab_cli run <datei> --monte-carlo [--csv <aus.csv>]   Streuung aus der Datei rechnen\n"
       "  photonlab_cli validate [--out <ordner>]      Validierung gegen analytische Lösungen\n");
 }
 
@@ -65,9 +70,7 @@ int cmd_components() {
 }
 
 int cmd_example(std::string_view name) {
-  io::Project project;
-  project.circuit = circuit::reference_design(name);
-  std::fputs(io::project_to_json(project).c_str(), stdout);
+  std::fputs(io::project_to_json(io::reference_project(name)).c_str(), stdout);
   return 0;
 }
 
@@ -122,6 +125,139 @@ int cmd_run(const std::string& file, bool do_sweep, const std::string& csv_path)
   return 0;
 }
 
+// Sweep rechnen und jede Leistungs-Messgröße auf Resonanzen untersuchen
+int cmd_resonances(const std::string& file) {
+  const io::Project project = io::load_project(file);
+  const circuit::CompiledCircuit compiled(project.circuit, circuit::ComponentRegistry::builtin());
+  ThreadPool pool;
+  const auto solutions = circuit::sweep(compiled, project.sweep, &pool);
+  std::vector<double> wavelengths;
+  std::vector<std::string> names;
+  std::vector<std::vector<double>> series;
+  for (const auto& solution : solutions) {
+    wavelengths.push_back(solution.wavelength);
+    std::size_t k = 0;
+    for (const auto& m : compiled.measurements(solution)) {
+      if (m.measurement.unit != "W") continue;
+      if (series.size() <= k) {
+        series.emplace_back();
+        names.push_back(m.instance + " " + m.measurement.name);
+      }
+      series[k++].push_back(m.measurement.value);
+    }
+  }
+  for (std::size_t k = 0; k < series.size(); ++k) {
+    {
+      circuit::ResonanceKind kind = circuit::ResonanceKind::dip;
+      const auto resonances = circuit::find_dominant_resonances(wavelengths, series[k], &kind);
+      if (resonances.empty()) continue;
+      std::printf("%s: %zu %s, mittlerer Abstand (FSR) %.4f nm\n", names[k].c_str(), resonances.size(),
+                  kind == circuit::ResonanceKind::dip ? "Einbrüche" : "Spitzen",
+                  circuit::mean_spacing(resonances) / units::nm);
+      for (const auto& r : resonances)
+        std::printf("  %.4f nm   Breite %.2f pm   Q %.0f   Extinktion %.2f dB\n", r.position / units::nm,
+                    r.fwhm / 1e-12, r.quality, r.extinction_db);
+    }
+  }
+  std::printf("Hinweis: unter etwa 10 Punkten pro Halbwertsbreite sind Breite und Extinktion ungenau.\n");
+  return 0;
+}
+
+int cmd_monte_carlo(const std::string& file, const std::string& csv_path) {
+  const io::Project project = io::load_project(file);
+  const auto& registry = circuit::ComponentRegistry::builtin();
+  if (project.monte_carlo.variations.empty())
+    std::fprintf(stderr, "Hinweis: Die Datei enthält keine Streuungen, alle Stichproben sind gleich.\n");
+  ThreadPool pool;
+  const circuit::MonteCarloResult result =
+      circuit::monte_carlo(project.circuit, registry, project.wavelength, project.monte_carlo, &pool);
+  std::printf("Monte-Carlo: %d Stichproben, Startwert %llu, Wellenlänge %.3f nm, nicht lösbar: %d\n",
+              project.monte_carlo.samples, static_cast<unsigned long long>(project.monte_carlo.seed),
+              project.wavelength / units::nm, result.failed);
+  for (std::size_t k = 0; k < result.names.size(); ++k) {
+    const circuit::Statistics st = circuit::statistics(result.values[k]);
+    std::printf("  %-28s Mittel %.6e  Streuung %.3e  Min %.6e  Max %.6e %s\n", result.names[k].c_str(), st.mean,
+                st.stddev, st.min, st.max, result.units[k].c_str());
+  }
+  if (!csv_path.empty()) {
+    std::ofstream csv(csv_path);
+    if (!csv) {
+      std::fprintf(stderr, "Fehler: %s kann nicht geschrieben werden\n", csv_path.c_str());
+      return 1;
+    }
+    csv.precision(12);
+    csv << "sample";
+    for (std::size_t k = 0; k < result.names.size(); ++k) csv << ',' << result.names[k] << '_' << result.units[k];
+    csv << '\n';
+    for (int i = 0; i < project.monte_carlo.samples; ++i) {
+      csv << i;
+      for (const auto& values : result.values) csv << ',' << values[static_cast<std::size_t>(i)];
+      csv << '\n';
+    }
+    std::printf("Stichproben nach %s geschrieben\n", csv_path.c_str());
+  }
+  return 0;
+}
+
+// Referenzfall Ring (Bauplan Abschnitt 16 und Abnahme Phase 2): FSR, Güte und Extinktion gegen die Formeln.
+bool validate_ring(const std::string& out_dir) {
+  const auto& registry = circuit::ComponentRegistry::builtin();
+  const circuit::Circuit ring = circuit::reference_ring_allpass();
+  const circuit::Instance& inst = *ring.find_instance("ring");
+  const circuit::ComponentType& type = *registry.find("ring_allpass");
+  auto value = [&](const char* name) {
+    const auto it = inst.params.find(name);
+    return it != inst.params.end() ? it->second : type.find_param(name)->default_value;
+  };
+  const double length = 2.0 * constants::pi * value("radius");
+  const double t = std::sqrt(1.0 - value("power_coupling"));
+  const double a = std::pow(10.0, -value("loss_db_per_cm") * (length / 1e-2) / 20.0);
+  const double n_group = value("n_group");
+
+  const circuit::CompiledCircuit compiled(ring, registry);
+  ThreadPool pool;
+  const circuit::SweepSettings settings{1540e-9, 1560e-9, 40001};  // 0,5 pm Schrittweite
+  const auto solutions = circuit::sweep(compiled, settings, &pool);
+  std::vector<double> wavelengths, transmission;
+  const int det = compiled.port_index("det", "in");
+  for (const auto& solution : solutions) {
+    wavelengths.push_back(solution.wavelength);
+    transmission.push_back(power(solution.a(det)) / 1e-3);
+  }
+  const auto resonances = circuit::find_resonances(wavelengths, transmission, circuit::ResonanceKind::dip);
+  if (resonances.size() < 2) {
+    std::printf("Ring: weniger als zwei Resonanzen gefunden\n");
+    return false;
+  }
+  const auto& r1 = resonances[0];
+  const auto& r2 = resonances[1];
+  const double fsr_expected = r1.position * r2.position / (n_group * length);
+  const double fwhm_expected =
+      r1.position * r1.position * (1.0 - t * a) / (constants::pi * n_group * length * std::sqrt(t * a));
+  const double extinction_expected = 10.0 * std::log10(std::pow((1.0 - t * a) / (a - t), 2));
+  const double fsr_error = std::abs((r2.position - r1.position) / fsr_expected - 1.0);
+  const double fwhm_error = std::abs(r1.fwhm / fwhm_expected - 1.0);
+  const double extinction_error = std::abs(r1.extinction_db - extinction_expected);
+
+  std::printf("Ring FSR:        %.5f nm, Formel %.5f nm (rel. Abweichung %.1e, Toleranz 1e-4)\n",
+              (r2.position - r1.position) / units::nm, fsr_expected / units::nm, fsr_error);
+  std::printf("Ring Güte:       %.0f, Formel %.0f (rel. Abweichung der Breite %.1e, Toleranz 1e-2)\n", r1.quality,
+              r1.position / fwhm_expected, fwhm_error);
+  std::printf("Ring Extinktion: %.3f dB, Formel %.3f dB (Abweichung %.1e dB, Toleranz 0,05 dB)\n",
+              r1.extinction_db, extinction_expected, extinction_error);
+  if (!out_dir.empty()) {
+    std::ofstream csv(std::filesystem::path(out_dir) / "ring.csv");
+    csv.precision(12);
+    csv << "quantity,simulation,analytic\n";
+    csv << "fsr_m," << r2.position - r1.position << ',' << fsr_expected << '\n';
+    csv << "fwhm_m," << r1.fwhm << ',' << fwhm_expected << '\n';
+    csv << "quality," << r1.quality << ',' << r1.position / fwhm_expected << '\n';
+    csv << "extinction_db," << r1.extinction_db << ',' << extinction_expected << '\n';
+    std::printf("Bericht: %s/ring.csv\n", out_dir.c_str());
+  }
+  return fsr_error < 1e-4 && fwhm_error < 1e-2 && extinction_error < 0.05;
+}
+
 // Referenzfall MZI (Bauplan Abschnitt 16): Ausgänge folgen sin²/cos² der Phasendifferenz, Energie bleibt
 // erhalten.
 int cmd_validate(const std::string& out_dir) {
@@ -158,10 +294,11 @@ int cmd_validate(const std::string& out_dir) {
           << energy_error << '\n';
   }
 
-  const bool ok = worst_transfer < tolerance && worst_energy < tolerance;
+  bool ok = worst_transfer < tolerance && worst_energy < tolerance;
   std::printf("MZI gegen cos²(Δφ/2):   größte Abweichung %.3e (Toleranz %.0e)\n", worst_transfer, tolerance);
   std::printf("MZI Energieerhaltung:   größte Abweichung %.3e (Toleranz %.0e)\n", worst_energy, tolerance);
   if (csv.is_open()) std::printf("Bericht: %s/mzi.csv\n", out_dir.c_str());
+  ok = validate_ring(out_dir) && ok;
   std::printf("%s\n", ok ? "BESTANDEN" : "NICHT BESTANDEN");
   return ok ? 0 : 1;
 }
@@ -174,7 +311,7 @@ int main(int argc, char** argv) {
 #endif
   const std::vector<std::string> args(argv + 1, argv + argc);
   if (args.empty()) {
-    std::printf("PhotonLab CLI 0.2.0 (Phase 1)\n");
+    std::printf("PhotonLab CLI 0.3.0 (Phase 2)\n");
     print_usage();
     return 0;
   }
@@ -196,6 +333,9 @@ int main(int argc, char** argv) {
     if (command == "--info") return cmd_info();
     if (command == "components") return cmd_components();
     if (command == "example" && args.size() >= 2) return cmd_example(args[1]);
+    if (command == "run" && args.size() >= 2 && flag("--resonances")) return cmd_resonances(args[1]);
+    if (command == "run" && args.size() >= 2 && flag("--monte-carlo"))
+      return cmd_monte_carlo(args[1], option("--csv"));
     if (command == "run" && args.size() >= 2) return cmd_run(args[1], flag("--sweep"), option("--csv"));
     if (command == "validate") return cmd_validate(option("--out"));
     print_usage();

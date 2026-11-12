@@ -8,9 +8,10 @@
 using namespace photonlab;
 using namespace photonlab::circuit;
 
-TEST_CASE("Registry kennt die fünf Bauteile der Phase 1") {
+TEST_CASE("Registry kennt die Bauteile der Phasen 1 und 2") {
   const auto& reg = ComponentRegistry::builtin();
-  for (const char* name : {"waveguide", "coupler", "phase_shifter", "laser", "detector"}) {
+  for (const char* name : {"waveguide", "coupler", "phase_shifter", "laser", "detector", "ring_allpass",
+                           "ring_adddrop", "y_splitter", "bandpass", "grating_coupler"}) {
     const ComponentType* type = reg.find(name);
     REQUIRE(type != nullptr);
     CHECK(reg.create(name, {})->port_count() == static_cast<int>(type->port_names.size()));

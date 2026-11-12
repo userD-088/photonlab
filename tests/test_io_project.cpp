@@ -15,12 +15,16 @@ TEST_CASE("Projekt: Speichern und Laden ist verlustfrei") {
   project.circuit.find_instance("arm_oben")->params["length"] = 123.456789012345e-6;
   project.wavelength = 1551.23e-9;
   project.sweep = {1.52e-6, 1.58e-6, 777};
+  project.monte_carlo = {123, 18446744073709551615ull, {{"waveguide", "n_eff", 1e-4, false, true}}};
 
   const std::string text = io::project_to_json(project);
   const io::Project loaded = io::project_from_json(text);
   CHECK(io::project_to_json(loaded) == text);
   CHECK(loaded.wavelength == project.wavelength);
   CHECK(loaded.sweep.points == 777);
+  CHECK(loaded.monte_carlo.samples == 123);
+  CHECK(loaded.monte_carlo.seed == 18446744073709551615ull);
+  CHECK(loaded.monte_carlo.variations == project.monte_carlo.variations);
   CHECK(loaded.circuit.find_instance("arm_oben")->params.at("length") == 123.456789012345e-6);
   CHECK(loaded.circuit.find_instance("det_cross")->grid_y == 5);
 
@@ -44,10 +48,10 @@ TEST_CASE("Projekt: Datei schreiben und lesen") {
 TEST_CASE("Projekt: Beispieldateien entsprechen den Referenz-Designs") {
   const std::filesystem::path dir = PHOTONLAB_EXAMPLES_DIR;
   for (const auto& [file, name] : {std::pair{"02_mach_zehnder.plab.json", "mzi"},
-                                   std::pair{"02b_mach_zehnder_unbalanciert.plab.json", "mzi_unbalanced"}}) {
-    io::Project expected;
-    expected.circuit = circuit::reference_design(name);
-    CHECK(io::project_to_json(io::load_project(dir / file)) == io::project_to_json(expected));
+                                   std::pair{"02b_mach_zehnder_unbalanciert.plab.json", "mzi_unbalanced"},
+                                   std::pair{"03_ring_allpass.plab.json", "ring_allpass"},
+                                   std::pair{"03b_ring_adddrop.plab.json", "ring_adddrop"}}) {
+    CHECK(io::project_to_json(io::load_project(dir / file)) == io::project_to_json(io::reference_project(name)));
   }
 }
 

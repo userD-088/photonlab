@@ -116,6 +116,19 @@
       "wavelength_start": 1.5e-06,
       "wavelength_stop": 1.6e-06,
       "points": 501
+    },
+    "monte_carlo": {
+      "samples": 500,
+      "seed": 1,
+      "variations": [
+        {
+          "type": "waveguide",
+          "param": "n_eff",
+          "sigma": 0.0002,
+          "relative": false,
+          "correlated": false
+        }
+      ]
     }
   }
 }

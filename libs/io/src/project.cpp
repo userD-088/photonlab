@@ -2,6 +2,8 @@
 
 #include <fstream>
 #include <nlohmann/json.hpp>
+
+#include "photonlab/circuit/reference_designs.hpp"
 #include <sstream>
 
 namespace photonlab::io {
@@ -26,6 +28,14 @@ std::string project_to_json(const Project& project) {
   for (const auto& c : project.circuit.connections)
     connections.push_back({{"from", circuit::to_string(c.a)}, {"to", circuit::to_string(c.b)}});
 
+  ordered_json variations = ordered_json::array();
+  for (const auto& v : project.monte_carlo.variations)
+    variations.push_back({{"type", v.type},
+                          {"param", v.param},
+                          {"sigma", v.sigma},
+                          {"relative", v.relative},
+                          {"correlated", v.correlated}});
+
   const ordered_json root = {{"format", format_name},
                              {"version", project_format_version},
                              {"units", "SI"},
@@ -38,7 +48,11 @@ std::string project_to_json(const Project& project) {
                                {"sweep",
                                 {{"wavelength_start", project.sweep.wavelength_start},
                                  {"wavelength_stop", project.sweep.wavelength_stop},
-                                 {"points", project.sweep.points}}}}}};
+                                 {"points", project.sweep.points}}},
+                               {"monte_carlo",
+                                {{"samples", project.monte_carlo.samples},
+                                 {"seed", project.monte_carlo.seed},
+                                 {"variations", std::move(variations)}}}}}};
   return root.dump(2) + "\n";
 }
 
@@ -79,6 +93,17 @@ Project project_from_json(std::string_view text) {
         project.sweep.wavelength_stop = sw.value("wavelength_stop", project.sweep.wavelength_stop);
         project.sweep.points = sw.value("points", project.sweep.points);
       }
+      if (sim.contains("monte_carlo")) {
+        const auto& mc = sim.at("monte_carlo");
+        project.monte_carlo.samples = mc.value("samples", project.monte_carlo.samples);
+        project.monte_carlo.seed = mc.value("seed", project.monte_carlo.seed);
+        if (mc.contains("variations"))
+          for (const auto& v : mc.at("variations"))
+            project.monte_carlo.variations.push_back({v.at("type").get<std::string>(),
+                                                      v.at("param").get<std::string>(),
+                                                      v.at("sigma").get<double>(), v.value("relative", false),
+                                                      v.value("correlated", false)});
+      }
     }
     return project;
   } catch (const nlohmann::json::exception& e) {
@@ -86,6 +111,16 @@ Project project_from_json(std::string_view text) {
   } catch (const circuit::CircuitError& e) {
     throw IoError(std::string("Projektdatei fehlerhaft: ") + e.what());
   }
+}
+
+Project reference_project(std::string_view name) {
+  circuit::ReferenceSetup setup = circuit::reference_setup(name);
+  Project project;
+  project.circuit = std::move(setup.circuit);
+  project.wavelength = setup.wavelength;
+  project.sweep = setup.sweep;
+  project.monte_carlo = std::move(setup.monte_carlo);
+  return project;
 }
 
 void save_project(const Project& project, const std::filesystem::path& path) {

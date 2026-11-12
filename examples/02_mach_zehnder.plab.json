@@ -101,6 +101,19 @@
       "wavelength_start": 1.5e-06,
       "wavelength_stop": 1.6e-06,
       "points": 501
+    },
+    "monte_carlo": {
+      "samples": 500,
+      "seed": 1,
+      "variations": [
+        {
+          "type": "coupler",
+          "param": "power_coupling",
+          "sigma": 0.02,
+          "relative": false,
+          "correlated": false
+        }
+      ]
     }
   }
 }

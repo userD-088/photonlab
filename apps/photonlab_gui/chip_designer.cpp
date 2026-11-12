@@ -111,7 +111,7 @@ ImVec2 operator-(ImVec2 a, ImVec2 b) { return {a.x - b.x, a.y - b.y}; }
 ChipDesigner::ChipDesigner(ThreadPool& pool, SDL_Window* window, float ui_scale)
     : pool_(pool), window_(window), ui_scale_(ui_scale), cell_(28.0f * ui_scale) {
   io::Project project;
-  project.circuit = circuit::reference_mzi();
+  project = io::reference_project("mzi");
   set_project(std::move(project), {});
   selected_ = "phase";  // damit die Kennlinie beim Start die cos²-Kurve zeigt
   rename_buffer_ = selected_;
@@ -172,9 +172,7 @@ void ChipDesigner::perform(Pending action, const std::string& argument) {
       show_file_dialog(DialogKind::open_project, window_);
       break;
     case Pending::load_example: {
-      io::Project project;
-      project.circuit = circuit::reference_design(argument);
-      set_project(std::move(project), {});
+      set_project(io::reference_project(argument), {});
       set_status("Beispiel geladen: " + project_.circuit.name);
       break;
     }

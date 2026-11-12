@@ -4,7 +4,9 @@ add_executable(photonlab_tests
   test_thread_pool.cpp
   test_interference.cpp
   test_circuit_components.cpp
+  test_circuit_monte_carlo.cpp
   test_circuit_registry.cpp
+  test_circuit_resonators.cpp
   test_circuit_solver.cpp
   test_circuit_sweep.cpp
   test_io_project.cpp)

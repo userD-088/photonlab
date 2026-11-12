@@ -1,4 +1,5 @@
 add_library(photonlab_core
+  src/parallel_for.cpp
   src/thread_pool.cpp
   src/units.cpp)
 add_library(photonlab::core ALIAS photonlab_core)
