@@ -73,9 +73,15 @@ if(PHOTONLAB_BUILD_GUI)
 endif()
 
 if(PHOTONLAB_BUILD_TESTS)
+  # doctest – nur Header. Das eigene CMake von v2.4.11 verlangt CMake < 3.5 und bricht mit CMake 4 ab,
+  # deshalb wird es wie bei Eigen übersprungen.
   FetchContent_Declare(doctest
     GIT_REPOSITORY https://github.com/doctest/doctest.git
     GIT_TAG        v2.4.11
-    GIT_SHALLOW    TRUE)
+    GIT_SHALLOW    TRUE
+    SOURCE_SUBDIR  photonlab-kein-cmake)
   FetchContent_MakeAvailable(doctest)
+  add_library(photonlab_doctest INTERFACE)
+  add_library(doctest::doctest ALIAS photonlab_doctest)
+  target_include_directories(photonlab_doctest SYSTEM INTERFACE ${doctest_SOURCE_DIR})
 endif()
