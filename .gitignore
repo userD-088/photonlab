@@ -1,0 +1,12 @@
+# Build
+build/
+out/
+cmake-build-*/
+# Editoren
+.vs/
+.idea/
+*.swp
+.DS_Store
+# clangd
+.cache/
+compile_commands.json
