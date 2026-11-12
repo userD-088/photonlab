@@ -9,11 +9,9 @@ CompiledCircuit::CompiledCircuit(const Circuit& circuit, const ComponentRegistry
   int next_port = 0;
   for (const auto& inst : circuit.instances) {
     for (const auto& slot : slots_)
-      if (slot.name == inst.name)
-        throw CircuitError("Instanzname '" + inst.name + "' ist doppelt vergeben");
+      if (slot.name == inst.name) throw CircuitError("Instanzname '" + inst.name + "' ist doppelt vergeben");
     const ComponentType* type = registry.find(inst.type);
-    if (!type)
-      throw CircuitError("Instanz '" + inst.name + "': unbekannter Bauteiltyp '" + inst.type + "'");
+    if (!type) throw CircuitError("Instanz '" + inst.name + "': unbekannter Bauteiltyp '" + inst.type + "'");
     try {
       components_.push_back(registry.create(inst.type, inst.params));
     } catch (const CircuitError& e) {
@@ -77,7 +75,8 @@ Solution CompiledCircuit::solve(double wavelength, const CVector* a_ext) const {
   }
   if (a_ext) rhs += s * (*a_ext);
 
-  // M = I − S·C. C ist eine Permutation (a_i = b_partner(i)), daher spaltenweise: (S·C)(:, partner(j)) = S(:, j)
+  // M = I − S·C. C ist eine Permutation (a_i = b_partner(i)), daher spaltenweise: (S·C)(:, partner(j)) = S(:,
+  // j)
   CMatrix m = CMatrix::Identity(n, n);
   for (int j = 0; j < n; ++j) {
     const int q = partner(j);
@@ -89,7 +88,8 @@ Solution CompiledCircuit::solve(double wavelength, const CVector* a_ext) const {
   const double rhs_norm = rhs.norm();
   solution.residual = (m * solution.b - rhs).norm() / (rhs_norm > 0.0 ? rhs_norm : 1.0);
   if (!solution.b.allFinite() || !(solution.residual < 1e-9))
-    throw CircuitError("Schaltung ist bei dieser Wellenlänge singulär (verlustfreie Schleife exakt in Resonanz?)");
+    throw CircuitError(
+        "Schaltung ist bei dieser Wellenlänge singulär (verlustfreie Schleife exakt in Resonanz?)");
 
   // Einlaufende Wellen: a = C·b + a_ext
   for (int j = 0; j < n; ++j) {

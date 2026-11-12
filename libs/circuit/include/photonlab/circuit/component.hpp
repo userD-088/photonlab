@@ -2,12 +2,11 @@
 // Schnittstelle aller Bauteile der Schaltungs-Ebene.
 // Ein Bauteil hat Ports und liefert pro Wellenlänge eine komplexe Streumatrix S mit b = S·a
 // (a = einlaufende, b = auslaufende Wellen, |a|² = Leistung in Watt).
+#include <Eigen/Dense>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <Eigen/Dense>
 
 #include "photonlab/core/complex.hpp"
 
@@ -21,13 +20,13 @@ using ParamMap = std::map<std::string, double>;
 
 // Beschreibung eines Parameters: Wertebereich in SI, Anzeige-Einheit nur für Oberfläche und CLI.
 struct ParamSpec {
-  std::string name;           // Schlüssel in ParamMap und in der Projektdatei
-  std::string label;          // deutscher Anzeigename
+  std::string name;   // Schlüssel in ParamMap und in der Projektdatei
+  std::string label;  // deutscher Anzeigename
   double default_value = 0.0;
   double min_value = 0.0;
   double max_value = 1.0;
-  std::string display_unit;   // z. B. "µm"
-  double display_scale = 1.0; // SI-Wert = Anzeigewert * display_scale
+  std::string display_unit;    // z. B. "µm"
+  double display_scale = 1.0;  // SI-Wert = Anzeigewert * display_scale
 };
 
 // Messwert, den ein Bauteil aus den Wellen an seinen Ports ableitet (z. B. Detektorstrom).

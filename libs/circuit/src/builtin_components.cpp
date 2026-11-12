@@ -20,7 +20,8 @@ CMatrix two_port(cplx tau) {
 }
 
 // Wellenleiter: phi = 2*pi*n_eff(lambda)*L/lambda mit linearer Dispersion um lambda0,
-// n_eff(lambda) = n_eff0 + (n_eff0 - n_g)*(lambda - lambda0)/lambda0  (folgt aus n_g = n - lambda*dn/dlambda).
+// n_eff(lambda) = n_eff0 + (n_eff0 - n_g)*(lambda - lambda0)/lambda0  (folgt aus n_g = n -
+// lambda*dn/dlambda).
 class Waveguide final : public Component {
  public:
   explicit Waveguide(const ParamMap& p)
@@ -112,7 +113,8 @@ class Laser final : public Component {
   double power_, phase_;
 };
 
-// Detektor: idealer Absorber ohne Reflexion. Photostrom I = R*P + I_dunkel (noch ohne Rauschen und Bandbreite).
+// Detektor: idealer Absorber ohne Reflexion. Photostrom I = R*P + I_dunkel (noch ohne Rauschen und
+// Bandbreite).
 class Detector final : public Component {
  public:
   explicit Detector(const ParamMap& p)
@@ -138,7 +140,8 @@ std::unique_ptr<Component> make(const ParamMap& p) {
 
 }  // namespace
 
-// Anzeigetexte bleiben im Latin-1-Zeichenvorrat (kein Griechisch), damit jede Schrift der Oberfläche sie darstellt.
+// Anzeigetexte bleiben im Latin-1-Zeichenvorrat (kein Griechisch), damit jede Schrift der Oberfläche sie
+// darstellt.
 void register_builtin_components(ComponentRegistry& registry) {
   const double two_pi = 2.0 * constants::pi;
 

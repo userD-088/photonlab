@@ -26,8 +26,8 @@ struct InstanceMeasurement {
 
 // Leistungsbilanz einer Lösung, alle Werte in Watt.
 struct PowerBalance {
-  double emitted = 0.0;    // von Quellen-Bauteilen netto abgegeben
-  double absorbed = 0.0;   // in Bauteilen absorbiert (Detektoren, Verluste)
+  double emitted = 0.0;       // von Quellen-Bauteilen netto abgegeben
+  double absorbed = 0.0;      // in Bauteilen absorbiert (Detektoren, Verluste)
   double external_in = 0.0;   // über a_ext an offenen Ports eingespeist
   double leaving_open = 0.0;  // verlässt die Schaltung über offene Ports
 };

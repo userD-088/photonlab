@@ -57,8 +57,7 @@ std::unique_ptr<Component> ComponentRegistry::create(std::string_view type_name,
   ParamMap full = type->default_params();
   for (const auto& [key, value] : params) {
     const ParamSpec* spec = type->find_param(key);
-    if (!spec)
-      throw CircuitError("Bauteiltyp '" + type->name + "' kennt den Parameter '" + key + "' nicht");
+    if (!spec) throw CircuitError("Bauteiltyp '" + type->name + "' kennt den Parameter '" + key + "' nicht");
     if (!std::isfinite(value) || value < spec->min_value || value > spec->max_value)
       throw CircuitError("Parameter '" + key + "' von '" + type->name + "' liegt außerhalb von [" +
                          std::to_string(spec->min_value) + ", " + std::to_string(spec->max_value) +

@@ -1,9 +1,8 @@
 #include "photonlab/io/project.hpp"
 
 #include <fstream>
-#include <sstream>
-
 #include <nlohmann/json.hpp>
+#include <sstream>
 
 namespace photonlab::io {
 
@@ -27,20 +26,19 @@ std::string project_to_json(const Project& project) {
   for (const auto& c : project.circuit.connections)
     connections.push_back({{"from", circuit::to_string(c.a)}, {"to", circuit::to_string(c.b)}});
 
-  const ordered_json root = {
-      {"format", format_name},
-      {"version", project_format_version},
-      {"units", "SI"},
-      {"circuit",
-       {{"name", project.circuit.name},
-        {"instances", std::move(instances)},
-        {"connections", std::move(connections)}}},
-      {"simulation",
-       {{"wavelength", project.wavelength},
-        {"sweep",
-         {{"wavelength_start", project.sweep.wavelength_start},
-          {"wavelength_stop", project.sweep.wavelength_stop},
-          {"points", project.sweep.points}}}}}};
+  const ordered_json root = {{"format", format_name},
+                             {"version", project_format_version},
+                             {"units", "SI"},
+                             {"circuit",
+                              {{"name", project.circuit.name},
+                               {"instances", std::move(instances)},
+                               {"connections", std::move(connections)}}},
+                             {"simulation",
+                              {{"wavelength", project.wavelength},
+                               {"sweep",
+                                {{"wavelength_start", project.sweep.wavelength_start},
+                                 {"wavelength_stop", project.sweep.wavelength_stop},
+                                 {"points", project.sweep.points}}}}}};
   return root.dump(2) + "\n";
 }
 

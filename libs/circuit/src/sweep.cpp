@@ -59,8 +59,7 @@ struct SweepState {
       }
       std::lock_guard lock(mutex);
       ++done;
-      if (control)
-        control->progress = static_cast<float>(done) / static_cast<float>(wavelengths.size());
+      if (control) control->progress = static_cast<float>(done) / static_cast<float>(wavelengths.size());
     }
     {
       std::lock_guard lock(mutex);

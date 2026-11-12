@@ -18,8 +18,7 @@ const Instance* Circuit::find_instance(std::string_view instance_name) const {
   return nullptr;
 }
 
-Instance& Circuit::add(std::string instance_name, std::string type, ParamMap params, int grid_x,
-                       int grid_y) {
+Instance& Circuit::add(std::string instance_name, std::string type, ParamMap params, int grid_x, int grid_y) {
   if (instance_name.empty() || instance_name.find('.') != std::string::npos)
     throw CircuitError("Ungültiger Instanzname '" + instance_name + "' (leer oder mit Punkt)");
   if (find_instance(instance_name))

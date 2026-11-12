@@ -33,7 +33,8 @@ void print_usage() {
       "Aufruf:\n"
       "  photonlab_cli --info                         Konstanten und ein Interferenz-Beispiel\n"
       "  photonlab_cli components                     alle Bauteiltypen mit Ports und Parametern\n"
-      "  photonlab_cli example <name>                 Referenz-Design als .plab.json ausgeben (mzi, mzi_unbalanced)\n"
+      "  photonlab_cli example <name>                 Referenz-Design als .plab.json ausgeben (mzi, "
+      "mzi_unbalanced)\n"
       "  photonlab_cli run <datei.plab.json>          Schaltung bei der Arbeitswellenlänge rechnen\n"
       "  photonlab_cli run <datei> --sweep [--csv <aus.csv>]   Wellenlängen-Sweep aus der Datei\n"
       "  photonlab_cli validate [--out <ordner>]      Validierung gegen analytische Lösungen\n");
@@ -121,7 +122,8 @@ int cmd_run(const std::string& file, bool do_sweep, const std::string& csv_path)
   return 0;
 }
 
-// Referenzfall MZI (Bauplan Abschnitt 16): Ausgänge folgen sin²/cos² der Phasendifferenz, Energie bleibt erhalten.
+// Referenzfall MZI (Bauplan Abschnitt 16): Ausgänge folgen sin²/cos² der Phasendifferenz, Energie bleibt
+// erhalten.
 int cmd_validate(const std::string& out_dir) {
   const auto& registry = circuit::ComponentRegistry::builtin();
   const double laser_power = 1e-3;
@@ -148,7 +150,8 @@ int cmd_validate(const std::string& out_dir) {
     const double bar_expected = std::pow(std::sin(phase / 2.0), 2);
     const double cross_expected = std::pow(std::cos(phase / 2.0), 2);
     const double energy_error = std::abs(bar + cross - 1.0);
-    worst_transfer = std::max({worst_transfer, std::abs(bar - bar_expected), std::abs(cross - cross_expected)});
+    worst_transfer =
+        std::max({worst_transfer, std::abs(bar - bar_expected), std::abs(cross - cross_expected)});
     worst_energy = std::max(worst_energy, energy_error);
     if (csv.is_open())
       csv << phase << ',' << bar << ',' << bar_expected << ',' << cross << ',' << cross_expected << ','

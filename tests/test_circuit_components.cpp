@@ -59,12 +59,14 @@ TEST_CASE("Wellenleiter: Verlust in dB/cm") {
 TEST_CASE("Wellenleiter: Gruppenlaufzeit entspricht dem Gruppenindex") {
   // d(phi)/d(omega) = n_g * L / c0  (Gruppenlaufzeit), numerisch über zentrale Differenz
   const double length = 100 * units::um, n_group = 4.2;
-  const auto wg = reg().create("waveguide", {{"length", length}, {"n_group", n_group}, {"loss_db_per_cm", 0.0}});
+  const auto wg =
+      reg().create("waveguide", {{"length", length}, {"n_group", n_group}, {"loss_db_per_cm", 0.0}});
   const double d_lambda = 1e-12;
   const cplx s_plus = wg->s_matrix(lambda0 + d_lambda)(1, 0);
   const cplx s_minus = wg->s_matrix(lambda0 - d_lambda)(1, 0);
   const double d_phase = std::arg(s_plus / s_minus);
-  const double d_omega = omega_from_wavelength(lambda0 + d_lambda) - omega_from_wavelength(lambda0 - d_lambda);
+  const double d_omega =
+      omega_from_wavelength(lambda0 + d_lambda) - omega_from_wavelength(lambda0 - d_lambda);
   CHECK(d_phase / d_omega == doctest::Approx(n_group * length / constants::c0).epsilon(1e-6));
 }
 

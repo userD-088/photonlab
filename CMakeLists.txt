@@ -16,6 +16,10 @@ endif()
 include(cmake/Dependencies.cmake)
 include(cmake/Warnings.cmake)
 
+if(PHOTONLAB_BUILD_TESTS)
+  enable_testing()   # vor den Unterordnern, damit auch apps/ Tests anmelden können
+endif()
+
 add_subdirectory(libs/core)
 add_subdirectory(libs/circuit)
 add_subdirectory(libs/io)
@@ -26,6 +30,5 @@ if(PHOTONLAB_BUILD_GUI)
 endif()
 
 if(PHOTONLAB_BUILD_TESTS)
-  enable_testing()
   add_subdirectory(tests)
 endif()
