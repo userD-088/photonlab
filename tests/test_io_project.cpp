@@ -51,7 +51,8 @@ TEST_CASE("Projekt: Beispieldateien entsprechen den Referenz-Designs") {
                                    std::pair{"02b_mach_zehnder_unbalanciert.plab.json", "mzi_unbalanced"},
                                    std::pair{"03_ring_allpass.plab.json", "ring_allpass"},
                                    std::pair{"03b_ring_adddrop.plab.json", "ring_adddrop"}}) {
-    CHECK(io::project_to_json(io::load_project(dir / file)) == io::project_to_json(io::reference_project(name)));
+    CHECK(io::project_to_json(io::load_project(dir / file)) ==
+          io::project_to_json(io::reference_project(name)));
   }
 }
 

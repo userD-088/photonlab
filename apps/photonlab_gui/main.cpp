@@ -73,10 +73,11 @@ void build_default_layout(ImGuiID dock_id, ImVec2 size) {
   const ImGuiID left = ImGui::DockBuilderSplitNode(center, ImGuiDir_Left, 0.13f, nullptr, &center);
   const ImGuiID right = ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, 0.26f, nullptr, &center);
   ImGuiID bottom = ImGui::DockBuilderSplitNode(center, ImGuiDir_Down, 0.42f, nullptr, &center);
-  ImGuiID bottom_right = ImGui::DockBuilderSplitNode(bottom, ImGuiDir_Right, 0.5f, nullptr, &bottom);
+  ImGuiID bottom_right = ImGui::DockBuilderSplitNode(bottom, ImGuiDir_Right, 0.46f, nullptr, &bottom);
   ImGui::DockBuilderDockWindow(ChipDesigner::window_library, left);
   ImGui::DockBuilderDockWindow(ChipDesigner::window_properties, right);
   ImGui::DockBuilderDockWindow(ChipDesigner::window_spectrum, bottom);
+  ImGui::DockBuilderDockWindow(ChipDesigner::window_monte_carlo, bottom_right);
   ImGui::DockBuilderDockWindow(ChipDesigner::window_curve, bottom_right);
   ImGui::DockBuilderDockWindow(window_field, center);
   ImGui::DockBuilderDockWindow(ChipDesigner::window_canvas, center);
@@ -198,7 +199,10 @@ int main(int argc, char** argv) {
       placeholder(window_quantum, "Kommt in Phase 11",
                   "Einzelphotonen, Hong-Ou-Mandel, linear-optisches CNOT, Boson Sampling.");
       // Beim Start liegt der Chip-Designer vorn (einziger schon nutzbarer Arbeitsbereich)
-      if (frame_count == 2) ImGui::SetWindowFocus(ChipDesigner::window_canvas);
+      if (frame_count == 2) {
+        ImGui::SetWindowFocus(ChipDesigner::window_curve);
+        ImGui::SetWindowFocus(ChipDesigner::window_canvas);
+      }
       ++frame_count;
       if (show_demo) ImGui::ShowDemoWindow(&show_demo);
 

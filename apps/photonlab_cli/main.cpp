@@ -176,8 +176,8 @@ int cmd_monte_carlo(const std::string& file, const std::string& csv_path) {
               project.wavelength / units::nm, result.failed);
   for (std::size_t k = 0; k < result.names.size(); ++k) {
     const circuit::Statistics st = circuit::statistics(result.values[k]);
-    std::printf("  %-28s Mittel %.6e  Streuung %.3e  Min %.6e  Max %.6e %s\n", result.names[k].c_str(), st.mean,
-                st.stddev, st.min, st.max, result.units[k].c_str());
+    std::printf("  %-28s Mittel %.6e  Streuung %.3e  Min %.6e  Max %.6e %s\n", result.names[k].c_str(),
+                st.mean, st.stddev, st.min, st.max, result.units[k].c_str());
   }
   if (!csv_path.empty()) {
     std::ofstream csv(csv_path);
@@ -187,7 +187,8 @@ int cmd_monte_carlo(const std::string& file, const std::string& csv_path) {
     }
     csv.precision(12);
     csv << "sample";
-    for (std::size_t k = 0; k < result.names.size(); ++k) csv << ',' << result.names[k] << '_' << result.units[k];
+    for (std::size_t k = 0; k < result.names.size(); ++k)
+      csv << ',' << result.names[k] << '_' << result.units[k];
     csv << '\n';
     for (int i = 0; i < project.monte_carlo.samples; ++i) {
       csv << i;
@@ -241,8 +242,8 @@ bool validate_ring(const std::string& out_dir) {
 
   std::printf("Ring FSR:        %.5f nm, Formel %.5f nm (rel. Abweichung %.1e, Toleranz 1e-4)\n",
               (r2.position - r1.position) / units::nm, fsr_expected / units::nm, fsr_error);
-  std::printf("Ring Güte:       %.0f, Formel %.0f (rel. Abweichung der Breite %.1e, Toleranz 1e-2)\n", r1.quality,
-              r1.position / fwhm_expected, fwhm_error);
+  std::printf("Ring Güte:       %.0f, Formel %.0f (rel. Abweichung der Breite %.1e, Toleranz 1e-2)\n",
+              r1.quality, r1.position / fwhm_expected, fwhm_error);
   std::printf("Ring Extinktion: %.3f dB, Formel %.3f dB (Abweichung %.1e dB, Toleranz 0,05 dB)\n",
               r1.extinction_db, extinction_expected, extinction_error);
   if (!out_dir.empty()) {

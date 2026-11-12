@@ -11,6 +11,8 @@
 #include <vector>
 
 #include "imgui.h"
+#include "photonlab/circuit/analysis.hpp"
+#include "photonlab/circuit/monte_carlo.hpp"
 #include "photonlab/circuit/solver.hpp"
 #include "photonlab/core/job.hpp"
 #include "photonlab/core/thread_pool.hpp"
@@ -28,6 +30,7 @@ class ChipDesigner {
   static constexpr const char* window_properties = "Eigenschaften";
   static constexpr const char* window_spectrum = "Spektrum";
   static constexpr const char* window_curve = "Kennlinie";
+  static constexpr const char* window_monte_carlo = "Monte-Carlo";
 
   ChipDesigner(ThreadPool& pool, SDL_Window* window, float ui_scale);
   ~ChipDesigner();
@@ -70,6 +73,11 @@ class ChipDesigner {
   void update_solution();
   void update_sweep();
   void update_curve();
+  void update_monte_carlo();
+  void start_monte_carlo();
+  void update_resonances();
+  std::string monte_carlo_key() const;
+  bool wave_between(const circuit::PortRef& a, const circuit::PortRef& b, double* power, double* phase) const;
   std::string sweep_key() const;
 
   // Zeichnen
@@ -78,6 +86,8 @@ class ChipDesigner {
   void draw_properties();
   void draw_spectrum();
   void draw_curve();
+  void draw_monte_carlo();
+  void draw_resonance_table(float width);
   void draw_confirm_popup();
   void handle_dialog_result();
   std::optional<PortGeometry> port_geometry(const circuit::PortRef& port) const;
@@ -130,6 +140,31 @@ class ChipDesigner {
   bool auto_sweep_ = true;
   bool spectrum_dbm_ = false;
   bool fit_spectrum_ = true;
+
+  // Resonanz-Auswertung des Spektrums
+  bool show_resonances_ = true;
+  int resonance_series_ = -1;  // -1 = automatisch die erste Kurve mit Resonanzen
+  std::string resonance_key_;
+  int resonance_series_used_ = -1;
+  circuit::ResonanceKind resonance_kind_ = circuit::ResonanceKind::dip;
+  std::vector<circuit::Resonance> resonances_;  // Lage und Breite in nm
+  double resonance_points_per_width_ = 0.0;
+
+  // Monte-Carlo-Job
+  struct MonteCarloData {
+    circuit::MonteCarloResult result;
+    std::string key;
+    std::string error;
+  };
+  std::shared_ptr<JobControl> mc_control_;
+  std::future<MonteCarloData> mc_future_;
+  MonteCarloData mc_;
+  int mc_series_ = -1;  // -1 = automatisch
+  bool mc_at_least_ = true;
+  double mc_limit_milli_ = 0.5;  // Grenze der Ausbeute in Milli-Einheiten der Messgröße
+  std::string mc_new_type_, mc_new_param_;
+  bool fit_histogram_ = true;
+  bool show_wire_values_ = false;
 
   // Kennlinie (Parameter-Sweep des ausgewählten Bauteils)
   SeriesData curve_;

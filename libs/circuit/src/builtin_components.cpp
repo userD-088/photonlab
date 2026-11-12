@@ -135,7 +135,8 @@ class Detector final : public Component {
   double responsivity_, dark_current_;
 };
 
-// Geführte Welle über eine Länge: Amplitude und Phase wie beim Wellenleiter (gleiche Dispersion, gleicher Verlust).
+// Geführte Welle über eine Länge: Amplitude und Phase wie beim Wellenleiter (gleiche Dispersion, gleicher
+// Verlust).
 struct GuidedPath {
   double n_eff, n_group, wavelength_ref, loss_db_per_cm;
 
@@ -157,7 +158,9 @@ struct GuidedPath {
 class RingAllPass final : public Component {
  public:
   explicit RingAllPass(const ParamMap& p)
-      : path_(p), length_(2.0 * constants::pi * p.at("radius")), t_(std::sqrt(1.0 - p.at("power_coupling"))) {}
+      : path_(p),
+        length_(2.0 * constants::pi * p.at("radius")),
+        t_(std::sqrt(1.0 - p.at("power_coupling"))) {}
 
   int port_count() const override { return 2; }
 
@@ -255,7 +258,8 @@ class BandpassFilter final : public Component {
 };
 
 // Gitterkoppler: Gauß-förmige Leistungs-Transmission um die Zentralwellenlänge,
-// T = T_max * exp(-4*ln(2)*((lambda - lambda_c)/B)²) mit B = volle 3-dB-Bandbreite. Ohne Phase, ohne Reflexion.
+// T = T_max * exp(-4*ln(2)*((lambda - lambda_c)/B)²) mit B = volle 3-dB-Bandbreite. Ohne Phase, ohne
+// Reflexion.
 class GratingCoupler final : public Component {
  public:
   explicit GratingCoupler(const ParamMap& p)
@@ -336,11 +340,13 @@ void register_builtin_components(ComponentRegistry& registry) {
                 make<Detector>});
 
   // --- Phase 2 ---
-  // Wellenleiter-Parameter der Ringe wie beim Wellenleiter (Si-Streifen 500 nm x 220 nm, Chrostowski/Hochberg Kap. 3).
-  const std::vector<ParamSpec> guided = {{"n_eff", "Effektiver Index", 2.44, 1.0, 5.0, "", 1.0},
-                                         {"n_group", "Gruppenindex", 4.2, 1.0, 10.0, "", 1.0},
-                                         {"wavelength_ref", "Bezugswellenlänge", 1550e-9, 100e-9, 20e-6, "nm", 1e-9},
-                                         {"loss_db_per_cm", "Verlust", 2.0, 0.0, 1000.0, "dB/cm", 1.0}};
+  // Wellenleiter-Parameter der Ringe wie beim Wellenleiter (Si-Streifen 500 nm x 220 nm, Chrostowski/Hochberg
+  // Kap. 3).
+  const std::vector<ParamSpec> guided = {
+      {"n_eff", "Effektiver Index", 2.44, 1.0, 5.0, "", 1.0},
+      {"n_group", "Gruppenindex", 4.2, 1.0, 10.0, "", 1.0},
+      {"wavelength_ref", "Bezugswellenlänge", 1550e-9, 100e-9, 20e-6, "nm", 1e-9},
+      {"loss_db_per_cm", "Verlust", 2.0, 0.0, 1000.0, "dB/cm", 1.0}};
 
   {
     std::vector<ParamSpec> params = {{"radius", "Radius", 10e-6, 1e-6, 1e-2, "µm", 1e-6},
@@ -355,17 +361,19 @@ void register_builtin_components(ComponentRegistry& registry) {
                   make<RingAllPass>});
   }
   {
-    std::vector<ParamSpec> params = {{"radius", "Radius", 10e-6, 1e-6, 1e-2, "µm", 1e-6},
-                                     {"power_coupling_1", "Kopplung Bus 1 (Leistung)", 0.02, 0.0, 1.0, "", 1.0},
-                                     {"power_coupling_2", "Kopplung Bus 2 (Leistung)", 0.02, 0.0, 1.0, "", 1.0}};
+    std::vector<ParamSpec> params = {
+        {"radius", "Radius", 10e-6, 1e-6, 1e-2, "µm", 1e-6},
+        {"power_coupling_1", "Kopplung Bus 1 (Leistung)", 0.02, 0.0, 1.0, "", 1.0},
+        {"power_coupling_2", "Kopplung Bus 2 (Leistung)", 0.02, 0.0, 1.0, "", 1.0}};
     params.insert(params.end(), guided.begin(), guided.end());
-    ComponentType type{"ring_adddrop",
-                       "Ring (Add-Drop)",
-                       "Ring zwischen zwei Bussen; Koppler wellenlängenunabhängig, keine Rückstreuung. "
-                       "Im Schaltplan liegt 'drop' rechts, auf dem Chip tritt es entgegen der Eingangsrichtung aus.",
-                       {"in", "add", "through", "drop"},
-                       params,
-                       make<RingAddDrop>};
+    ComponentType type{
+        "ring_adddrop",
+        "Ring (Add-Drop)",
+        "Ring zwischen zwei Bussen; Koppler wellenlängenunabhängig, keine Rückstreuung. "
+        "Im Schaltplan liegt 'drop' rechts, auf dem Chip tritt es entgegen der Eingangsrichtung aus.",
+        {"in", "add", "through", "drop"},
+        params,
+        make<RingAddDrop>};
     type.left_port_count = 2;
     registry.add(std::move(type));
   }
@@ -390,7 +398,8 @@ void register_builtin_components(ComponentRegistry& registry) {
                 make<BandpassFilter>});
 
   // Standardwerte Gitterkoppler: Größenordnung üblicher eindimensionaler SOI-Gitterkoppler
-  // (einige dB Verlust, einige zehn nm Bandbreite). Quelle: Chrostowski/Hochberg, "Silicon Photonics Design", Kap. 5.
+  // (einige dB Verlust, einige zehn nm Bandbreite). Quelle: Chrostowski/Hochberg, "Silicon Photonics Design",
+  // Kap. 5.
   {
     ComponentType type{"grating_coupler",
                        "Gitterkoppler",

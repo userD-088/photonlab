@@ -2,9 +2,9 @@
 
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <sstream>
 
 #include "photonlab/circuit/reference_designs.hpp"
-#include <sstream>
 
 namespace photonlab::io {
 
@@ -99,10 +99,9 @@ Project project_from_json(std::string_view text) {
         project.monte_carlo.seed = mc.value("seed", project.monte_carlo.seed);
         if (mc.contains("variations"))
           for (const auto& v : mc.at("variations"))
-            project.monte_carlo.variations.push_back({v.at("type").get<std::string>(),
-                                                      v.at("param").get<std::string>(),
-                                                      v.at("sigma").get<double>(), v.value("relative", false),
-                                                      v.value("correlated", false)});
+            project.monte_carlo.variations.push_back(
+                {v.at("type").get<std::string>(), v.at("param").get<std::string>(),
+                 v.at("sigma").get<double>(), v.value("relative", false), v.value("correlated", false)});
       }
     }
     return project;

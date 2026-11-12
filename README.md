@@ -12,10 +12,10 @@ Realistischer Photonik-Simulator in C++20 mit SDL3: vom elektromagnetischen Feld
 Der vollständige Bauplan steht in [`docs/PhotonLab_Bauplan_v2.pdf`](docs/PhotonLab_Bauplan_v2.pdf).
 Einen interaktiven Vorgeschmack gibt [`docs/prototypes/photonische_gatter.html`](docs/prototypes/photonische_gatter.html) (im Browser öffnen).
 
-**Status:** Phase 1 – Schaltung MVP. Der Chip-Designer ist nutzbar: Laser, Wellenleiter, Richtkoppler,
-Phasenschieber und Detektoren auf einem Raster platzieren, verbinden und live rechnen; Spektrum und
-Kennlinie als Plot; Speichern und Laden als `.plab.json`. Bauteil-Labor, Logik-Labor und Quanten-Modus
-sind noch Platzhalter.
+**Status:** Phase 2 – Schaltung erweitert. Der Chip-Designer rechnet Schaltungen aus Lasern, Wellenleitern,
+Kopplern, Phasenschiebern, Ringresonatoren, Y-Splittern, Filtern, Gitterkopplern und Detektoren, wertet
+Spektren aus (FSR, Güte, Extinktion) und schätzt per Monte-Carlo die Ausbeute. Bauteil-Labor, Logik-Labor
+und Quanten-Modus sind noch Platzhalter.
 
 ## Voraussetzungen (Windows)
 
@@ -56,6 +56,9 @@ Programme:
 Die Verbindungen zeigen das Licht: Farbton = Phase, Helligkeit = Leistung. „Spektrum“ rechnet einen
 Wellenlängen-Sweep als Job im Threadpool, „Kennlinie“ zeigt die Detektorleistungen über einem Parameter
 des ausgewählten Bauteils (beim Start: die cos²-Kennlinie des Mach-Zehnder-Interferometers).
+Neben dem Spektrum steht die Tabelle der gefundenen Resonanzen; ein Klick auf eine Zeile legt die
+Arbeitswellenlänge dorthin. „Monte-Carlo“ streut Parameter normalverteilt und zeigt Histogramm und
+Ausbeute. Das Häkchen „Werte“ blendet Leistung und Phase an jeder Verbindung ein.
 
 ## Kommandozeile
 
@@ -63,6 +66,8 @@ des ausgewählten Bauteils (beim Start: die cos²-Kennlinie des Mach-Zehnder-Int
 photonlab_cli components                                  # Bauteiltypen, Ports, Parameter
 photonlab_cli run examples/02_mach_zehnder.plab.json      # Messwerte bei der Arbeitswellenlänge
 photonlab_cli run examples/02b_mach_zehnder_unbalanciert.plab.json --sweep --csv spektrum.csv
+photonlab_cli run examples/03b_ring_adddrop.plab.json --resonances    # FSR, Güte, Extinktion
+photonlab_cli run examples/03_ring_allpass.plab.json --monte-carlo    # Streuung und Statistik
 photonlab_cli validate --out docs/validation              # Validierung gegen analytische Lösungen
 ```
 

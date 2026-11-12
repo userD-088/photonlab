@@ -76,8 +76,8 @@ std::vector<Resonance> find_resonances(const std::vector<double>& x, const std::
     r.fwhm = right_cross - left_cross;  // NaN, wenn ein Schnittpunkt fehlt
     r.quality = r.fwhm > 0.0 ? position / r.fwhm : std::numeric_limits<double>::quiet_NaN();
     const double high = std::max(r.value, r.baseline), low = std::min(r.value, r.baseline);
-    r.extinction_db = low > 0.0 && high > 0.0 ? 10.0 * std::log10(high / low)
-                                              : std::numeric_limits<double>::infinity();
+    r.extinction_db =
+        low > 0.0 && high > 0.0 ? 10.0 * std::log10(high / low) : std::numeric_limits<double>::infinity();
     result.push_back(r);
   }
   return result;

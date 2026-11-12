@@ -22,8 +22,22 @@ Offen aus Phase 1 (Folge-Issues):
 - [ ] #13 Validierungsbericht als CI-Artefakt hochladen (`photonlab_cli validate --out`)
 
 ## Phase 2 – Schaltung erweitert
-- [ ] #14 Ringresonator (All-Pass, Add-Drop) als Bauteil; FSR, Güte, Extinktion gegen Formeln
-- [ ] #15 Y-Splitter/MMI, Bandpassfilter, Gitterkoppler
-- [ ] #16 Sweep-Leistung: 10.000 Punkte < 1 s als Test absichern (dünnbesetzter Löser bei großen Schaltungen)
-- [ ] #17 Monte-Carlo über Fertigungsstreuung
-- [ ] #18 Phase/Leistung im Editor: Zahlenwerte an den Verbindungen einblendbar
+- [x] #14 Ringresonator (All-Pass, Add-Drop) als Bauteil; FSR, Güte, Extinktion gegen Formeln
+- [x] #15 Y-Splitter (1x2-MMI), Bandpassfilter, Gitterkoppler
+- [x] #16 Sweep-Leistung: 10.000 Punkte < 1 s als Test abgesichert (dichter Löser reicht dafür)
+- [x] #17 Monte-Carlo über Parameterstreuung mit Ausbeute (GUI-Fenster, CLI, Projektdatei)
+- [x] #18 Phase/Leistung im Editor: Zahlenwerte an den Verbindungen einblendbar („Werte“)
+- [x] #19 Spektrum auswerten: Resonanzen, FSR, Güte, Extinktion (GUI-Tabelle, `run --resonances`)
+
+Offen aus Phase 2 (Folge-Issues):
+- [ ] #20 Dünnbesetzter Löser für große Schaltungen (erst nötig ab einigen hundert Ports)
+- [ ] #21 Monte-Carlo über das ganze Spektrum (z. B. Streuung der Resonanzlage) statt nur einer Wellenlänge
+- [ ] #22 Wellenlängenabhängige Koppler (Koppellänge aus Supermoden)
+
+## Phase 3 – Logik-Labor (linear)
+- [ ] #23 `libs/logic`: Codierungen (Intensität, Phase), Wahrheitstabellen-Läufer auf Schaltungs-Ebene
+- [ ] #24 Schwellwert-Analyse und Kontrastverhältnis CR = 10·log10(P1_min / P0_max)
+- [ ] #25 Gatter-Zeugnis mit Ampeln (Kriterien aus Bauplan 7.8), Kaskaden-Test
+- [ ] #26 Referenz-Design Interferenz-XOR/XNOR; Abnahme: CR > 20 dB im Idealfall, fehlende Regeneration wird markiert
+- [ ] #27 Ring-Directed-Logic (elektrisch gesteuerte Ringe)
+- [ ] #28 Logik-Labor in der GUI: Prüfstand, Wahrheitstabelle mit Messwerten, Zeugnis

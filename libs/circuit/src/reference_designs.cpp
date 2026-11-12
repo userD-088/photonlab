@@ -49,7 +49,8 @@ Circuit reference_ring_allpass() {
   Circuit c;
   c.name = "Ringresonator (All-Pass)";
   c.add("laser", "laser", {{"power", 1e-3}}, 1, 3);
-  c.add("ring", "ring_allpass", {{"radius", 10e-6}, {"power_coupling", 0.02}, {"loss_db_per_cm", 10.0}}, 8, 3);
+  c.add("ring", "ring_allpass", {{"radius", 10e-6}, {"power_coupling", 0.02}, {"loss_db_per_cm", 10.0}}, 8,
+        3);
   c.add("det", "detector", {}, 15, 3);
   c.connect("laser.out", "ring.in");
   c.connect("ring.out", "det.in");
@@ -61,7 +62,8 @@ Circuit reference_ring_adddrop() {
   c.name = "Ringresonator (Add-Drop)";
   c.add("laser", "laser", {{"power", 1e-3}}, 1, 3);
   c.add("ring", "ring_adddrop",
-        {{"radius", 10e-6}, {"power_coupling_1", 0.02}, {"power_coupling_2", 0.02}, {"loss_db_per_cm", 10.0}}, 8, 3);
+        {{"radius", 10e-6}, {"power_coupling_1", 0.02}, {"power_coupling_2", 0.02}, {"loss_db_per_cm", 10.0}},
+        8, 3);
   c.add("det_through", "detector", {}, 15, 3);
   c.add("det_drop", "detector", {}, 15, 5);
   c.connect("laser.out", "ring.in");
@@ -93,7 +95,8 @@ ReferenceSetup reference_setup(std::string_view name) {
   } else {
     // Ringe: schmale Resonanzen brauchen einen feinen Sweep (5 pm Schrittweite)
     setup.sweep = {1540e-9, 1560e-9, 4001};
-    // Arbeitswellenlänge auf die Resonanz nahe 1550 nm legen: Umlaufphase 2*pi*L*(n_g/lambda + (n_eff - n_g)/lambda0) = 2*pi*m
+    // Arbeitswellenlänge auf die Resonanz nahe 1550 nm legen: Umlaufphase 2*pi*L*(n_g/lambda + (n_eff -
+    // n_g)/lambda0) = 2*pi*m
     const ComponentType& type = *ComponentRegistry::builtin().find(name);
     const Instance& ring = *setup.circuit.find_instance("ring");
     auto value = [&](const char* param) {

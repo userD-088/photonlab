@@ -1,4 +1,5 @@
-// Phase 2: Ringresonatoren, Y-Splitter, Bandpass, Gitterkoppler gegen Formeln und gegen ausgeschriebene Schaltungen.
+// Phase 2: Ringresonatoren, Y-Splitter, Bandpass, Gitterkoppler gegen Formeln und gegen ausgeschriebene
+// Schaltungen.
 #include <doctest/doctest.h>
 
 #include <chrono>
@@ -22,7 +23,7 @@ const double lambda0 = 1550 * units::nm;
 const double radius = 10 * units::um, coupling = 0.02, loss_db_per_cm = 10.0, n_eff = 2.44, n_group = 4.2;
 const double ring_length = 2.0 * constants::pi * radius;
 const double t = std::sqrt(1.0 - coupling);
-const double a = std::pow(10.0, -loss_db_per_cm * (ring_length / 1e-2) / 20.0);
+const double a = std::pow(10.0, -loss_db_per_cm*(ring_length / 1e-2) / 20.0);
 
 double round_trip_phase(double lambda) {
   const double n = n_eff + (n_eff - n_group) * (lambda - lambda0) / lambda0;
@@ -31,7 +32,8 @@ double round_trip_phase(double lambda) {
 }  // namespace
 
 TEST_CASE("All-Pass-Ring: Kompaktmodell = Schaltung aus Koppler und Schleife = analytische Transmission") {
-  const ParamMap ring_params = {{"radius", radius}, {"power_coupling", coupling}, {"loss_db_per_cm", loss_db_per_cm}};
+  const ParamMap ring_params = {
+      {"radius", radius}, {"power_coupling", coupling}, {"loss_db_per_cm", loss_db_per_cm}};
   const auto ring = reg().create("ring_allpass", ring_params);
 
   Circuit explicit_ring;
@@ -49,16 +51,18 @@ TEST_CASE("All-Pass-Ring: Kompaktmodell = Schaltung aus Koppler und Schleife = a
     const cplx tau_circuit = compiled.solve(lambda, &a_ext).b(compiled.port_index("koppler", "out1"));
     CHECK(std::abs(tau - tau_circuit) < 1e-11);
     const double phi = round_trip_phase(lambda);
-    const double expected = (a * a - 2 * t * a * std::cos(phi) + t * t) / (1 - 2 * a * t * std::cos(phi) + t * t * a * a);
+    const double expected =
+        (a * a - 2 * t * a * std::cos(phi) + t * t) / (1 - 2 * a * t * std::cos(phi) + t * t * a * a);
     CHECK(std::abs(std::norm(tau) - expected) < 1e-11);
   }
 }
 
 TEST_CASE("Add-Drop-Ring: Kompaktmodell = Schaltung aus zwei Kopplern und zwei Halbringen") {
   const double k1 = 0.05, k2 = 0.03;
-  const auto ring = reg().create(
-      "ring_adddrop",
-      {{"radius", radius}, {"power_coupling_1", k1}, {"power_coupling_2", k2}, {"loss_db_per_cm", loss_db_per_cm}});
+  const auto ring = reg().create("ring_adddrop", {{"radius", radius},
+                                                  {"power_coupling_1", k1},
+                                                  {"power_coupling_2", k2},
+                                                  {"loss_db_per_cm", loss_db_per_cm}});
 
   Circuit c;
   c.add("k1", "coupler", {{"power_coupling", k1}});  // in1 = in, in2 = Ring, out1 = through, out2 = Ring
@@ -75,7 +79,7 @@ TEST_CASE("Add-Drop-Ring: Kompaktmodell = Schaltung aus zwei Kopplern und zwei H
 
   for (int k = 0; k <= 2000; ++k) {
     const double lambda = (1540.0 + 0.01 * k) * units::nm;
-    const CMatrix s = ring->s_matrix(lambda);  // Ports: in, add, through, drop
+    const CMatrix s = ring->s_matrix(lambda);   // Ports: in, add, through, drop
     CHECK((s - s.transpose()).norm() < 1e-15);  // reziprok
     CVector from_in = CVector::Zero(compiled.port_count()), from_add = from_in;
     from_in(in) = 1.0;
@@ -90,7 +94,8 @@ TEST_CASE("Add-Drop-Ring: Kompaktmodell = Schaltung aus zwei Kopplern und zwei H
 
 TEST_CASE("Add-Drop-Ring: verlustfrei unitär, symmetrisch gekoppelt volle Übertragung in Resonanz") {
   const auto ring = reg().create(
-      "ring_adddrop", {{"radius", radius}, {"power_coupling_1", 0.1}, {"power_coupling_2", 0.1}, {"loss_db_per_cm", 0.0}});
+      "ring_adddrop",
+      {{"radius", radius}, {"power_coupling_1", 0.1}, {"power_coupling_2", 0.1}, {"loss_db_per_cm", 0.0}});
   // Resonanz: Umlaufphase = 2*pi*m. phi(lambda) = 2*pi*L*(n_g/lambda + (n_eff - n_g)/lambda0)
   const double m = std::round(round_trip_phase(lambda0) / (2.0 * constants::pi));
   const double lambda_res = n_group / (m / ring_length - (n_eff - n_group) / lambda0);
@@ -118,10 +123,12 @@ TEST_CASE("Abnahme Phase 2: Ring-FSR, Güte und Extinktion entsprechen den Forme
   const double cycles = round_trip_phase(r1.position) / (2.0 * constants::pi);
   CHECK(std::abs(cycles - std::round(cycles)) < 1e-4);
   // FSR = lambda1*lambda2/(n_g*L), also etwa lambda²/(n_g*L)
-  CHECK(r2.position - r1.position == doctest::Approx(r1.position * r2.position / (n_group * ring_length)).epsilon(1e-4));
+  CHECK(r2.position - r1.position ==
+        doctest::Approx(r1.position * r2.position / (n_group * ring_length)).epsilon(1e-4));
   CHECK(mean_spacing(resonances) == doctest::Approx(r2.position - r1.position).epsilon(1e-2));
   // Halbwertsbreite = lambda²*(1 - t*a)/(pi*n_g*L*sqrt(t*a)), Güte = lambda/Breite
-  const double fwhm = r1.position * r1.position * (1 - t * a) / (constants::pi * n_group * ring_length * std::sqrt(t * a));
+  const double fwhm =
+      r1.position * r1.position * (1 - t * a) / (constants::pi * n_group * ring_length * std::sqrt(t * a));
   CHECK(r1.fwhm == doctest::Approx(fwhm).epsilon(1e-2));
   CHECK(r1.quality == doctest::Approx(r1.position / fwhm).epsilon(1e-2));
   // Extinktion: T_min = (a - t)²/(1 - t*a)²
@@ -132,8 +139,9 @@ TEST_CASE("Abnahme Phase 2: Ring-FSR, Güte und Extinktion entsprechen den Forme
 
 TEST_CASE("Kritische Kopplung: t = a löscht die Transmission in Resonanz aus") {
   const double k_critical = 1.0 - a * a;
-  const auto ring = reg().create(
-      "ring_allpass", {{"radius", radius}, {"power_coupling", k_critical}, {"loss_db_per_cm", loss_db_per_cm}});
+  const auto ring =
+      reg().create("ring_allpass",
+                   {{"radius", radius}, {"power_coupling", k_critical}, {"loss_db_per_cm", loss_db_per_cm}});
   const double m = std::round(round_trip_phase(lambda0) / (2.0 * constants::pi));
   const double lambda_res = n_group / (m / ring_length - (n_eff - n_group) / lambda0);
   CHECK(std::norm(ring->s_matrix(lambda_res)(1, 0)) < 1e-12);
@@ -179,21 +187,24 @@ TEST_CASE("Bandpass: Butterworth |H|² = 1/(1 + x^(2n)), 3 dB an den Bandkanten"
   const double center = 1550 * units::nm, bandwidth = 2 * units::nm;
   for (int order : {1, 2, 3, 5, 8}) {
     const auto filter = reg().create(
-        "bandpass", {{"wavelength_center", center}, {"bandwidth", bandwidth}, {"order", static_cast<double>(order)}});
+        "bandpass",
+        {{"wavelength_center", center}, {"bandwidth", bandwidth}, {"order", static_cast<double>(order)}});
     CHECK(std::norm(filter->s_matrix(center)(1, 0)) == doctest::Approx(1.0).epsilon(1e-12));
     CHECK(std::norm(filter->s_matrix(center + bandwidth / 2)(1, 0)) == doctest::Approx(0.5).epsilon(1e-12));
     CHECK(std::norm(filter->s_matrix(center - bandwidth / 2)(1, 0)) == doctest::Approx(0.5).epsilon(1e-12));
     for (double x : {-3.0, -0.7, 0.3, 1.9}) {
       const double expected = 1.0 / (1.0 + std::pow(x, 2 * order));
-      CHECK(std::norm(filter->s_matrix(center + x * bandwidth / 2)(1, 0)) == doctest::Approx(expected).epsilon(1e-10));
+      CHECK(std::norm(filter->s_matrix(center + x * bandwidth / 2)(1, 0)) ==
+            doctest::Approx(expected).epsilon(1e-10));
     }
   }
 }
 
 TEST_CASE("Gitterkoppler: Gauß mit 3-dB-Bandbreite und Einfügeverlust") {
   const double center = 1550 * units::nm, bandwidth = 60 * units::nm;
-  const auto gc = reg().create(
-      "grating_coupler", {{"wavelength_center", center}, {"bandwidth", bandwidth}, {"insertion_loss_db", 4.0}});
+  const auto gc =
+      reg().create("grating_coupler",
+                   {{"wavelength_center", center}, {"bandwidth", bandwidth}, {"insertion_loss_db", 4.0}});
   const double peak = from_db(-4.0);
   CHECK(std::norm(gc->s_matrix(center)(1, 0)) == doctest::Approx(peak).epsilon(1e-12));
   CHECK(std::norm(gc->s_matrix(center + bandwidth / 2)(1, 0)) == doctest::Approx(peak / 2).epsilon(1e-12));
@@ -211,7 +222,8 @@ TEST_CASE("Resonanzsuche: Lorentz-Spitze mit bekannter Lage, Breite und Höhe") 
   REQUIRE(peaks.size() == 1);
   CHECK(peaks[0].position == doctest::Approx(center).epsilon(1e-6));
   CHECK(peaks[0].value == doctest::Approx(1.0).epsilon(1e-4));
-  // Der Bezugspegel am Rand des Fensters liegt etwas über dem Sockel, daher ist die Breite geringfügig kleiner
+  // Der Bezugspegel am Rand des Fensters liegt etwas über dem Sockel, daher ist die Breite geringfügig
+  // kleiner
   CHECK(peaks[0].fwhm == doctest::Approx(width).epsilon(2e-2));
   CHECK(find_resonances(x, y, ResonanceKind::dip).empty());
   ResonanceKind kind = ResonanceKind::dip;

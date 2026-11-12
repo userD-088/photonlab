@@ -21,7 +21,9 @@ std::uint64_t splitmix64(std::uint64_t x) {
 }
 
 // Gleichverteilt in (0, 1): 53 Zufallsbits, um eine halbe Stufe verschoben
-double unit_interval(std::uint64_t bits) { return (static_cast<double>(bits >> 11) + 0.5) / 9007199254740992.0; }
+double unit_interval(std::uint64_t bits) {
+  return (static_cast<double>(bits >> 11) + 0.5) / 9007199254740992.0;
+}
 
 }  // namespace
 
@@ -36,7 +38,8 @@ double standard_normal(std::uint64_t seed, std::uint64_t a, std::uint64_t b, std
   return std::sqrt(-2.0 * std::log(u1)) * std::cos(2.0 * constants::pi * u2);
 }
 
-void validate(const MonteCarloSettings& settings, const Circuit& /*circuit*/, const ComponentRegistry& registry) {
+void validate(const MonteCarloSettings& settings, const Circuit& /*circuit*/,
+              const ComponentRegistry& registry) {
   if (settings.samples < 1) throw CircuitError("Monte-Carlo braucht mindestens eine Stichprobe");
   for (const auto& v : settings.variations) {
     const ComponentType* type = registry.find(v.type);

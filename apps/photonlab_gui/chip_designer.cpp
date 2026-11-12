@@ -44,8 +44,13 @@ const ImVec4 color_good = ImVec4(0.36f, 0.77f, 0.55f, 1.0f);
 
 const ComponentRegistry& registry() { return ComponentRegistry::builtin(); }
 
-// Editor-Konvention: Ports, deren Name mit "in" beginnt, liegen links, alle anderen rechts.
-bool is_left_port(const std::string& port_name) { return port_name.rfind("in", 0) == 0; }
+// Anzahl der Portreihen eines Bauteils im Schaltplan (links und rechts getrennt gezählt)
+float body_rows(const ComponentType& type) {
+  int left_rows = 0, right_rows = 0;
+  for (int i = 0; i < static_cast<int>(type.port_names.size()); ++i)
+    ++(type.is_left_port(i) ? left_rows : right_rows);
+  return static_cast<float>(std::max({left_rows, right_rows, 1}));
+}
 
 // Zahl mit SI-Vorsatz, z. B. 1.0e-3 W -> "1.000 mW"
 std::string format_si(double value, const std::string& unit) {
@@ -120,6 +125,8 @@ ChipDesigner::ChipDesigner(ThreadPool& pool, SDL_Window* window, float ui_scale)
 ChipDesigner::~ChipDesigner() {
   if (sweep_control_) sweep_control_->cancel_requested = true;
   if (sweep_future_.valid()) sweep_future_.wait();
+  if (mc_control_) mc_control_->cancel_requested = true;
+  if (mc_future_.valid()) mc_future_.wait();
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -147,6 +154,9 @@ void ChipDesigner::set_project(io::Project project, std::string path) {
   fit_spectrum_ = true;
   fit_curve_ = true;
   fit_view_ = 3;
+  resonance_series_ = -1;
+  mc_series_ = -1;
+  mc_new_type_.clear();
 }
 
 void ChipDesigner::request(Pending action, std::string argument) {
@@ -445,8 +455,9 @@ std::optional<ChipDesigner::PortGeometry> ChipDesigner::port_geometry(const Port
   const ComponentType* type = instance ? registry().find(instance->type) : nullptr;
   if (!type) return std::nullopt;
   int left_row = 0, right_row = 0;
-  for (const auto& name : type->port_names) {
-    const bool left = is_left_port(name);
+  for (int index = 0; index < static_cast<int>(type->port_names.size()); ++index) {
+    const std::string& name = type->port_names[static_cast<std::size_t>(index)];
+    const bool left = type->is_left_port(index);
     int& row = left ? left_row : right_row;
     if (name == port.port) {
       const float x = static_cast<float>(instance->grid_x) + (left ? 0.0f : component_width);
@@ -479,9 +490,23 @@ ImU32 ChipDesigner::wave_color(const PortRef& a, const PortRef& b, float* streng
   }
 }
 
+// Stärkere der beiden Wellen auf einer Verbindung: Gesamtleistung und Phase
+bool ChipDesigner::wave_between(const PortRef& a, const PortRef& b, double* power_w, double* phase) const {
+  if (!has_solution_ || !compiled_) return false;
+  try {
+    const cplx forward = solution_.b(compiled_->port_index(a));
+    const cplx backward = solution_.b(compiled_->port_index(b));
+    *power_w = std::norm(forward) + std::norm(backward);
+    *phase = std::arg(std::norm(forward) >= std::norm(backward) ? forward : backward);
+    return true;
+  } catch (const std::exception&) {
+    return false;
+  }
+}
+
 // Zweite Zeile im Bauteil: erster Messwert, sonst der erste Parameter
 std::string ChipDesigner::summary(const Instance& instance, const ComponentType& type) const {
-  if (type.port_names.size() == 1 && !is_left_port(type.port_names.front())) {
+  if (type.port_names.size() == 1 && !type.is_left_port(0)) {
     // Quelle: der eingestellte Parameter ist aussagekräftiger als die Rückreflexion
   } else {
     for (const auto& m : measurements_)
@@ -502,10 +527,13 @@ void ChipDesigner::draw() {
   update_solution();
   update_sweep();
   update_curve();
+  update_resonances();
+  update_monte_carlo();
 
   draw_library();
   draw_properties();
   draw_spectrum();
+  draw_monte_carlo();
   draw_curve();
   draw_canvas();  // zuletzt, damit der Arbeitsbereich beim Start den Fokus hat
   draw_confirm_popup();
@@ -682,10 +710,11 @@ void ChipDesigner::draw_spectrum() {
     sweep.wavelength_stop = stop_nm * units::nm;
     dirty_ = true;
   }
-  ImGui::SameLine();
   ImGui::Checkbox("dBm", &spectrum_dbm_);
   ImGui::SameLine();
   ImGui::Checkbox("automatisch", &auto_sweep_);
+  ImGui::SameLine();
+  ImGui::Checkbox("Resonanzen", &show_resonances_);
 
   // Job-Zeile: Fortschritt und Abbruch, sonst Startknopf und Zustand
   const bool running = sweep_future_.valid();
@@ -716,6 +745,13 @@ void ChipDesigner::draw_spectrum() {
     ImPlot::SetNextAxesToFit();
     fit_spectrum_ = false;
   }
+  const float table_width =
+      show_resonances_ ? std::min(ImGui::GetFontSize() * 19.0f, ImGui::GetContentRegionAvail().x * 0.55f)
+                       : 0.0f;
+  if (show_resonances_) {
+    draw_resonance_table(table_width);
+    ImGui::SameLine();
+  }
   if (ImPlot::BeginPlot("##spektrum", ImVec2(-1.0f, -1.0f))) {
     ImPlot::SetupAxes("Wellenlänge [nm]", spectrum_dbm_ ? "Leistung [dBm]" : "Leistung [mW]");
     ImPlot::SetupLegend(ImPlotLocation_South, ImPlotLegendFlags_Outside | ImPlotLegendFlags_Horizontal);
@@ -731,6 +767,17 @@ void ChipDesigner::draw_spectrum() {
       ImPlot::PlotLine(sweep_result_.names[k].c_str(), sweep_result_.x.data(), data,
                        static_cast<int>(values.size()));
     }
+    // gefundene Resonanzen markieren
+    if (show_resonances_ && !resonances_.empty() && resonance_series_used_ >= 0 &&
+        static_cast<std::size_t>(resonance_series_used_) < sweep_result_.power_mw.size()) {
+      std::vector<double> xs, ys;
+      for (const auto& r : resonances_) {
+        xs.push_back(r.position);
+        ys.push_back(spectrum_dbm_ ? to_dbm(r.value) : r.value);
+      }
+      ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 4.0f * ui_scale_, ImVec4(1.0f, 1.0f, 1.0f, 0.9f), 1.0f);
+      ImPlot::PlotScatter("##resonanzen", xs.data(), ys.data(), static_cast<int>(xs.size()));
+    }
     // Arbeitswellenlänge als verschiebbare Linie
     double working_nm = project_.wavelength / units::nm;
     if (ImPlot::DragLineX(0, &working_nm, ImVec4(1.0f, 0.42f, 0.36f, 1.0f), 1.5f) && working_nm > low_nm &&
@@ -739,6 +786,356 @@ void ChipDesigner::draw_spectrum() {
       dirty_ = true;
     }
     ImPlot::EndPlot();
+  }
+  ImGui::End();
+}
+
+// Resonanzen der gewählten Kurve; Lage und Breite in nm, Werte in mW
+void ChipDesigner::update_resonances() {
+  const std::string key = sweep_result_.key + "/" + std::to_string(resonance_series_);
+  if (key == resonance_key_) return;
+  resonance_key_ = key;
+  resonances_.clear();
+  resonance_series_used_ = -1;
+  resonance_points_per_width_ = 0.0;
+  const auto count = static_cast<int>(std::min(sweep_result_.names.size(), sweep_result_.power_mw.size()));
+  for (int k = 0; k < count; ++k) {
+    if (resonance_series_ >= 0 && k != resonance_series_) continue;
+    auto found = circuit::find_dominant_resonances(
+        sweep_result_.x, sweep_result_.power_mw[static_cast<std::size_t>(k)], &resonance_kind_);
+    if (found.empty() && resonance_series_ < 0) continue;  // automatisch: erste Kurve mit Resonanzen
+    resonances_ = std::move(found);
+    resonance_series_used_ = k;
+    break;
+  }
+  if (!resonances_.empty() && sweep_result_.x.size() > 1) {
+    const double step =
+        (sweep_result_.x.back() - sweep_result_.x.front()) / static_cast<double>(sweep_result_.x.size() - 1);
+    double narrowest = 0.0;
+    for (const auto& r : resonances_)
+      if (r.fwhm > 0.0 && (narrowest == 0.0 || r.fwhm < narrowest)) narrowest = r.fwhm;
+    resonance_points_per_width_ = step > 0.0 ? narrowest / step : 0.0;
+  }
+}
+
+void ChipDesigner::draw_resonance_table(float width) {
+  ImGui::BeginChild("resonanzen", ImVec2(width, 0.0f));
+  const auto count = static_cast<int>(std::min(sweep_result_.names.size(), sweep_result_.power_mw.size()));
+  const char* current = resonance_series_used_ >= 0 && resonance_series_used_ < count
+                            ? sweep_result_.names[static_cast<std::size_t>(resonance_series_used_)].c_str()
+                            : "(keine Resonanzen)";
+  ImGui::SetNextItemWidth(-1.0f);
+  if (ImGui::BeginCombo("##kurve", current)) {
+    if (ImGui::Selectable("automatisch", resonance_series_ < 0)) resonance_series_ = -1;
+    for (int k = 0; k < count; ++k)
+      if (ImGui::Selectable(sweep_result_.names[static_cast<std::size_t>(k)].c_str(), resonance_series_ == k))
+        resonance_series_ = k;
+    ImGui::EndCombo();
+  }
+  if (resonances_.empty()) {
+    ImGui::TextDisabled("Keine Resonanzen im Sweep-Bereich.");
+  } else {
+    const double spacing = circuit::mean_spacing(resonances_);
+    ImGui::Text("%d %s", static_cast<int>(resonances_.size()),
+                resonance_kind_ == circuit::ResonanceKind::dip ? "Einbrüche" : "Spitzen");
+    if (spacing > 0.0) {
+      ImGui::SameLine();
+      ImGui::Text("| FSR %.4g nm", spacing);
+    }
+    if (resonance_points_per_width_ > 0.0 && resonance_points_per_width_ < 10.0)
+      ImGui::TextColored(color_bad, "Nur %.1f Punkte je Breite: ungenau, feiner sweepen.",
+                         resonance_points_per_width_);
+    if (ImGui::BeginTable(
+            "tabelle", 4,
+            ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp)) {
+      ImGui::TableSetupColumn("Lage nm", ImGuiTableColumnFlags_WidthStretch, 1.5f);
+      ImGui::TableSetupColumn("Breite pm", ImGuiTableColumnFlags_WidthStretch, 1.2f);
+      ImGui::TableSetupColumn("Güte", ImGuiTableColumnFlags_WidthStretch, 1.1f);
+      ImGui::TableSetupColumn("Ext. dB", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+      ImGui::TableSetupScrollFreeze(0, 1);
+      ImGui::TableHeadersRow();
+      for (std::size_t i = 0; i < resonances_.size(); ++i) {
+        const auto& r = resonances_[i];
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        char label[48];
+        std::snprintf(label, sizeof label, "%.3f##r%d", r.position, static_cast<int>(i));
+        // Klick legt die Arbeitswellenlänge auf die Resonanz
+        if (ImGui::Selectable(label, false, ImGuiSelectableFlags_SpanAllColumns)) {
+          project_.wavelength = r.position * units::nm;
+          dirty_ = true;
+        }
+        ImGui::TableNextColumn();
+        if (r.fwhm > 0.0)
+          ImGui::Text("%.2f", r.fwhm * 1e3);
+        else
+          ImGui::TextDisabled("-");
+        ImGui::TableNextColumn();
+        if (r.fwhm > 0.0)
+          ImGui::Text("%.0f", r.quality);
+        else
+          ImGui::TextDisabled("-");
+        ImGui::TableNextColumn();
+        if (std::isfinite(r.extinction_db))
+          ImGui::Text("%.2f", r.extinction_db);
+        else
+          ImGui::TextUnformatted("> 100");
+      }
+      ImGui::EndTable();
+    }
+  }
+  ImGui::EndChild();
+}
+
+std::string ChipDesigner::monte_carlo_key() const {
+  std::string key = std::to_string(revision_) + "/" + std::to_string(project_.monte_carlo.samples) + "/" +
+                    std::to_string(project_.monte_carlo.seed);
+  char buffer[96];
+  std::snprintf(buffer, sizeof buffer, "/%.17g", project_.wavelength);
+  key += buffer;
+  for (const auto& v : project_.monte_carlo.variations) {
+    std::snprintf(buffer, sizeof buffer, "/%.17g/%d%d", v.sigma, v.relative ? 1 : 0, v.correlated ? 1 : 0);
+    key += "/" + v.type + "." + v.param + buffer;
+  }
+  return key;
+}
+
+void ChipDesigner::start_monte_carlo() {
+  if (mc_future_.valid()) return;
+  mc_control_ = std::make_shared<JobControl>();
+  // Der Job besitzt Kopien von Schaltung und Einstellungen; die GUI darf währenddessen weiter bearbeiten.
+  mc_future_ = pool_.submit([circuit = project_.circuit, settings = project_.monte_carlo,
+                             wavelength = project_.wavelength, key = monte_carlo_key(), control = mc_control_,
+                             pool = &pool_] {
+    MonteCarloData data;
+    data.key = key;
+    try {
+      data.result = circuit::monte_carlo(circuit, registry(), wavelength, settings, pool, control.get());
+    } catch (const std::exception& e) {
+      data.error = e.what();
+    }
+    control->finished = true;
+    return data;
+  });
+}
+
+void ChipDesigner::update_monte_carlo() {
+  if (!mc_future_.valid() || mc_future_.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+    return;
+  MonteCarloData data = mc_future_.get();
+  mc_control_.reset();
+  if (data.result.cancelled) return;  // altes Ergebnis bleibt stehen
+  mc_ = std::move(data);
+  fit_histogram_ = true;
+}
+
+void ChipDesigner::draw_monte_carlo() {
+  ImGui::Begin(window_monte_carlo);
+  auto& settings = project_.monte_carlo;
+  const float field_width = ImGui::GetFontSize() * 6.5f;
+
+  ImGui::SetNextItemWidth(field_width);
+  if (ImGui::DragInt("Stichproben", &settings.samples, 10.0f, 1, 1000000, "%d", ImGuiSliderFlags_AlwaysClamp))
+    dirty_ = true;
+  ImGui::SameLine();
+  ImGui::SetNextItemWidth(field_width);
+  if (ImGui::InputScalar("Startwert", ImGuiDataType_U64, &settings.seed)) dirty_ = true;
+  if (mc_future_.valid()) {
+    if (ImGui::SmallButton("Abbrechen")) mc_control_->cancel_requested = true;
+    ImGui::SameLine();
+    ImGui::ProgressBar(mc_control_->progress.load(), ImVec2(-1.0f, 0.0f));
+  } else {
+    if (ImGui::SmallButton("Starten")) start_monte_carlo();
+    if (!mc_.key.empty() && mc_.key != monte_carlo_key()) {
+      ImGui::SameLine();
+      ImGui::TextColored(color_bad, "veraltet");
+    }
+  }
+
+  // Streuungen: je Bauteiltyp und Parameter eine Zeile
+  int remove_index = -1;
+  if (!settings.variations.empty() &&
+      ImGui::BeginTable("streuungen", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
+    ImGui::TableSetupColumn("Streuung von", ImGuiTableColumnFlags_WidthStretch, 2.0f);
+    ImGui::TableSetupColumn("Sigma", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+    ImGui::TableSetupColumn("relativ", ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableSetupColumn("gemeinsam", ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableSetupColumn("##entfernen", ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableHeadersRow();
+    for (int i = 0; i < static_cast<int>(settings.variations.size()); ++i) {
+      auto& v = settings.variations[static_cast<std::size_t>(i)];
+      const ComponentType* type = registry().find(v.type);
+      const circuit::ParamSpec* spec = type ? type->find_param(v.param) : nullptr;
+      ImGui::PushID(i);
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      if (spec)
+        ImGui::Text("%s: %s", type->label.c_str(), spec->label.c_str());
+      else
+        ImGui::TextColored(color_bad, "%s.%s (unbekannt)", v.type.c_str(), v.param.c_str());
+      ImGui::TableNextColumn();
+      // relativ in Prozent, absolut in der Anzeige-Einheit des Parameters
+      const double scale = v.relative ? 0.01 : (spec ? spec->display_scale : 1.0);
+      const std::string unit = v.relative ? "%" : (spec ? spec->display_unit : std::string());
+      double shown = v.sigma / scale;
+      const double zero = 0.0;
+      const std::string format = "%.4g " + (unit == "%" ? std::string("%%") : unit);
+      ImGui::SetNextItemWidth(-1.0f);
+      if (ImGui::DragScalar("##sigma", ImGuiDataType_Double, &shown,
+                            static_cast<float>(std::max(shown * 0.01, 1e-5)), &zero, nullptr, format.c_str(),
+                            ImGuiSliderFlags_AlwaysClamp)) {
+        v.sigma = std::max(0.0, shown) * scale;
+        dirty_ = true;
+      }
+      ImGui::TableNextColumn();
+      bool relative = v.relative;
+      if (ImGui::Checkbox("##relativ", &relative)) {
+        // Sigma sinnvoll umrechnen: auf den Standardwert des Parameters bezogen
+        const double nominal = spec && spec->default_value != 0.0 ? std::abs(spec->default_value) : 1.0;
+        v.sigma = relative ? v.sigma / nominal : v.sigma * nominal;
+        v.relative = relative;
+        dirty_ = true;
+      }
+      ImGui::TableNextColumn();
+      if (ImGui::Checkbox("##gemeinsam", &v.correlated)) dirty_ = true;
+      if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip(
+            "Alle Instanzen dieses Typs weichen gleich ab\n(z. B. Schichtdicke oder Temperatur).");
+      ImGui::TableNextColumn();
+      if (ImGui::SmallButton("x")) remove_index = i;
+      ImGui::PopID();
+    }
+    ImGui::EndTable();
+  }
+  if (remove_index >= 0) {
+    settings.variations.erase(settings.variations.begin() + remove_index);
+    dirty_ = true;
+  }
+
+  // Neue Streuung: nur Typen, die in der Schaltung vorkommen
+  std::vector<const ComponentType*> present;
+  for (const auto& type : registry().types())
+    if (!type.params.empty() &&
+        std::any_of(project_.circuit.instances.begin(), project_.circuit.instances.end(),
+                    [&](const Instance& inst) { return inst.type == type.name; }))
+      present.push_back(&type);
+  const ComponentType* new_type = registry().find(mc_new_type_);
+  if ((!new_type || std::find(present.begin(), present.end(), new_type) == present.end()) &&
+      !present.empty()) {
+    new_type = present.front();
+    mc_new_type_ = new_type->name;
+  }
+  if (new_type && !present.empty()) {
+    const circuit::ParamSpec* new_param = new_type->find_param(mc_new_param_);
+    if (!new_param) {
+      new_param = &new_type->params.front();
+      mc_new_param_ = new_param->name;
+    }
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7.5f);
+    if (ImGui::BeginCombo("##neuertyp", new_type->label.c_str())) {
+      for (const ComponentType* type : present)
+        if (ImGui::Selectable(type->label.c_str(), type == new_type)) {
+          mc_new_type_ = type->name;
+          mc_new_param_.clear();
+        }
+      ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.5f);
+    if (ImGui::BeginCombo("##neuerparameter", new_param->label.c_str())) {
+      for (const auto& param : new_type->params)
+        if (ImGui::Selectable(param.label.c_str(), param.name == mc_new_param_)) mc_new_param_ = param.name;
+      ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("+ Streuung")) {
+      // Startwert: 1 % des Standardwerts, relativ
+      settings.variations.push_back({mc_new_type_, mc_new_param_, 0.01, true, false});
+      dirty_ = true;
+    }
+  }
+
+  // Ergebnis
+  const auto& result = mc_.result;
+  if (!mc_.error.empty()) {
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextColored(color_bad, "%s", mc_.error.c_str());
+    ImGui::PopTextWrapPos();
+  } else if (result.names.empty()) {
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled(
+        "Noch kein Ergebnis. Jede Stichprobe stört die Parameter normalverteilt und löst die Schaltung "
+        "bei der Arbeitswellenlänge neu. Werte außerhalb des Parameterbereichs werden begrenzt.");
+    ImGui::PopTextWrapPos();
+  } else {
+    const int count = static_cast<int>(result.names.size());
+    int series = mc_series_;
+    if (series < 0 || series >= count) {
+      // automatisch: die Messgröße mit der größten relativen Streuung
+      double best = -1.0;
+      series = 0;
+      for (int k = 0; k < count; ++k) {
+        const circuit::Statistics st = circuit::statistics(result.values[static_cast<std::size_t>(k)]);
+        const double relative = st.mean != 0.0 ? st.stddev / std::abs(st.mean) : 0.0;
+        if (relative > best) {
+          best = relative;
+          series = k;
+        }
+      }
+    }
+    const auto index = static_cast<std::size_t>(series);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 11.0f);
+    if (ImGui::BeginCombo("##messgroesse", result.names[index].c_str())) {
+      for (int k = 0; k < count; ++k)
+        if (ImGui::Selectable(result.names[static_cast<std::size_t>(k)].c_str(), k == series)) {
+          mc_series_ = k;
+          fit_histogram_ = true;
+        }
+      ImGui::EndCombo();
+    }
+    const std::string& unit = result.units[index];
+    const circuit::Statistics st = circuit::statistics(result.values[index]);
+    ImGui::SameLine();
+    ImGui::Text("Mittel %s | Sigma %s", format_si(st.mean, unit).c_str(), format_si(st.stddev, unit).c_str());
+    ImGui::Text("Min %s | Max %s", format_si(st.min, unit).c_str(), format_si(st.max, unit).c_str());
+    if (result.failed > 0) {
+      ImGui::SameLine();
+      ImGui::TextColored(color_bad, "| %d nicht lösbar", result.failed);
+    }
+
+    // Ausbeute gegen eine Grenze (in Milli-Einheiten, passend zur Achse des Histogramms)
+    const char* comparisons[] = {"mindestens", "höchstens"};
+    int comparison = mc_at_least_ ? 0 : 1;
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7.0f);
+    if (ImGui::Combo("##vergleich", &comparison, comparisons, 2)) mc_at_least_ = comparison == 0;
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(field_width);
+    const std::string limit_format = "%.4g m" + unit;
+    ImGui::DragScalar("##grenze", ImGuiDataType_Double, &mc_limit_milli_,
+                      static_cast<float>(std::max(std::abs(mc_limit_milli_) * 0.005, 1e-6)), nullptr, nullptr,
+                      limit_format.c_str());
+    ImGui::SameLine();
+    const double yield = circuit::yield_fraction(result.values[index], mc_limit_milli_ * 1e-3, mc_at_least_);
+    ImGui::Text("Ausbeute %.1f %%", yield * 100.0);
+
+    static std::vector<double> scaled;
+    scaled.clear();
+    for (double v : result.values[index])
+      if (std::isfinite(v)) scaled.push_back(v * 1e3);
+    if (fit_histogram_) {
+      ImPlot::SetNextAxesToFit();
+      fit_histogram_ = false;
+    }
+    if (ImPlot::BeginPlot("##histogramm", ImVec2(-1.0f, -1.0f), ImPlotFlags_NoLegend)) {
+      const std::string x_label = result.names[index] + " [m" + unit + "]";
+      ImPlot::SetupAxes(x_label.c_str(), "Anzahl");
+      if (!scaled.empty() && st.max > st.min)
+        ImPlot::PlotHistogram("##werte", scaled.data(), static_cast<int>(scaled.size()), ImPlotBin_Sturges);
+      else if (!scaled.empty())
+        ImPlot::PlotInfLines("##wert", scaled.data(), 1);  // keine Streuung: alle Stichproben gleich
+      ImPlot::DragLineX(1, &mc_limit_milli_, ImVec4(1.0f, 0.42f, 0.36f, 1.0f), 1.5f);
+      ImPlot::EndPlot();
+    }
   }
   ImGui::End();
 }
@@ -819,6 +1216,8 @@ void ChipDesigner::draw_canvas() {
   }
   ImGui::SameLine();
   if (ImGui::SmallButton("Alles zeigen")) fit_view_ = 1;
+  ImGui::SameLine();
+  ImGui::Checkbox("Werte", &show_wire_values_);
 
   // Zeichenfläche
   const float status_height = ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
@@ -851,10 +1250,7 @@ void ChipDesigner::draw_canvas() {
       float min_x = 1e9f, min_y = 1e9f, max_x = -1e9f, max_y = -1e9f;
       for (const auto& instance : project_.circuit.instances) {
         const ComponentType* type = registry().find(instance.type);
-        int left_rows = 0, right_rows = 0;
-        if (type)
-          for (const auto& port_name : type->port_names) ++(is_left_port(port_name) ? left_rows : right_rows);
-        const float rows = static_cast<float>(std::max({left_rows, right_rows, 1}));
+        const float rows = type ? body_rows(*type) : 1.0f;
         min_x = std::min(min_x, static_cast<float>(instance.grid_x));
         max_x = std::max(max_x, static_cast<float>(instance.grid_x) + component_width);
         min_y = std::min(min_y, static_cast<float>(instance.grid_y) - 1.5f);
@@ -941,9 +1337,7 @@ void ChipDesigner::draw_canvas() {
   for (auto& instance : project_.circuit.instances) {
     const ComponentType* type = registry().find(instance.type);
     if (!type) continue;
-    int left_rows = 0, right_rows = 0;
-    for (const auto& port_name : type->port_names) ++(is_left_port(port_name) ? left_rows : right_rows);
-    const float rows = static_cast<float>(std::max({left_rows, right_rows, 1}));
+    const float rows = body_rows(*type);
     const float gx = static_cast<float>(instance.grid_x), gy = static_cast<float>(instance.grid_y);
     const ImVec2 body_min = grid_to_screen(gx, gy - body_margin);
     const ImVec2 body_max =
@@ -1061,7 +1455,6 @@ void ChipDesigner::draw_canvas() {
     const ImU32 color = wave_color(connection.a, connection.b, &strength);
     draw_wire(g1->position, g1->left, g2->position, g2->left, color, strength);
   }
-
   // Gehäuse mit Beschriftung
   const float font_size = ImGui::GetFontSize();
   for (const auto& body : body_draws) {
@@ -1095,6 +1488,34 @@ void ChipDesigner::draw_canvas() {
     draw->AddCircleFilled(port.position, port_radius, port.connected ? color_accent : color_stage);
     draw->AddCircle(port.position, port_radius, port.hovered ? color_text : color_accent, 0,
                     port.hovered ? 2.5f : 1.5f);
+  }
+
+  // Zahlenwerte an den Verbindungen (zuletzt gezeichnet, damit kein Gehäuse sie verdeckt)
+  if (show_wire_values_) {
+    for (const auto& connection : project_.circuit.connections) {
+      const auto g1 = port_geometry(connection.a), g2 = port_geometry(connection.b);
+      double wave_power = 0.0, wave_phase = 0.0;
+      if (!g1 || !g2 || !wave_between(connection.a, connection.b, &wave_power, &wave_phase)) continue;
+      char label[64];
+      if (wave_power < 1e-9 * max_wave_power_ || max_wave_power_ <= 0.0)
+        std::snprintf(label, sizeof label, "0 W");
+      else
+        std::snprintf(label, sizeof label, "%s  %.0f°", format_si(wave_power, "W").c_str(),
+                      std::round(wave_phase * 180.0 / constants::pi) + 0.0);  // + 0.0 macht aus -0 eine 0
+      // Mittelpunkt der Bezier-Kurve: (p1 + 3*c1 + 3*c2 + p2)/8; die Kontrollpunkte heben sich in x auf oder
+      // nicht
+      const float reach = std::max(1.5f * cell_, 0.4f * std::abs(g2->position.x - g1->position.x));
+      const float c1x = g1->position.x + (g1->left ? -reach : reach),
+                  c2x = g2->position.x + (g2->left ? -reach : reach);
+      const ImVec2 middle = {(g1->position.x + 3.0f * c1x + 3.0f * c2x + g2->position.x) / 8.0f,
+                             (g1->position.y + g2->position.y) * 0.5f};
+      const ImVec2 size = ImGui::CalcTextSize(label);
+      const ImVec2 corner = {middle.x - size.x * 0.5f, middle.y + cell_ * 0.22f};
+      draw->AddRectFilled({corner.x - 3.0f, corner.y - 1.0f},
+                          {corner.x + size.x + 3.0f, corner.y + size.y + 1.0f}, IM_COL32(10, 14, 20, 215),
+                          3.0f);
+      draw->AddText(corner, color_text, label);
+    }
   }
 
   // Gummiband beim Verbinden

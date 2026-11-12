@@ -22,7 +22,8 @@ std::vector<Solution> sweep(const CompiledCircuit& circuit, const SweepSettings&
   const std::vector<double> wavelengths = sweep_wavelengths(settings);
   std::vector<Solution> solutions(wavelengths.size());
   const bool completed = parallel_for(
-      wavelengths.size(), [&](std::size_t i) { solutions[i] = circuit.solve(wavelengths[i]); }, pool, control);
+      wavelengths.size(), [&](std::size_t i) { solutions[i] = circuit.solve(wavelengths[i]); }, pool,
+      control);
   if (!completed) return {};
   return solutions;
 }

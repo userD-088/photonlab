@@ -8,10 +8,12 @@ namespace photonlab::circuit {
 enum class ResonanceKind { dip, peak };
 
 struct Resonance {
-  double position = 0.0;       // Lage des Extremums (Einheit der x-Achse, z. B. Wellenlänge)
-  double value = 0.0;          // Wert im Extremum (parabolisch verfeinert)
-  double baseline = 0.0;       // Bezugspegel zwischen den Nachbarresonanzen: bei Einbrüchen das Maximum, bei Spitzen das Minimum
-  double fwhm = 0.0;           // volle Breite auf halber Höhe zwischen Extremum und Bezugspegel; NaN, wenn nicht messbar
+  double position = 0.0;  // Lage des Extremums (Einheit der x-Achse, z. B. Wellenlänge)
+  double value = 0.0;     // Wert im Extremum (parabolisch verfeinert)
+  double baseline =
+      0.0;  // Bezugspegel zwischen den Nachbarresonanzen: bei Einbrüchen das Maximum, bei Spitzen das Minimum
+  double fwhm =
+      0.0;  // volle Breite auf halber Höhe zwischen Extremum und Bezugspegel; NaN, wenn nicht messbar
   double quality = 0.0;        // Güte Q = position / fwhm
   double extinction_db = 0.0;  // 10*log10(größerer / kleinerer der beiden Pegel)
 };

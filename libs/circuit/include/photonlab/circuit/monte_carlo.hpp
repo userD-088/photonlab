@@ -14,11 +14,12 @@ namespace photonlab::circuit {
 
 // Streuung eines Parameters aller Instanzen eines Bauteiltyps.
 struct Variation {
-  std::string type;         // Bauteiltyp, z. B. "waveguide"
-  std::string param;        // Parameter, z. B. "n_eff"
-  double sigma = 0.0;       // Standardabweichung: absolut in SI oder relativ zum Nennwert
-  bool relative = false;    // true: sigma ist ein Bruchteil des Nennwerts
-  bool correlated = false;  // true: alle Instanzen erhalten dieselbe Abweichung (z. B. Schichtdicke, Temperatur)
+  std::string type;       // Bauteiltyp, z. B. "waveguide"
+  std::string param;      // Parameter, z. B. "n_eff"
+  double sigma = 0.0;     // Standardabweichung: absolut in SI oder relativ zum Nennwert
+  bool relative = false;  // true: sigma ist ein Bruchteil des Nennwerts
+  bool correlated =
+      false;  // true: alle Instanzen erhalten dieselbe Abweichung (z. B. Schichtdicke, Temperatur)
   bool operator==(const Variation&) const = default;
 };
 
