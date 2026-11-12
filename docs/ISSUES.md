@@ -4,7 +4,7 @@ Jede Zeile wird ein Issue. Claude Code bekommt immer nur ein Issue auf einmal.
 
 ## Phase 0 – Fundament
 - [ ] #1 Projekt baut lokal unter Windows (VS Code + CMake Tools), GUI-Fenster öffnet sich
-- [ ] #2 CI auf GitHub ist grün (Windows + Linux)
+- [x] #2 CI auf GitHub ist grün (Windows + Linux)
 - [x] #3 Job-System: Simulation im Threadpool mit Fortschrittsbalken in der GUI (Wellenlängen-Sweep im Fenster „Spektrum“)
 - [x] #4 ImPlot einbinden und im Chip-Designer die MZI-Kennlinie plotten (Fenster „Kennlinie“)
 
