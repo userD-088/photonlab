@@ -17,6 +17,8 @@ include(cmake/Dependencies.cmake)
 include(cmake/Warnings.cmake)
 
 add_subdirectory(libs/core)
+add_subdirectory(libs/circuit)
+add_subdirectory(libs/io)
 add_subdirectory(apps/photonlab_cli)
 
 if(PHOTONLAB_BUILD_GUI)
