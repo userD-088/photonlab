@@ -131,8 +131,9 @@ Circuit reference_xor_directed() {
 }
 
 std::vector<std::string> reference_design_names() {
-  return {"mzi",           "mzi_unbalanced",   "ring_allpass", "ring_adddrop",
-          "xor_interference", "and_interference", "xor_directed"};
+  return {"mzi",          "mzi_unbalanced",   "ring_allpass",
+          "ring_adddrop", "xor_interference", "and_interference",
+          "xor_directed"};
 }
 
 Circuit reference_design(std::string_view name) {

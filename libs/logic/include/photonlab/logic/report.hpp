@@ -12,8 +12,8 @@ enum class Rating { good, limited, bad, not_rated };
 std::string_view to_string(Rating rating);  // "gut", "eingeschränkt", "nicht erfüllt", "nicht bewertet"
 
 struct Criterion {
-  std::string key;     // stabiler Schlüssel, z. B. "contrast"
-  std::string name;    // deutscher Anzeigename
+  std::string key;   // stabiler Schlüssel, z. B. "contrast"
+  std::string name;  // deutscher Anzeigename
   Rating rating = Rating::not_rated;
   std::string value;   // Messwert als Text
   std::string remark;  // Begründung bzw. Einschränkung
@@ -21,10 +21,10 @@ struct Criterion {
 
 // Kaskaden-Test: Ausgang eines Gatters speist einen Eingang eines zweiten, identischen Gatters.
 struct CascadeResult {
-  bool possible = false;        // lässt sich optisch überhaupt verbinden?
-  std::string reason;           // warum nicht, bzw. was verbunden wurde
+  bool possible = false;  // lässt sich optisch überhaupt verbinden?
+  std::string reason;     // warum nicht, bzw. was verbunden wurde
   bool logic_preserved = false;
-  GateDefinition gate;          // Definition der zweistufigen Schaltung
+  GateDefinition gate;  // Definition der zweistufigen Schaltung
   TruthTable table;
 };
 

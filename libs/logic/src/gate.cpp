@@ -55,7 +55,8 @@ void validate(const GateDefinition& gate, const circuit::Circuit& circuit,
   if (gate.inputs.empty()) throw CircuitError("Das Gatter hat keinen logischen Eingang");
   if (gate.outputs.empty()) throw CircuitError("Das Gatter hat keinen logischen Ausgang");
   if (gate.inputs.size() > max_inputs)
-    throw CircuitError("Mehr als " + std::to_string(max_inputs) + " logische Eingänge werden nicht unterstützt");
+    throw CircuitError("Mehr als " + std::to_string(max_inputs) +
+                       " logische Eingänge werden nicht unterstützt");
 
   for (const auto& input : gate.inputs) {
     const circuit::Instance* instance = circuit.find_instance(input.instance);
@@ -77,9 +78,11 @@ void validate(const GateDefinition& gate, const circuit::Circuit& circuit,
     if (!circuit.find_instance(output.instance))
       throw CircuitError("Ausgang '" + output.name + "': Instanz '" + output.instance + "' gibt es nicht");
     if (!output.expected.empty() && output.expected.size() != gate.row_count())
-      throw CircuitError("Ausgang '" + output.name + "': die erwartete Funktion passt nicht zur Zahl der Eingänge");
+      throw CircuitError("Ausgang '" + output.name +
+                         "': die erwartete Funktion passt nicht zur Zahl der Eingänge");
     for (int bit : output.expected)
-      if (bit != 0 && bit != 1) throw CircuitError("Ausgang '" + output.name + "': erwartete Bits müssen 0 oder 1 sein");
+      if (bit != 0 && bit != 1)
+        throw CircuitError("Ausgang '" + output.name + "': erwartete Bits müssen 0 oder 1 sein");
   }
 }
 
@@ -92,7 +95,8 @@ circuit::Circuit apply_inputs(const circuit::Circuit& circuit, const GateDefinit
   for (std::size_t k = 0; k < gate.inputs.size(); ++k) {
     const LogicInput& input = gate.inputs[k];
     circuit::Instance* instance = result.find_instance(input.instance);
-    if (!instance) throw CircuitError("Eingang '" + input.name + "': Instanz '" + input.instance + "' gibt es nicht");
+    if (!instance)
+      throw CircuitError("Eingang '" + input.name + "': Instanz '" + input.instance + "' gibt es nicht");
     instance->params[input.param] = input_bit(gate, row, k) ? input.value1 : input.value0;
   }
   return result;
@@ -106,14 +110,22 @@ struct NamedFunction {
 };
 const std::vector<NamedFunction>& named_functions() {
   static const std::vector<NamedFunction> functions = {
-      {"BUFFER", 1, {0, 1}},        {"NOT", 1, {1, 0}},
-      {"AND", 2, {0, 0, 0, 1}},     {"OR", 2, {0, 1, 1, 1}},
-      {"XOR", 2, {0, 1, 1, 0}},     {"XNOR", 2, {1, 0, 0, 1}},
-      {"NAND", 2, {1, 1, 1, 0}},    {"NOR", 2, {1, 0, 0, 0}},
-      {"A", 2, {0, 0, 1, 1}},       {"B", 2, {0, 1, 0, 1}},
-      {"NOT A", 2, {1, 1, 0, 0}},   {"NOT B", 2, {1, 0, 1, 0}},
-      {"A AND NOT B", 2, {0, 0, 1, 0}}, {"B AND NOT A", 2, {0, 1, 0, 0}},
-      {"A OR NOT B", 2, {1, 0, 1, 1}},  {"B OR NOT A", 2, {1, 1, 0, 1}},
+      {"BUFFER", 1, {0, 1}},
+      {"NOT", 1, {1, 0}},
+      {"AND", 2, {0, 0, 0, 1}},
+      {"OR", 2, {0, 1, 1, 1}},
+      {"XOR", 2, {0, 1, 1, 0}},
+      {"XNOR", 2, {1, 0, 0, 1}},
+      {"NAND", 2, {1, 1, 1, 0}},
+      {"NOR", 2, {1, 0, 0, 0}},
+      {"A", 2, {0, 0, 1, 1}},
+      {"B", 2, {0, 1, 0, 1}},
+      {"NOT A", 2, {1, 1, 0, 0}},
+      {"NOT B", 2, {1, 0, 1, 0}},
+      {"A AND NOT B", 2, {0, 0, 1, 0}},
+      {"B AND NOT A", 2, {0, 1, 0, 0}},
+      {"A OR NOT B", 2, {1, 0, 1, 1}},
+      {"B OR NOT A", 2, {1, 1, 0, 1}},
   };
   return functions;
 }

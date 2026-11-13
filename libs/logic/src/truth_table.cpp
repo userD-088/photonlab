@@ -25,8 +25,8 @@ TruthTable run_truth_table(const circuit::Circuit& circuit, const circuit::Compo
         return m.instance == output.instance && m.measurement.name == output.measurement;
       });
       if (it == measurements.end())
-        throw CircuitError("Ausgang '" + output.name + "': '" + output.instance + "' liefert keine Messgröße '" +
-                           output.measurement + "'");
+        throw CircuitError("Ausgang '" + output.name + "': '" + output.instance +
+                           "' liefert keine Messgröße '" + output.measurement + "'");
       if (it->measurement.unit != "W")
         throw CircuitError("Ausgang '" + output.name + "': die Messgröße '" + output.measurement +
                            "' ist keine Leistung");
@@ -90,11 +90,13 @@ OutputAnalysis analyze_output(const TruthTable& table, std::size_t output, const
   if (!any1) a.p1_min = 0.0;
   a.separable = any1 && any0 && a.p1_min > a.p0_max;
   a.threshold = 0.5 * (a.p1_min + a.p0_max);
-  a.contrast_db = any1 && any0 ? contrast_ratio_db(a.p1_min, a.p0_max) : std::numeric_limits<double>::quiet_NaN();
+  a.contrast_db =
+      any1 && any0 ? contrast_ratio_db(a.p1_min, a.p0_max) : std::numeric_limits<double>::quiet_NaN();
   return a;
 }
 
-bool logic_holds(const TruthTable& table, std::size_t output, const std::vector<int>& bits, double threshold) {
+bool logic_holds(const TruthTable& table, std::size_t output, const std::vector<int>& bits,
+                 double threshold) {
   if (bits.size() != table.rows.size()) return false;
   for (std::size_t i = 0; i < bits.size(); ++i)
     if ((table.rows[i].power.at(output) > threshold) != (bits[i] != 0)) return false;

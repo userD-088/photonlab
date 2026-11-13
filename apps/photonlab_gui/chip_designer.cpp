@@ -13,6 +13,7 @@
 #include "photonlab/circuit/reference_designs.hpp"
 #include "photonlab/circuit/sweep.hpp"
 #include "photonlab/core/units.hpp"
+#include "ui_util.hpp"
 
 // Hinweis: Alle Texte der Oberfläche bleiben im Latin-1-Zeichenvorrat, damit auch die
 // eingebaute ImGui-Schrift sie darstellt (kein Griechisch, keine Pfeile, keine Gedankenstriche).
@@ -50,41 +51,6 @@ float body_rows(const ComponentType& type) {
   for (int i = 0; i < static_cast<int>(type.port_names.size()); ++i)
     ++(type.is_left_port(i) ? left_rows : right_rows);
   return static_cast<float>(std::max({left_rows, right_rows, 1}));
-}
-
-// Zahl mit SI-Vorsatz, z. B. 1.0e-3 W -> "1.000 mW"
-std::string format_si(double value, const std::string& unit) {
-  struct Prefix {
-    double factor;
-    const char* symbol;
-  };
-  static const Prefix prefixes[] = {{1e9, "G"},  {1e6, "M"},         {1e3, "k"},  {1.0, ""},
-                                    {1e-3, "m"}, {1e-6, "\xC2\xB5"}, {1e-9, "n"}, {1e-12, "p"}};
-  char buffer[64];
-  const double magnitude = std::abs(value);
-  if (magnitude < 1e-15) {
-    std::snprintf(buffer, sizeof buffer, "0 %s", unit.c_str());
-    return buffer;
-  }
-  const Prefix* chosen = &prefixes[std::size(prefixes) - 1];
-  for (const Prefix& p : prefixes)
-    if (magnitude >= p.factor) {
-      chosen = &p;
-      break;
-    }
-  std::snprintf(buffer, sizeof buffer, "%.4g %s%s", value / chosen->factor, chosen->symbol, unit.c_str());
-  return buffer;
-}
-
-std::string format_param(double si_value, const circuit::ParamSpec& spec) {
-  char buffer[64];
-  std::snprintf(buffer, sizeof buffer, "%.4g %s", si_value / spec.display_scale, spec.display_unit.c_str());
-  return buffer;
-}
-
-double param_value(const Instance& instance, const circuit::ParamSpec& spec) {
-  const auto it = instance.params.find(spec.name);
-  return it != instance.params.end() ? it->second : spec.default_value;
 }
 
 // Messgrößen in Watt eines gelösten Punktes: Namen und Werte in mW
@@ -240,6 +206,10 @@ void ChipDesigner::handle_dialog_result() {
   if (result->path.empty()) return;  // abgebrochen
   if (result->kind == DialogKind::open_project) {
     open_file(result->path);
+  } else if (result->kind == DialogKind::save_gate) {
+    std::string path = result->path;
+    if (path_from_utf8(path).extension().empty()) path += ".gate.json";
+    if (on_save_gate) on_save_gate(path);
   } else {
     std::string path = result->path;
     if (path_from_utf8(path).extension().empty()) path += ".plab.json";

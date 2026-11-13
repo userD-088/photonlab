@@ -28,8 +28,10 @@ double worst_contrast_db(const circuit::Circuit& circuit, const circuit::Compone
 OptimizeResult optimize_parameter(const circuit::Circuit& circuit, const circuit::ComponentRegistry& registry,
                                   const GateDefinition& gate, double wavelength, const std::string& instance,
                                   const std::string& param, double lower, double upper, int points) {
-  if (!circuit.find_instance(instance)) throw CircuitError("Optimierer: Instanz '" + instance + "' gibt es nicht");
-  if (!(lower < upper) || points < 3) throw CircuitError("Optimierer braucht Minimum < Maximum und mindestens 3 Punkte");
+  if (!circuit.find_instance(instance))
+    throw CircuitError("Optimierer: Instanz '" + instance + "' gibt es nicht");
+  if (!(lower < upper) || points < 3)
+    throw CircuitError("Optimierer braucht Minimum < Maximum und mindestens 3 Punkte");
   for (const auto& input : gate.inputs)
     if (input.instance == instance && input.param == param)
       throw CircuitError("Optimierer: '" + instance + "." + param + "' ist ein logischer Eingang");

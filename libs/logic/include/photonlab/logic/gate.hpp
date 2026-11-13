@@ -18,9 +18,9 @@ enum class Encoding {
   electrical,  // elektrisches Steuersignal (Heizer, Modulator); das Licht trägt nur das Ergebnis
 };
 std::string_view to_string(Encoding encoding);
-std::string_view label(Encoding encoding);                     // deutscher Anzeigename
-std::string_view adjective(Encoding encoding);                 // "phasencodiert", "intensitätscodiert", ...
-Encoding encoding_from_string(std::string_view text);          // wirft CircuitError
+std::string_view label(Encoding encoding);             // deutscher Anzeigename
+std::string_view adjective(Encoding encoding);         // "phasencodiert", "intensitätscodiert", ...
+Encoding encoding_from_string(std::string_view text);  // wirft CircuitError
 
 // Logischer Eingang: Bit 0 und Bit 1 setzen einen Parameter einer Instanz auf zwei Werte (SI).
 struct LogicInput {

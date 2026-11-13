@@ -1,5 +1,5 @@
-// PhotonLab GUI: Fenster, Docking und die vier Arbeitsbereiche. Der Chip-Designer ist seit Phase 1 nutzbar,
-// die anderen drei Bereiche sind noch Platzhalter.
+// PhotonLab GUI: Fenster, Docking und die vier Arbeitsbereiche. Chip-Designer (Phase 1 und 2) und
+// Logik-Labor (Phase 3) sind nutzbar, Bauteil-Labor und Quanten-Modus sind noch Platzhalter.
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
@@ -15,6 +15,7 @@
 #include "imgui_impl_sdlrenderer3.h"
 #include "imgui_internal.h"  // DockBuilder für das Standard-Layout
 #include "implot.h"
+#include "logic_lab.hpp"
 #include "photonlab/core/thread_pool.hpp"
 
 namespace {
@@ -22,7 +23,7 @@ namespace {
 using photonlab::gui::ChipDesigner;
 
 const char* window_field = "Bauteil-Labor";
-const char* window_logic = "Logik-Labor";
+const char* window_logic = photonlab::gui::LogicLab::window_name;
 const char* window_quantum = "Quanten-Modus";
 
 void apply_style(float ui_scale) {
@@ -143,6 +144,7 @@ int main(int argc, char** argv) {
   {
     photonlab::ThreadPool pool;
     ChipDesigner chip_designer(pool, window, ui_scale);
+    photonlab::gui::LogicLab logic_lab(pool, chip_designer);
     if (!project_path.empty() && !chip_designer.open_file(project_path) && automated) exit_code = 1;
 
     bool running = true, show_demo = false, reset_layout = false;
@@ -194,15 +196,12 @@ int main(int argc, char** argv) {
                   "Feld-Ebene: Geometrie zeichnen, Modenlöser, 2D-FDTD, Bandstrukturen. "
                   "Referenz-Prototyp: docs/prototypes/photonische_gatter.html");
       chip_designer.draw();
-      placeholder(window_logic, "Kommt in Phase 3 und 10",
-                  "Wahrheitstabellen automatisch messen, Gatter-Zeugnis, Addierer und Flip-Flops.");
+      logic_lab.draw();
       placeholder(window_quantum, "Kommt in Phase 11",
                   "Einzelphotonen, Hong-Ou-Mandel, linear-optisches CNOT, Boson Sampling.");
       // Beim Start liegt der Chip-Designer vorn (einziger schon nutzbarer Arbeitsbereich)
-      if (frame_count == 2) {
-        ImGui::SetWindowFocus(ChipDesigner::window_curve);
-        ImGui::SetWindowFocus(ChipDesigner::window_canvas);
-      }
+      if (frame_count == 2) ImGui::SetWindowFocus(ChipDesigner::window_curve);
+      if (frame_count == 3) ImGui::SetWindowFocus(ChipDesigner::window_canvas);
       ++frame_count;
       if (show_demo) ImGui::ShowDemoWindow(&show_demo);
 

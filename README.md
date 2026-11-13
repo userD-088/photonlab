@@ -12,9 +12,9 @@ Realistischer Photonik-Simulator in C++20 mit SDL3: vom elektromagnetischen Feld
 Der vollständige Bauplan steht in [`docs/PhotonLab_Bauplan_v2.pdf`](docs/PhotonLab_Bauplan_v2.pdf).
 Einen interaktiven Vorgeschmack gibt [`docs/prototypes/photonische_gatter.html`](docs/prototypes/photonische_gatter.html) (im Browser öffnen).
 
-**Status:** Phase 2 – Schaltung erweitert. Der Chip-Designer rechnet Schaltungen aus Lasern, Wellenleitern,
-Kopplern, Phasenschiebern, Ringresonatoren, Y-Splittern, Filtern, Gitterkopplern und Detektoren, wertet
-Spektren aus (FSR, Güte, Extinktion) und schätzt per Monte-Carlo die Ausbeute. Bauteil-Labor, Logik-Labor
+**Status:** Phase 3 – Logik-Labor (linear). Der Chip-Designer rechnet photonische Schaltungen, das
+Logik-Labor prüft sie als Logikgatter: automatische Wahrheitstabelle, Kontrastverhältnis und ein Zeugnis,
+das ehrlich zeigt, welche Anforderungen an ein Logikelement erfüllt sind und welche nicht. Bauteil-Labor
 und Quanten-Modus sind noch Platzhalter.
 
 ## Voraussetzungen (Windows)
@@ -60,6 +60,22 @@ Neben dem Spektrum steht die Tabelle der gefundenen Resonanzen; ein Klick auf ei
 Arbeitswellenlänge dorthin. „Monte-Carlo“ streut Parameter normalverteilt und zeigt Histogramm und
 Ausbeute. Das Häkchen „Werte“ blendet Leistung und Phase an jeder Verbindung ein.
 
+## Logik-Labor bedienen
+
+Datei → Beispiele → „Interferenz-XOR/XNOR“ laden und den Reiter „Logik-Labor“ öffnen.
+
+- **Gatter-Definition**: Ein Eingang schaltet einen Parameter zwischen zwei Werten um (z. B. die Phase
+  eines Lasers zwischen 0 und π), ein Ausgang ist die Leistung an einem Detektor.
+- **Wahrheitstabelle**: PhotonLab simuliert alle Kombinationen und zeigt Leistung, entschiedenes Bit und
+  Entscheidungspegel. Falsche Zeilen sind rot markiert.
+- **Zeugnis**: Ampel je Kriterium (Kontrast, Kaskadierbarkeit, Fan-out, Pegelregeneration, Bias-Toleranz
+  usw.) mit Messwert und Begründung. Der Kaskaden-Test schaltet zwei Gatter wirklich hintereinander.
+- **Optimierer**: stimmt einen Parameter (z. B. die Bias-Phase) auf den besten Kontrast ab.
+
+Die drei Beispiele zeigen drei typische Befunde: das Interferenz-XOR hat perfekten Kontrast, ist aber
+nicht kaskadierbar; das lineare AND hat nur 6 dB Kontrast und scheitert im Kaskaden-Test; Directed Logic
+mit Ringen ist realistisch, aber schmalbandig.
+
 ## Kommandozeile
 
 ```
@@ -68,6 +84,7 @@ photonlab_cli run examples/02_mach_zehnder.plab.json      # Messwerte bei der Ar
 photonlab_cli run examples/02b_mach_zehnder_unbalanciert.plab.json --sweep --csv spektrum.csv
 photonlab_cli run examples/03b_ring_adddrop.plab.json --resonances    # FSR, Güte, Extinktion
 photonlab_cli run examples/03_ring_allpass.plab.json --monte-carlo    # Streuung und Statistik
+photonlab_cli run examples/05_interferenz_xor.plab.json --logic       # Wahrheitstabelle und Zeugnis
 photonlab_cli validate --out docs/validation              # Validierung gegen analytische Lösungen
 ```
 

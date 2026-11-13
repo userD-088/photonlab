@@ -1,4 +1,5 @@
-// Phase 3: Logik-Labor. Wahrheitstabellen, Kontrastverhältnis und Gatter-Zeugnis gegen analytische Erwartungen.
+// Phase 3: Logik-Labor. Wahrheitstabellen, Kontrastverhältnis und Gatter-Zeugnis gegen analytische
+// Erwartungen.
 #include <doctest/doctest.h>
 
 #include <cmath>
@@ -106,13 +107,15 @@ TEST_CASE("Abnahme Phase 3: das Zeugnis markiert fehlende Regeneration und Kaska
   CHECK(rating_of(report, "cascade") == Rating::bad);
   CHECK_FALSE(report.cascade.possible);  // phasencodierter Eingang, intensitätscodierter Ausgang
   CHECK(rating_of(report, "loss") == Rating::bad);
-  CHECK(report.level_slope_db_per_db == doctest::Approx(1.0).epsilon(1e-9));  // linear: Pegel folgt der Quelle
+  CHECK(report.level_slope_db_per_db ==
+        doctest::Approx(1.0).epsilon(1e-9));  // linear: Pegel folgt der Quelle
   CHECK(report.fan_out == doctest::Approx(2.0).epsilon(1e-12));
   CHECK(rating_of(report, "fan_out") == Rating::limited);
   CHECK(rating_of(report, "energy") == Rating::not_rated);
   CHECK_FALSE(report.real_gate);
 
-  // Kennlinie über der Eingangsphase: P = 2 mW * sin²(pi*x/2), an den Pegeln flach, in der Mitte Steigung pi/2
+  // Kennlinie über der Eingangsphase: P = 2 mW * sin²(pi*x/2), an den Pegeln flach, in der Mitte Steigung
+  // pi/2
   CHECK(report.end_slope < 0.1);
   CHECK(report.mid_slope == doctest::Approx(constants::pi / 2).epsilon(1e-3));
 
@@ -128,7 +131,8 @@ TEST_CASE("Lineares AND: 6 dB Kontrast, Kaskade wird gebaut und scheitert") {
   const GateReport report = characterize(project.circuit, reg(), project.gate, lambda0);
   // Pegel 0, P/2, P/2, 2P mit P = 1 mW
   const double expected[] = {0.0, 0.5e-3, 0.5e-3, 2e-3};
-  for (std::size_t row = 0; row < 4; ++row) CHECK(std::abs(report.table.rows[row].power[0] - expected[row]) < 1e-15);
+  for (std::size_t row = 0; row < 4; ++row)
+    CHECK(std::abs(report.table.rows[row].power[0] - expected[row]) < 1e-15);
   CHECK(report.function_correct);
   CHECK(report.worst_contrast_db == doctest::Approx(10.0 * std::log10(4.0)).epsilon(1e-10));
   CHECK(rating_of(report, "contrast") == Rating::bad);
@@ -136,9 +140,12 @@ TEST_CASE("Lineares AND: 6 dB Kontrast, Kaskade wird gebaut und scheitert") {
   REQUIRE(report.cascade.possible);
   CHECK(report.cascade.gate.inputs.size() == 3);  // A1, B1 und B2
   REQUIRE(report.cascade.table.rows.size() == 8);
-  CHECK(report.cascade.gate.outputs[0].expected == std::vector<int>{0, 0, 0, 0, 0, 0, 0, 1});  // (A1 AND B1) AND B2
-  // Zeile A1=0, B1=1, B2=1: Stufe 1 liefert P/2 statt 0, Stufe 2 macht daraus (sqrt(P/2) + sqrt(P))²/2 = 1,457 mW
-  CHECK(report.cascade.table.rows[3].power[0] == doctest::Approx(1e-3 * std::pow(std::sqrt(0.5) + 1.0, 2) / 2).epsilon(1e-12));
+  CHECK(report.cascade.gate.outputs[0].expected ==
+        std::vector<int>{0, 0, 0, 0, 0, 0, 0, 1});  // (A1 AND B1) AND B2
+  // Zeile A1=0, B1=1, B2=1: Stufe 1 liefert P/2 statt 0, Stufe 2 macht daraus (sqrt(P/2) + sqrt(P))²/2 =
+  // 1,457 mW
+  CHECK(report.cascade.table.rows[3].power[0] ==
+        doctest::Approx(1e-3 * std::pow(std::sqrt(0.5) + 1.0, 2) / 2).epsilon(1e-12));
   CHECK_FALSE(report.cascade.logic_preserved);  // 1,457 mW liegt über dem Entscheidungspegel 1,25 mW
   CHECK(rating_of(report, "cascade") == Rating::bad);
   CHECK(rating_of(report, "regeneration") == Rating::bad);
@@ -169,7 +176,8 @@ TEST_CASE("Latenz ist die Gruppenlaufzeit n_g*L/c0; ein Wellenleiter ist kein re
   c.add("det", "detector");
   c.connect("laser.out", "leitung.in");
   c.connect("leitung.out", "det.in");
-  const GateDefinition gate{"Leitung", {{"A", "laser", "power", 0.0, 1e-3, Encoding::intensity}},
+  const GateDefinition gate{"Leitung",
+                            {{"A", "laser", "power", 0.0, 1e-3, Encoding::intensity}},
                             {{"Y", "det", "Leistung", function_bits("BUFFER", 1)}}};
   const GateReport report = characterize(c, reg(), gate, lambda0);
   CHECK(report.latency == doctest::Approx(4.2 * length / constants::c0).epsilon(1e-6));
@@ -210,8 +218,9 @@ TEST_CASE("Optimierer findet die Bias-Phase pi/2 des XOR") {
   CHECK(result.best_x == doctest::Approx(constants::pi / 2).epsilon(1e-3));
   CHECK(result.best_contrast_db > 60.0);
   CHECK(result.x.size() == 121);
-  CHECK_THROWS_AS(optimize_parameter(project.circuit, reg(), project.gate, lambda0, "laser_a", "phase", 0.0, 1.0),
-                  circuit::CircuitError);  // logischer Eingang
+  CHECK_THROWS_AS(
+      optimize_parameter(project.circuit, reg(), project.gate, lambda0, "laser_a", "phase", 0.0, 1.0),
+      circuit::CircuitError);  // logischer Eingang
 }
 
 TEST_CASE("Fehlerhafte Gatter-Definitionen werden mit Klartext abgelehnt") {
@@ -225,9 +234,9 @@ TEST_CASE("Fehlerhafte Gatter-Definitionen werden mit Klartext abgelehnt") {
   broken([](GateDefinition& g) { g.outputs.clear(); });
   broken([](GateDefinition& g) { g.inputs[0].instance = "gibt_es_nicht"; });
   broken([](GateDefinition& g) { g.inputs[0].param = "tippfehler"; });
-  broken([](GateDefinition& g) { g.inputs[0].value1 = 1e9; });                // außerhalb des Bereichs
+  broken([](GateDefinition& g) { g.inputs[0].value1 = 1e9; });  // außerhalb des Bereichs
   broken([](GateDefinition& g) { g.inputs[0].value1 = g.inputs[0].value0; });
-  broken([](GateDefinition& g) { g.outputs[0].expected = {0, 1}; });          // falsche Länge
+  broken([](GateDefinition& g) { g.outputs[0].expected = {0, 1}; });           // falsche Länge
   broken([](GateDefinition& g) { g.outputs[0].measurement = "Photostrom"; });  // keine Leistung
   broken([](GateDefinition& g) { g.outputs[0].instance = "koppler"; });        // keine Messgröße
   CHECK_THROWS_AS(encoding_from_string("morse"), circuit::CircuitError);

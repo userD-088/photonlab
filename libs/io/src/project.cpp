@@ -44,10 +44,10 @@ logic::GateDefinition gate_from_json(const ordered_json& json) {
                              logic::encoding_from_string(in.value("encoding", "intensity"))});
   if (json.contains("outputs"))
     for (const auto& out : json.at("outputs"))
-      gate.outputs.push_back({out.at("name").get<std::string>(), out.at("instance").get<std::string>(),
-                              out.value("measurement", "Leistung"),
-                              out.contains("expected") ? out.at("expected").get<std::vector<int>>()
-                                                       : std::vector<int>{}});
+      gate.outputs.push_back(
+          {out.at("name").get<std::string>(), out.at("instance").get<std::string>(),
+           out.value("measurement", "Leistung"),
+           out.contains("expected") ? out.at("expected").get<std::vector<int>>() : std::vector<int>{}});
   return gate;
 }
 
@@ -192,26 +192,28 @@ std::string gate_report_to_json(const logic::GateDefinition& gate, const logic::
                         {"rating", std::string(logic::to_string(c.rating))},
                         {"value", c.value},
                         {"remark", c.remark}});
-  const ordered_json root = {
-      {"format", gate_format_name},
-      {"version", 1},
-      {"units", "SI"},
-      {"gate", gate_to_json(gate)},
-      {"wavelength", report.wavelength},
-      {"truth_table", std::move(rows)},
-      {"outputs", std::move(outputs)},
-      {"measured",
-       {{"latency", report.latency},
-        {"input_power", report.input_power},
-        {"fan_out", report.fan_out},
-        {"isolation_db", finite_or_null(report.isolation_db)},
-        {"phase_tolerance", finite_or_null(report.phase_tolerance)},
-        {"wavelength_tolerance", report.wavelength_tolerance},
-        {"level_slope_db_per_db", report.level_slope_db_per_db},
-        {"cascade_possible", report.cascade.possible},
-        {"cascade_logic_preserved", report.cascade.logic_preserved}}},
-      {"report", {{"real_gate", report.real_gate}, {"good", report.good_count}, {"rated", report.rated_count},
-                  {"criteria", std::move(criteria)}}}};
+  const ordered_json root = {{"format", gate_format_name},
+                             {"version", 1},
+                             {"units", "SI"},
+                             {"gate", gate_to_json(gate)},
+                             {"wavelength", report.wavelength},
+                             {"truth_table", std::move(rows)},
+                             {"outputs", std::move(outputs)},
+                             {"measured",
+                              {{"latency", report.latency},
+                               {"input_power", report.input_power},
+                               {"fan_out", report.fan_out},
+                               {"isolation_db", finite_or_null(report.isolation_db)},
+                               {"phase_tolerance", finite_or_null(report.phase_tolerance)},
+                               {"wavelength_tolerance", report.wavelength_tolerance},
+                               {"level_slope_db_per_db", report.level_slope_db_per_db},
+                               {"cascade_possible", report.cascade.possible},
+                               {"cascade_logic_preserved", report.cascade.logic_preserved}}},
+                             {"report",
+                              {{"real_gate", report.real_gate},
+                               {"good", report.good_count},
+                               {"rated", report.rated_count},
+                               {"criteria", std::move(criteria)}}}};
   return root.dump(2) + "\n";
 }
 

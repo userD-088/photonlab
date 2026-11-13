@@ -274,15 +274,17 @@ void print_report(const logic::GateDefinition& gate, const logic::GateReport& re
       const double p = report.table.rows[row].power[k];
       const auto& a = report.outputs[k];
       const bool decided = p > a.threshold;
-      std::printf(" | %10.4f µW -> %d %-4s", p / 1e-6, decided ? 1 : 0, decided == (a.bits[row] != 0) ? "" : "FALSCH");
+      std::printf(" | %10.4f µW -> %d %-4s", p / 1e-6, decided ? 1 : 0,
+                  decided == (a.bits[row] != 0) ? "" : "FALSCH");
     }
     std::printf("\n");
   }
   for (std::size_t k = 0; k < gate.outputs.size(); ++k) {
     const auto& a = report.outputs[k];
-    std::printf("%s: %s, Entscheidungspegel %.4f µW, Kontrast %s, Extinktion %s\n", gate.outputs[k].name.c_str(),
-                a.function.empty() ? "unbekannte Funktion" : a.function.c_str(), a.threshold / 1e-6,
-                logic::format_db(a.contrast_db).c_str(), logic::format_db(a.extinction_db).c_str());
+    std::printf("%s: %s, Entscheidungspegel %.4f µW, Kontrast %s, Extinktion %s\n",
+                gate.outputs[k].name.c_str(), a.function.empty() ? "unbekannte Funktion" : a.function.c_str(),
+                a.threshold / 1e-6, logic::format_db(a.contrast_db).c_str(),
+                logic::format_db(a.extinction_db).c_str());
   }
   std::printf("\nZeugnis \"%s\" bei %.3f nm\n", report.gate_name.c_str(), report.wavelength / units::nm);
   for (const auto& c : report.criteria) {
@@ -303,8 +305,8 @@ int cmd_logic(const std::string& file, const std::string& gate_path) {
     std::fprintf(stderr, "Fehler: Die Datei enthält keine Gatter-Definition (Abschnitt \"logic\").\n");
     return 1;
   }
-  const logic::GateReport report = logic::characterize(
-      project.circuit, circuit::ComponentRegistry::builtin(), project.gate, project.wavelength);
+  const logic::GateReport report = logic::characterize(project.circuit, circuit::ComponentRegistry::builtin(),
+                                                       project.gate, project.wavelength);
   print_report(project.gate, report);
   if (!gate_path.empty()) {
     io::save_gate_report(project.gate, report, gate_path);
@@ -317,12 +319,13 @@ int cmd_logic(const std::string& file, const std::string& gate_path) {
 // fehlende Pegelregeneration.
 bool validate_xor() {
   const io::Project project = io::reference_project("xor_interference");
-  const logic::GateReport report = logic::characterize(
-      project.circuit, circuit::ComponentRegistry::builtin(), project.gate, project.wavelength);
+  const logic::GateReport report = logic::characterize(project.circuit, circuit::ComponentRegistry::builtin(),
+                                                       project.gate, project.wavelength);
   const logic::Criterion* regeneration = report.find("regeneration");
   const bool contrast_ok = report.function_correct && report.worst_contrast_db > 20.0;
   const bool regeneration_flagged = regeneration && regeneration->rating == logic::Rating::bad;
-  std::printf("XOR Kontrast:         %s (gefordert > 20 dB)\n", logic::format_db(report.worst_contrast_db).c_str());
+  std::printf("XOR Kontrast:         %s (gefordert > 20 dB)\n",
+              logic::format_db(report.worst_contrast_db).c_str());
   std::printf("XOR Pegelregeneration: %s (erwartet: nicht erfüllt)\n",
               regeneration ? std::string(logic::to_string(regeneration->rating)).c_str() : "fehlt");
   return contrast_ok && regeneration_flagged;

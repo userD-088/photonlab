@@ -13,6 +13,7 @@ Das hilft Menschen und Claude gleichermaßen, den Code nachzuvollziehen.
 - [`circuit_solver.md`](circuit_solver.md) – Schaltungslöser (I − S·C)·b = S·a_ext + b_src und Kompaktmodelle (Phase 1)
 - [`resonators.md`](resonators.md) – Ringresonatoren, Y-Splitter, Bandpass, Gitterkoppler, Resonanz-Auswertung (Phase 2)
 - [`monte_carlo.md`](monte_carlo.md) – Monte-Carlo über Parameterstreuung (Phase 2)
+- [`logic.md`](logic.md) – Logik-Labor: Wahrheitstabelle, Kontrast, Gatter-Zeugnis und seine Messvorschriften (Phase 3)
 
 ## Geplante Notizen
 - `fdtd.md` – Yee-Gitter, Courant, CPML (Phase 4)

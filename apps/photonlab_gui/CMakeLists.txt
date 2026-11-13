@@ -1,8 +1,9 @@
 add_executable(photonlab_gui
   main.cpp
   chip_designer.cpp
-  file_dialog.cpp)
-target_link_libraries(photonlab_gui PRIVATE photonlab::core photonlab::circuit photonlab::io imgui implot)
+  file_dialog.cpp
+  logic_lab.cpp)
+target_link_libraries(photonlab_gui PRIVATE photonlab::core photonlab::circuit photonlab::logic photonlab::io imgui implot)
 photonlab_warnings(photonlab_gui)
 
 # Rauchtest ohne Bildschirm: ein paar Bilder mit dem Dummy-Videotreiber rendern und beenden

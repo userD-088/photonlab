@@ -42,6 +42,16 @@ class ChipDesigner {
   void request_quit();  // fragt bei ungespeicherten Änderungen nach
   bool quit_confirmed() const { return quit_confirmed_; }
 
+  // Zugriff für andere Arbeitsbereiche (Logik-Labor), die dieselbe Schaltung auswerten
+  io::Project& project() { return project_; }
+  std::uint64_t revision() const { return revision_; }  // zählt bei jeder physikalischen Änderung hoch
+  void mark_dirty() { dirty_ = true; }                  // Einstellungen geändert, Physik gleich
+  void touch_circuit() { touch(); }                     // Schaltung physikalisch geändert
+  void load_example(const std::string& name) { request(Pending::load_example, name); }
+  void show_status(std::string text, bool is_error = false) { set_status(std::move(text), is_error); }
+  SDL_Window* window() const { return window_; }
+  std::function<void(const std::string& path)> on_save_gate;  // Ziel für den Dialog "Gatter exportieren"
+
  private:
   enum class Pending { none, new_project, open_project, load_example, quit };
 

@@ -35,9 +35,25 @@ Offen aus Phase 2 (Folge-Issues):
 - [ ] #22 Wellenlängenabhängige Koppler (Koppellänge aus Supermoden)
 
 ## Phase 3 – Logik-Labor (linear)
-- [ ] #23 `libs/logic`: Codierungen (Intensität, Phase), Wahrheitstabellen-Läufer auf Schaltungs-Ebene
-- [ ] #24 Schwellwert-Analyse und Kontrastverhältnis CR = 10·log10(P1_min / P0_max)
-- [ ] #25 Gatter-Zeugnis mit Ampeln (Kriterien aus Bauplan 7.8), Kaskaden-Test
-- [ ] #26 Referenz-Design Interferenz-XOR/XNOR; Abnahme: CR > 20 dB im Idealfall, fehlende Regeneration wird markiert
-- [ ] #27 Ring-Directed-Logic (elektrisch gesteuerte Ringe)
-- [ ] #28 Logik-Labor in der GUI: Prüfstand, Wahrheitstabelle mit Messwerten, Zeugnis
+- [x] #23 `libs/logic`: Codierungen (Intensität, Phase, elektrisch), Wahrheitstabellen-Läufer auf Schaltungs-Ebene
+- [x] #24 Schwellwert-Analyse und Kontrastverhältnis CR = 10·log10(P1_min / P0_max)
+- [x] #25 Gatter-Zeugnis mit Ampeln (Kriterien aus Bauplan 7.8), Kaskaden-Test
+- [x] #26 Referenz-Design Interferenz-XOR/XNOR; Abnahme: CR > 20 dB im Idealfall, fehlende Regeneration wird markiert
+- [x] #27 Ring-Directed-Logic (elektrisch abgestimmte Add-Drop-Ringe, XOR/XNOR)
+- [x] #28 Logik-Labor in der GUI: Gatter-Definition, Wahrheitstabelle mit Messwerten, Zeugnis
+- [x] #29 Optimierer: Parameter auf bestes Kontrastverhältnis abstimmen
+- [x] #30 Export des charakterisierten Gatters als `.gate.json`
+
+Offen aus Phase 3 (Folge-Issues):
+- [ ] #31 Wellenlängen-Codierung (Mehrkanal-Löser, Bauplan 5.5) und Polarisations-Codierung
+- [ ] #32 Toleranz gegen Rauschen als Statistik (Monte-Carlo über die Wahrheitstabelle, Ausbeute des Gatters)
+- [ ] #33 Weitere Referenz-Gatter: NOT/OR mit Bias-Strahl, Directed-Logic AND/OR
+- [ ] #34 Logik-Labor: eigenes Fensterlayout je Arbeitsbereich (Platz für Tabelle und Zeugnis)
+
+## Phase 4 – Feld: 2D-FDTD
+- [ ] #35 `libs/field/fdtd`: Yee-Gitter 2D, TE und TM getrennt, Leapfrog, Courant-Prüfung
+- [ ] #36 CPML-Ränder; Abnahme: Reflexion < −40 dB
+- [ ] #37 Quellen: Punkt, Gauß-Puls, CW mit einstellbarer Phase; mehrere Quellen
+- [ ] #38 Monitore: Schnappschuss, Poynting-Fluss, DFT-Spektrum
+- [ ] #39 Validierung: numerische Dispersion des Yee-Schemas, Fresnel-Reflexion, Energieerhaltung
+- [ ] #40 Bauteil-Labor in der GUI: Geometrie-Editor, Live-Feld als Farbkarte

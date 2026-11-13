@@ -22,6 +22,10 @@ Abkürzung `H = a·e^{iφ}` für einen ganzen und `h = √a·e^{iφ/2}` für ein
 - Halbwertsbreite (Lorentz-Näherung für hohe Finesse): `Δλ = λ²·(1 − ta) / (π·n_g·L·√(ta))`.
 - Güte `Q = λ/Δλ`, Finesse `F = FSR/Δλ`.
 
+Beide Ringe haben eine **Abstimmphase** θ: eine Zusatzphase pro Umlauf, `H = a·e^{i(φ+θ)}`. Sie steht
+für einen Heizer oder Plasma-Modulator am Ring; ein Treibermodell (Spannung, Leistung, Bandbreite)
+gibt es noch nicht.
+
 ## Add-Drop-Ring (zwei Busse)
 
 Koppler 1 am Eingangsbus (`t₁, κ₁`), Koppler 2 am zweiten Bus (`t₂, κ₂`), dazwischen je ein halber Umlauf:
