@@ -11,8 +11,9 @@ add_executable(photonlab_tests
   test_circuit_sweep.cpp
   test_field_fdtd.cpp
   test_io_project.cpp
-  test_logic.cpp)
-target_link_libraries(photonlab_tests PRIVATE photonlab::core photonlab::circuit photonlab::logic photonlab::field photonlab::io doctest::doctest)
+  test_logic.cpp
+  test_modes.cpp)
+target_link_libraries(photonlab_tests PRIVATE photonlab::core photonlab::circuit photonlab::logic photonlab::field photonlab::modes photonlab::io doctest::doctest)
 target_compile_definitions(photonlab_tests PRIVATE
   PHOTONLAB_EXAMPLES_DIR="${PROJECT_SOURCE_DIR}/examples")
 photonlab_warnings(photonlab_tests)

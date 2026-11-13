@@ -21,6 +21,8 @@ if(PHOTONLAB_BUILD_TESTS)
 endif()
 
 add_subdirectory(libs/core)
+add_subdirectory(libs/materials)
+add_subdirectory(libs/modes)
 add_subdirectory(libs/circuit)
 add_subdirectory(libs/logic)
 add_subdirectory(libs/field)
