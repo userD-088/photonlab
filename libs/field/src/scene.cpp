@@ -43,14 +43,17 @@ double time_step(const FieldScene& scene) {
 }
 
 void validate(const FieldScene& scene) {
-  if (scene.empty()) throw FieldError("Die Szene hat kein Rechengebiet (Breite und Höhe müssen positiv sein)");
+  if (scene.empty())
+    throw FieldError("Die Szene hat kein Rechengebiet (Breite und Höhe müssen positiv sein)");
   if (!(scene.cell_size > 0.0)) throw FieldError("Die Zellgröße muss positiv sein");
   const double nx = scene.width / scene.cell_size, ny = scene.height / scene.cell_size;
   if (nx < 8 || ny < 8) throw FieldError("Das Rechengebiet braucht mindestens 8 x 8 Zellen");
-  if (nx * ny > 4.0e6) throw FieldError("Das Gitter hätte mehr als 4 Millionen Zellen: Zellgröße oder Gebiet anpassen");
+  if (nx * ny > 4.0e6)
+    throw FieldError("Das Gitter hätte mehr als 4 Millionen Zellen: Zellgröße oder Gebiet anpassen");
   if (!(scene.courant > 0.0) || scene.courant > 1.0)
     throw FieldError("Die Courant-Zahl muss in (0, 1] liegen, sonst ist das Verfahren instabil");
-  if (!(scene.background_index >= 1.0)) throw FieldError("Die Brechzahl des Hintergrunds muss mindestens 1 sein");
+  if (!(scene.background_index >= 1.0))
+    throw FieldError("Die Brechzahl des Hintergrunds muss mindestens 1 sein");
   if (scene.pml_cells < 0) throw FieldError("Die Dicke der Randschicht darf nicht negativ sein");
   if (scene.pml_cells > 0 &&
       ((scene.boundary_x == Boundary::pml && 2 * scene.pml_cells + 4 > grid_nx(scene)) ||
@@ -63,11 +66,14 @@ void validate(const FieldScene& scene) {
     if (!(shape.index >= 1.0)) throw FieldError(who + "die Brechzahl muss mindestens 1 sein");
     if (shape.kind == ShapeKind::rectangle && (!(shape.width > 0.0) || !(shape.height > 0.0)))
       throw FieldError(who + "Breite und Höhe müssen positiv sein");
-    if (shape.kind != ShapeKind::rectangle && !(shape.radius > 0.0)) throw FieldError(who + "der Radius muss positiv sein");
+    if (shape.kind != ShapeKind::rectangle && !(shape.radius > 0.0))
+      throw FieldError(who + "der Radius muss positiv sein");
     if (shape.kind == ShapeKind::ring && !(shape.inner_radius >= 0.0 && shape.inner_radius < shape.radius))
       throw FieldError(who + "der Innenradius muss kleiner als der Außenradius sein");
   }
-  auto inside = [&](double x, double y) { return x >= 0.0 && x <= scene.width && y >= 0.0 && y <= scene.height; };
+  auto inside = [&](double x, double y) {
+    return x >= 0.0 && x <= scene.width && y >= 0.0 && y <= scene.height;
+  };
   for (const auto& source : scene.sources) {
     const std::string who = "Quelle '" + source.name + "': ";
     if (!(source.wavelength > 0.0)) throw FieldError(who + "die Wellenlänge muss positiv sein");
@@ -75,11 +81,13 @@ void validate(const FieldScene& scene) {
       throw FieldError(who + "liegt außerhalb des Rechengebiets");
     if (source.signal == SignalKind::pulse && !(source.pulse_duration > 0.0))
       throw FieldError(who + "die Pulsdauer muss positiv sein");
-    if (!(source.ramp_periods >= 0.0) || !(source.beam_width >= 0.0)) throw FieldError(who + "ungültige Einstellung");
+    if (!(source.ramp_periods >= 0.0) || !(source.beam_width >= 0.0))
+      throw FieldError(who + "ungültige Einstellung");
   }
   for (const auto& monitor : scene.monitors) {
     const std::string who = "Monitor '" + monitor.name + "': ";
-    if (!inside(monitor.x1, monitor.y1) || (monitor.kind == MonitorKind::flux && !inside(monitor.x2, monitor.y2)))
+    if (!inside(monitor.x1, monitor.y1) ||
+        (monitor.kind == MonitorKind::flux && !inside(monitor.x2, monitor.y2)))
       throw FieldError(who + "liegt außerhalb des Rechengebiets");
     if (monitor.kind == MonitorKind::flux) {
       const bool vertical = std::abs(monitor.x2 - monitor.x1) < 0.5 * scene.cell_size;
@@ -126,7 +134,8 @@ std::vector<Warning> check(const FieldScene& scene) {
     const bool in_pml = source.kind == SourceKind::point
                             ? near_pml(source.x1, source.y1)
                             : near_pml(0.5 * (source.x1 + source.x2), 0.5 * (source.y1 + source.y2));
-    if (in_pml) warnings.push_back({"Quelle '" + source.name + "' liegt in oder direkt an der Randschicht.", true});
+    if (in_pml)
+      warnings.push_back({"Quelle '" + source.name + "' liegt in oder direkt an der Randschicht.", true});
   }
   for (const auto& monitor : scene.monitors)
     if (near_pml(monitor.x1, monitor.y1))

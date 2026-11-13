@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include "photonlab/circuit/reference_designs.hpp"
+#include "photonlab/field/reference_scenes.hpp"
 #include "photonlab/logic/reference_gates.hpp"
 
 namespace photonlab::io {
@@ -49,6 +50,118 @@ logic::GateDefinition gate_from_json(const ordered_json& json) {
            out.value("measurement", "Leistung"),
            out.contains("expected") ? out.at("expected").get<std::vector<int>>() : std::vector<int>{}});
   return gate;
+}
+
+ordered_json scene_to_json(const field::FieldScene& scene) {
+  ordered_json shapes = ordered_json::array(), sources = ordered_json::array(),
+               monitors = ordered_json::array();
+  for (const auto& sh : scene.shapes)
+    shapes.push_back({{"name", sh.name},
+                      {"kind", std::string(field::to_string(sh.kind))},
+                      {"x", sh.x},
+                      {"y", sh.y},
+                      {"width", sh.width},
+                      {"height", sh.height},
+                      {"rotation", sh.rotation},
+                      {"radius", sh.radius},
+                      {"inner_radius", sh.inner_radius},
+                      {"index", sh.index}});
+  for (const auto& q : scene.sources)
+    sources.push_back({{"name", q.name},
+                       {"kind", std::string(field::to_string(q.kind))},
+                       {"x1", q.x1},
+                       {"y1", q.y1},
+                       {"x2", q.x2},
+                       {"y2", q.y2},
+                       {"beam_width", q.beam_width},
+                       {"signal", std::string(field::to_string(q.signal))},
+                       {"wavelength", q.wavelength},
+                       {"amplitude", q.amplitude},
+                       {"phase", q.phase},
+                       {"pulse_duration", q.pulse_duration},
+                       {"ramp_periods", q.ramp_periods}});
+  for (const auto& m : scene.monitors)
+    monitors.push_back({{"name", m.name},
+                        {"kind", std::string(field::to_string(m.kind))},
+                        {"x1", m.x1},
+                        {"y1", m.y1},
+                        {"x2", m.x2},
+                        {"y2", m.y2}});
+  return {{"name", scene.name},
+          {"width", scene.width},
+          {"height", scene.height},
+          {"cell_size", scene.cell_size},
+          {"background_index", scene.background_index},
+          {"polarization", std::string(field::to_string(scene.polarization))},
+          {"boundary_x", std::string(field::to_string(scene.boundary_x))},
+          {"boundary_y", std::string(field::to_string(scene.boundary_y))},
+          {"pml_cells", scene.pml_cells},
+          {"courant", scene.courant},
+          {"duration", scene.duration},
+          {"shapes", std::move(shapes)},
+          {"sources", std::move(sources)},
+          {"monitors", std::move(monitors)}};
+}
+
+field::FieldScene scene_from_json(const ordered_json& json) {
+  field::FieldScene scene;
+  const field::FieldScene defaults;
+  scene.name = json.value("name", "");
+  scene.width = json.value("width", 0.0);
+  scene.height = json.value("height", 0.0);
+  scene.cell_size = json.value("cell_size", defaults.cell_size);
+  scene.background_index = json.value("background_index", defaults.background_index);
+  scene.polarization = field::polarization_from_string(json.value("polarization", "ez"));
+  scene.boundary_x = field::boundary_from_string(json.value("boundary_x", "pml"));
+  scene.boundary_y = field::boundary_from_string(json.value("boundary_y", "pml"));
+  scene.pml_cells = json.value("pml_cells", defaults.pml_cells);
+  scene.courant = json.value("courant", defaults.courant);
+  scene.duration = json.value("duration", 0.0);
+  if (json.contains("shapes"))
+    for (const auto& j : json.at("shapes")) {
+      field::Shape sh;
+      sh.name = j.value("name", "");
+      sh.kind = field::shape_kind_from_string(j.value("kind", "rectangle"));
+      sh.x = j.at("x").get<double>();
+      sh.y = j.at("y").get<double>();
+      sh.width = j.value("width", sh.width);
+      sh.height = j.value("height", sh.height);
+      sh.rotation = j.value("rotation", 0.0);
+      sh.radius = j.value("radius", sh.radius);
+      sh.inner_radius = j.value("inner_radius", sh.inner_radius);
+      sh.index = j.value("index", sh.index);
+      scene.shapes.push_back(std::move(sh));
+    }
+  if (json.contains("sources"))
+    for (const auto& j : json.at("sources")) {
+      field::Source q;
+      q.name = j.value("name", "");
+      q.kind = field::source_kind_from_string(j.value("kind", "line"));
+      q.x1 = j.at("x1").get<double>();
+      q.y1 = j.at("y1").get<double>();
+      q.x2 = j.value("x2", q.x1);
+      q.y2 = j.value("y2", q.y1);
+      q.beam_width = j.value("beam_width", 0.0);
+      q.signal = field::signal_kind_from_string(j.value("signal", "continuous"));
+      q.wavelength = j.value("wavelength", q.wavelength);
+      q.amplitude = j.value("amplitude", q.amplitude);
+      q.phase = j.value("phase", 0.0);
+      q.pulse_duration = j.value("pulse_duration", q.pulse_duration);
+      q.ramp_periods = j.value("ramp_periods", q.ramp_periods);
+      scene.sources.push_back(std::move(q));
+    }
+  if (json.contains("monitors"))
+    for (const auto& j : json.at("monitors")) {
+      field::Monitor m;
+      m.name = j.value("name", "");
+      m.kind = field::monitor_kind_from_string(j.value("kind", "point"));
+      m.x1 = j.at("x1").get<double>();
+      m.y1 = j.at("y1").get<double>();
+      m.x2 = j.value("x2", m.x1);
+      m.y2 = j.value("y2", m.y1);
+      scene.monitors.push_back(std::move(m));
+    }
+  return scene;
 }
 
 // JSON kennt weder unendlich noch NaN: null steht für "nicht messbar bzw. unendlich"
@@ -98,7 +211,8 @@ std::string project_to_json(const Project& project) {
                                 {{"samples", project.monte_carlo.samples},
                                  {"seed", project.monte_carlo.seed},
                                  {"variations", std::move(variations)}}}}},
-                             {"logic", logic_json}};
+                             {"logic", logic_json},
+                             {"field", scene_to_json(project.field)}};
   return root.dump(2) + "\n";
 }
 
@@ -151,15 +265,30 @@ Project project_from_json(std::string_view text) {
       }
     }
     if (root.contains("logic")) project.gate = gate_from_json(root.at("logic"));
+    if (root.contains("field")) project.field = scene_from_json(root.at("field"));
     return project;
   } catch (const nlohmann::json::exception& e) {
     throw IoError(std::string("Projektdatei fehlerhaft: ") + e.what());
   } catch (const circuit::CircuitError& e) {
     throw IoError(std::string("Projektdatei fehlerhaft: ") + e.what());
+  } catch (const field::FieldError& e) {
+    throw IoError(std::string("Projektdatei fehlerhaft: ") + e.what());
   }
 }
 
+std::vector<std::string> reference_project_names() {
+  std::vector<std::string> names = field::reference_scene_names();
+  for (const auto& name : circuit::reference_design_names()) names.push_back(name);
+  return names;
+}
+
 Project reference_project(std::string_view name) {
+  if (name.rfind("field_", 0) == 0) {
+    Project project;
+    project.field = field::reference_scene(name);
+    project.circuit.name = project.field.name;
+    return project;
+  }
   circuit::ReferenceSetup setup = circuit::reference_setup(name);
   Project project;
   project.circuit = std::move(setup.circuit);

@@ -18,7 +18,8 @@ const double pi = constants::pi;
 const double c0 = constants::c0;
 const double eta0 = constants::mu0 * constants::c0;
 
-double max_abs(const std::vector<double>& v, std::size_t from = 0, std::size_t to = static_cast<std::size_t>(-1)) {
+double max_abs(const std::vector<double>& v, std::size_t from = 0,
+               std::size_t to = static_cast<std::size_t>(-1)) {
   double m = 0.0;
   for (std::size_t i = from; i < std::min(to, v.size()); ++i) m = std::max(m, std::abs(v[i]));
   return m;
@@ -52,7 +53,8 @@ TEST_CASE("Courant: dt = courant*dx/(c*sqrt(2)); ungültige Szenen werden abgele
 
 TEST_CASE("Abnahme Phase 4: numerische Dispersionsrelation des Yee-Schemas") {
   // Stehende Welle cos(kx*x + ky*y) im periodischen Gitter. Für eine Gitter-Eigenlösung gilt exakt
-  //   F(n+1) + F(n-1) = 2*cos(omega*dt)*F(n)   mit   cos(omega*dt) = 1 - 2*S²*(sin²(kx*dx/2) + sin²(ky*dx/2)),
+  //   F(n+1) + F(n-1) = 2*cos(omega*dt)*F(n)   mit   cos(omega*dt) = 1 - 2*S²*(sin²(kx*dx/2) +
+  //   sin²(ky*dx/2)),
   // S = c*dt/dx. Das ist die Dispersionsrelation sin²(omega*dt/2) = S²*(sin² + sin²) des Verfahrens.
   const int n = 48;
   const double dx = 50e-9;
@@ -74,7 +76,8 @@ TEST_CASE("Abnahme Phase 4: numerische Dispersionsrelation des Yee-Schemas") {
       for (int step = 0; step < 40; ++step) {
         sim.step();
         const double next = sim.field()[probe];
-        if (std::abs(current) > 0.2) CHECK((next + previous) / (2.0 * current) == doctest::Approx(expected).epsilon(1e-11));
+        if (std::abs(current) > 0.2)
+          CHECK((next + previous) / (2.0 * current) == doctest::Approx(expected).epsilon(1e-11));
         previous = current, current = next;
       }
       // Zum Vergleich: die numerische Kreisfrequenz liegt unter der physikalischen c*|k|
@@ -127,12 +130,13 @@ TEST_CASE("Abnahme Phase 4: Reflexion der CPML-Randschicht unter -40 dB") {
       source.signal = SignalKind::pulse;
       source.pulse_duration = 6e-15;
       s.sources = {source};
-      // Messpunkt nahe der Randschicht, schräg zur Quelle: Welle trifft die Schicht unter verschiedenen Winkeln
+      // Messpunkt nahe der Randschicht, schräg zur Quelle: Welle trifft die Schicht unter verschiedenen
+      // Winkeln
       s.monitors = {{"Probe", MonitorKind::point, (offset + 16) * dx, (offset + 60) * dx, 0, 0}};
       return s;
     };
     Fdtd small(scene(80, 0));
-    Fdtd large(scene(480, 200));  // gleiche Lage relativ zur Quelle, Rand 200 Zellen weiter weg
+    Fdtd large(scene(480, 200));    // gleiche Lage relativ zur Quelle, Rand 200 Zellen weiter weg
     const std::size_t steps = 500;  // in dieser Zeit läuft Licht 350 Zellen weit: kein Echo im großen Gebiet
     small.run(steps);
     large.run(steps);
@@ -177,8 +181,8 @@ TEST_CASE("Linienquelle strahlt eine ebene Welle der eingestellten Amplitude ab"
       CHECK(average == doctest::Approx(9.0 * index / (2.0 * eta0) * 0.5e-6).epsilon(0.02));
       // Spektrum des Messpunkts: Linie bei der Trägerfrequenz mit der Amplitude der Welle
       const auto& probe = sim.monitors()[0];
-      const std::vector<double> tail(probe.values.end() - static_cast<std::ptrdiff_t>(4 * period / sim.time_step()),
-                                     probe.values.end());
+      const std::vector<double> tail(
+          probe.values.end() - static_cast<std::ptrdiff_t>(4 * period / sim.time_step()), probe.values.end());
       const double f0 = c0 / source.wavelength;
       const auto spectrum = amplitude_spectrum(tail, probe.sample_interval, {0.5 * f0, f0, 1.5 * f0});
       CHECK(spectrum[1] == doctest::Approx(expected).epsilon(0.02));
@@ -199,7 +203,7 @@ TEST_CASE("Grenzfläche zweier Medien: Fresnel-Reflexion und -Transmission bei s
     const auto steps = static_cast<std::size_t>(s.duration / with.time_step());
     with.run(steps);
     without.run(steps);
-    const auto& total = with.monitors()[0].values;      // vor der Grenzfläche: einfallend + reflektiert
+    const auto& total = with.monitors()[0].values;  // vor der Grenzfläche: einfallend + reflektiert
     const auto& incident = without.monitors()[0].values;
     std::vector<double> reflected(steps);
     for (std::size_t k = 0; k < steps; ++k) reflected[k] = total[k] - incident[k];
@@ -225,9 +229,9 @@ TEST_CASE("Zeitsignale der Quellen") {
   pulse.signal = SignalKind::pulse;
   pulse.pulse_duration = 10e-15;
   pulse.phase = pi / 2;
-  CHECK(Fdtd::signal(pulse, 40e-15) == doctest::Approx(1.0));               // Maximum bei 4*tau
-  CHECK(std::abs(Fdtd::signal(pulse, 0.0)) < 2e-7);                         // e^-16
-  CHECK(std::abs(Fdtd::signal(pulse, 50e-15)) <= std::exp(-1.0) + 1e-12);   // Einhüllende e^-1 bei t0 + tau
+  CHECK(Fdtd::signal(pulse, 40e-15) == doctest::Approx(1.0));              // Maximum bei 4*tau
+  CHECK(std::abs(Fdtd::signal(pulse, 0.0)) < 2e-7);                        // e^-16
+  CHECK(std::abs(Fdtd::signal(pulse, 50e-15)) <= std::exp(-1.0) + 1e-12);  // Einhüllende e^-1 bei t0 + tau
 }
 
 TEST_CASE("Geometrie: Formen, Überdeckung und Hinweise zur Auflösung") {
@@ -235,10 +239,10 @@ TEST_CASE("Geometrie: Formen, Überdeckung und Hinweise zur Auflösung") {
   s.width = 4e-6, s.height = 4e-6, s.cell_size = 50e-9, s.background_index = 1.444;
   s.shapes = {{"Platte", ShapeKind::rectangle, 2e-6, 2e-6, 2e-6, 1e-6, 0.0, 1e-6, 0.5e-6, 2.0},
               {"Ring", ShapeKind::ring, 2e-6, 2e-6, 1e-6, 1e-6, 0.0, 0.4e-6, 0.2e-6, 3.476}};
-  CHECK(index_at(s, 0.2e-6, 0.2e-6) == 1.444);   // Hintergrund
-  CHECK(index_at(s, 1.2e-6, 2.0e-6) == 2.0);     // Platte
-  CHECK(index_at(s, 2.3e-6, 2.0e-6) == 3.476);   // Ring liegt oben
-  CHECK(index_at(s, 2.0e-6, 2.0e-6) == 2.0);     // Loch des Rings: wieder die Platte
+  CHECK(index_at(s, 0.2e-6, 0.2e-6) == 1.444);  // Hintergrund
+  CHECK(index_at(s, 1.2e-6, 2.0e-6) == 2.0);    // Platte
+  CHECK(index_at(s, 2.3e-6, 2.0e-6) == 3.476);  // Ring liegt oben
+  CHECK(index_at(s, 2.0e-6, 2.0e-6) == 2.0);    // Loch des Rings: wieder die Platte
   // gedrehtes Rechteck: Ecke der ungedrehten Platte liegt nach 45° Drehung außerhalb
   Shape rotated = s.shapes[0];
   CHECK(contains(rotated, 2.9e-6, 1.6e-6));

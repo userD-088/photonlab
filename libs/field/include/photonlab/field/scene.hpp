@@ -15,7 +15,8 @@ struct FieldError : std::runtime_error {
 
 // Welche Feldkomponenten gerechnet werden. In 2D zerfallen die Maxwell-Gleichungen in zwei unabhängige Sätze.
 enum class Polarization {
-  ez,  // E senkrecht zur Zeichenebene: Ez, Hx, Hy (oft "TM" genannt; auf einem Chip von oben gesehen TM-artig)
+  ez,  // E senkrecht zur Zeichenebene: Ez, Hx, Hy (oft "TM" genannt; auf einem Chip von oben gesehen
+       // TM-artig)
   hz,  // E in der Zeichenebene: Hz, Ex, Ey (oft "TE" genannt; auf einem Chip von oben gesehen TE-artig)
 };
 
@@ -30,13 +31,13 @@ enum class ShapeKind { rectangle, circle, ring };
 struct Shape {
   std::string name;
   ShapeKind kind = ShapeKind::rectangle;
-  double x = 0.0, y = 0.0;      // Mittelpunkt [m]
-  double width = 1e-6;          // Rechteck: Ausdehnung in x [m]
-  double height = 1e-6;         // Rechteck: Ausdehnung in y [m]
-  double rotation = 0.0;        // Rechteck: Drehung um den Mittelpunkt [rad]
-  double radius = 1e-6;         // Kreis und Ring: Außenradius [m]
-  double inner_radius = 0.5e-6; // Ring: Innenradius [m]
-  double index = 3.476;         // Brechzahl (reell, ohne Dispersion)
+  double x = 0.0, y = 0.0;       // Mittelpunkt [m]
+  double width = 1e-6;           // Rechteck: Ausdehnung in x [m]
+  double height = 1e-6;          // Rechteck: Ausdehnung in y [m]
+  double rotation = 0.0;         // Rechteck: Drehung um den Mittelpunkt [rad]
+  double radius = 1e-6;          // Kreis und Ring: Außenradius [m]
+  double inner_radius = 0.5e-6;  // Ring: Innenradius [m]
+  double index = 3.476;          // Brechzahl (reell, ohne Dispersion)
   bool operator==(const Shape&) const = default;
 };
 
@@ -48,13 +49,13 @@ struct Source {
   SourceKind kind = SourceKind::line;
   double x1 = 0.0, y1 = 0.0;  // Punkt bzw. Anfang der Linie [m]
   double x2 = 0.0, y2 = 0.0;  // Ende der Linie [m]
-  double beam_width = 0.0;    // Linie: 1/e-Halbbreite eines Gauß-Profils der Amplitude [m]; 0 = gleichmäßig
+  double beam_width = 0.0;  // Linie: 1/e-Halbbreite eines Gauß-Profils der Amplitude [m]; 0 = gleichmäßig
   SignalKind signal = SignalKind::continuous;
-  double wavelength = 1550e-9;       // Vakuumwellenlänge des Trägers [m]
-  double amplitude = 1.0;            // Amplitude der abgestrahlten ebenen Welle [V/m] (siehe fdtd.md)
-  double phase = 0.0;                // Phase des Trägers [rad]
-  double pulse_duration = 15e-15;    // Puls: 1/e-Halbbreite der Feld-Einhüllenden [s]
-  double ramp_periods = 4.0;         // Dauerstrich: sanftes Einschalten über so viele Perioden
+  double wavelength = 1550e-9;     // Vakuumwellenlänge des Trägers [m]
+  double amplitude = 1.0;          // Amplitude der abgestrahlten ebenen Welle [V/m] (siehe fdtd.md)
+  double phase = 0.0;              // Phase des Trägers [rad]
+  double pulse_duration = 15e-15;  // Puls: 1/e-Halbbreite der Feld-Einhüllenden [s]
+  double ramp_periods = 4.0;       // Dauerstrich: sanftes Einschalten über so viele Perioden
   bool operator==(const Source&) const = default;
 };
 
@@ -73,16 +74,16 @@ struct Monitor {
 
 struct FieldScene {
   std::string name;
-  double width = 0.0;                // Ausdehnung in x einschließlich Randschichten [m]; 0 = keine Szene
-  double height = 0.0;               // Ausdehnung in y [m]
-  double cell_size = 25e-9;          // Kantenlänge einer Gitterzelle dx = dy [m]
-  double background_index = 1.0;     // Brechzahl des Hintergrunds
+  double width = 0.0;             // Ausdehnung in x einschließlich Randschichten [m]; 0 = keine Szene
+  double height = 0.0;            // Ausdehnung in y [m]
+  double cell_size = 25e-9;       // Kantenlänge einer Gitterzelle dx = dy [m]
+  double background_index = 1.0;  // Brechzahl des Hintergrunds
   Polarization polarization = Polarization::ez;
   Boundary boundary_x = Boundary::pml;
   Boundary boundary_y = Boundary::pml;
-  int pml_cells = 12;                // Dicke der Randschicht in Zellen
-  double courant = 0.99;             // Zeitschritt relativ zur Stabilitätsgrenze dx/(c*sqrt(2)), 0 < courant <= 1
-  double duration = 0.0;             // Laufzeit für Batch-Rechnungen [s]; 0 = unbegrenzt (nur interaktiv)
+  int pml_cells = 12;     // Dicke der Randschicht in Zellen
+  double courant = 0.99;  // Zeitschritt relativ zur Stabilitätsgrenze dx/(c*sqrt(2)), 0 < courant <= 1
+  double duration = 0.0;  // Laufzeit für Batch-Rechnungen [s]; 0 = unbegrenzt (nur interaktiv)
   std::vector<Shape> shapes;
   std::vector<Source> sources;
   std::vector<Monitor> monitors;

@@ -12,10 +12,10 @@ Realistischer Photonik-Simulator in C++20 mit SDL3: vom elektromagnetischen Feld
 Der vollständige Bauplan steht in [`docs/PhotonLab_Bauplan_v2.pdf`](docs/PhotonLab_Bauplan_v2.pdf).
 Einen interaktiven Vorgeschmack gibt [`docs/prototypes/photonische_gatter.html`](docs/prototypes/photonische_gatter.html) (im Browser öffnen).
 
-**Status:** Phase 3 – Logik-Labor (linear). Der Chip-Designer rechnet photonische Schaltungen, das
-Logik-Labor prüft sie als Logikgatter: automatische Wahrheitstabelle, Kontrastverhältnis und ein Zeugnis,
-das ehrlich zeigt, welche Anforderungen an ein Logikelement erfüllt sind und welche nicht. Bauteil-Labor
-und Quanten-Modus sind noch Platzhalter.
+**Status:** Phase 4 – Feld-Ebene mit 2D-FDTD. Drei der vier Arbeitsbereiche sind nutzbar: das Bauteil-Labor
+rechnet Licht als Feld und zeigt es live, der Chip-Designer rechnet Schaltungen aus Kompaktmodellen, das
+Logik-Labor prüft sie als Logikgatter. Die Brücke vom Feld zur Schaltung (S-Parameter aus dem FDTD) und der
+Quanten-Modus fehlen noch.
 
 ## Voraussetzungen (Windows)
 
@@ -60,6 +60,22 @@ Neben dem Spektrum steht die Tabelle der gefundenen Resonanzen; ein Klick auf ei
 Arbeitswellenlänge dorthin. „Monte-Carlo“ streut Parameter normalverteilt und zeigt Histogramm und
 Ausbeute. Das Häkchen „Werte“ blendet Leistung und Phase an jeder Verbindung ein.
 
+## Bauteil-Labor bedienen
+
+Datei → Beispiele → „Feld: Interferenz zweier Quellen“ laden; das Feld läuft sofort los.
+
+| Aktion | Bedienung |
+|---|---|
+| Rechnung | Start/Pause, Zurücksetzen, „Schritte je Bild“ für das Tempo |
+| Objekt wählen und verschieben | im Bild anklicken und ziehen, oder in der Liste „Objekte“ wählen |
+| Objekt ändern | Werte unter „Ausgewählt“ (Lage, Größe, Brechzahl, Wellenlänge, Phase ...) |
+| Neues Objekt | Knöpfe „+ Rechteck“, „+ Kreis“, „+ Ring“, „+ Quelle“, „+ Monitor“ |
+| Gitter und Ränder | Abschnitt „Rechengebiet“ |
+
+Jede Änderung an der Szene startet die Rechnung neu. Unter „Hinweise“ steht, wenn die Auflösung zu grob ist
+oder eine Quelle in der Randschicht liegt. Gerechnet wird in zwei Dimensionen: Abstrahlung nach oben und
+unten fehlt, und Brechzahlen haben keine Dispersion.
+
 ## Logik-Labor bedienen
 
 Datei → Beispiele → „Interferenz-XOR/XNOR“ laden und den Reiter „Logik-Labor“ öffnen.
@@ -85,6 +101,7 @@ photonlab_cli run examples/02b_mach_zehnder_unbalanciert.plab.json --sweep --csv
 photonlab_cli run examples/03b_ring_adddrop.plab.json --resonances    # FSR, Güte, Extinktion
 photonlab_cli run examples/03_ring_allpass.plab.json --monte-carlo    # Streuung und Statistik
 photonlab_cli run examples/05_interferenz_xor.plab.json --logic       # Wahrheitstabelle und Zeugnis
+photonlab_cli run examples/01_wellenleiter_fdtd.plab.json --field     # 2D-FDTD über die Laufzeit der Szene
 photonlab_cli validate --out docs/validation              # Validierung gegen analytische Lösungen
 ```
 

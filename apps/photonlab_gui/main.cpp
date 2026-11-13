@@ -10,6 +10,7 @@
 #include <string_view>
 
 #include "chip_designer.hpp"
+#include "field_lab.hpp"
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
@@ -22,7 +23,7 @@ namespace {
 
 using photonlab::gui::ChipDesigner;
 
-const char* window_field = "Bauteil-Labor";
+const char* window_field = photonlab::gui::FieldLab::window_name;
 const char* window_logic = photonlab::gui::LogicLab::window_name;
 const char* window_quantum = "Quanten-Modus";
 
@@ -145,6 +146,7 @@ int main(int argc, char** argv) {
     photonlab::ThreadPool pool;
     ChipDesigner chip_designer(pool, window, ui_scale);
     photonlab::gui::LogicLab logic_lab(pool, chip_designer);
+    photonlab::gui::FieldLab field_lab(pool, chip_designer, renderer, ui_scale);
     if (!project_path.empty() && !chip_designer.open_file(project_path) && automated) exit_code = 1;
 
     bool running = true, show_demo = false, reset_layout = false;
@@ -192,16 +194,19 @@ int main(int argc, char** argv) {
         ImGui::EndMainMenuBar();
       }
 
-      placeholder(window_field, "Kommt in Phase 4 bis 8",
-                  "Feld-Ebene: Geometrie zeichnen, Modenlöser, 2D-FDTD, Bandstrukturen. "
-                  "Referenz-Prototyp: docs/prototypes/photonische_gatter.html");
+      field_lab.draw();
       chip_designer.draw();
       logic_lab.draw();
       placeholder(window_quantum, "Kommt in Phase 11",
                   "Einzelphotonen, Hong-Ou-Mandel, linear-optisches CNOT, Boson Sampling.");
       // Beim Start liegt der Chip-Designer vorn (einziger schon nutzbarer Arbeitsbereich)
       if (frame_count == 2) ImGui::SetWindowFocus(ChipDesigner::window_curve);
-      if (frame_count == 3) ImGui::SetWindowFocus(ChipDesigner::window_canvas);
+      if (frame_count == 3) {
+        // reine Feld-Projekte öffnen im Bauteil-Labor, alles andere im Chip-Designer
+        const auto& project = chip_designer.project();
+        const bool field_only = !project.field.empty() && project.circuit.instances.empty();
+        ImGui::SetWindowFocus(field_only ? window_field : ChipDesigner::window_canvas);
+      }
       ++frame_count;
       if (show_demo) ImGui::ShowDemoWindow(&show_demo);
 

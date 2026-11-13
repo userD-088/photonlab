@@ -114,6 +114,7 @@ void ChipDesigner::set_project(io::Project project, std::string path) {
   file_path_ = std::move(path);
   dirty_ = false;
   ++revision_;
+  ++generation_;
   selected_.clear();
   rename_buffer_.clear();
   wire_from_.reset();
@@ -500,11 +501,15 @@ void ChipDesigner::draw() {
   update_resonances();
   update_monte_carlo();
 
-  draw_library();
-  draw_properties();
-  draw_spectrum();
-  draw_monte_carlo();
-  draw_curve();
+  // Die Seiten- und Plotfenster gehören zum Chip-Designer: liegt ein anderer Arbeitsbereich vorn, werden
+  // sie nicht gezeichnet, ihre Plätze im Layout klappen zu und der andere Bereich bekommt die ganze Fläche.
+  if (canvas_visible_) {
+    draw_library();
+    draw_properties();
+    draw_spectrum();
+    draw_monte_carlo();
+    draw_curve();
+  }
   draw_canvas();  // zuletzt, damit der Arbeitsbereich beim Start den Fokus hat
   draw_confirm_popup();
 }
@@ -513,8 +518,12 @@ void ChipDesigner::draw_file_menu() {
   if (ImGui::MenuItem("Neu")) request(Pending::new_project);
   if (ImGui::MenuItem("Öffnen...")) request(Pending::open_project);
   if (ImGui::BeginMenu("Beispiele")) {
-    for (const auto& name : circuit::reference_design_names())
-      if (ImGui::MenuItem(circuit::reference_design(name).name.c_str())) request(Pending::load_example, name);
+    // Feld-Szenen zuerst, dann Schaltungen; der Menütext ist der Name des Projekts
+    for (const auto& name : io::reference_project_names()) {
+      const io::Project example = io::reference_project(name);
+      const std::string label = (example.field.empty() ? "Schaltung: " : "Feld: ") + example.circuit.name;
+      if (ImGui::MenuItem(label.c_str())) request(Pending::load_example, name);
+    }
     ImGui::EndMenu();
   }
   ImGui::Separator();
@@ -1165,7 +1174,7 @@ void ChipDesigner::draw_curve() {
 
 void ChipDesigner::draw_canvas() {
   ImGuiIO& io = ImGui::GetIO();
-  ImGui::Begin(window_canvas);
+  canvas_visible_ = ImGui::Begin(window_canvas);
 
   // Kopfzeile
   const std::string file_label =

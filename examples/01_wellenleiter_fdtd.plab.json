@@ -1,0 +1,98 @@
+{
+  "format": "photonlab.project",
+  "version": 1,
+  "units": "SI",
+  "circuit": {
+    "name": "Gerader Wellenleiter",
+    "instances": [],
+    "connections": []
+  },
+  "simulation": {
+    "wavelength": 1.55e-06,
+    "sweep": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 501
+    },
+    "monte_carlo": {
+      "samples": 500,
+      "seed": 1,
+      "variations": []
+    }
+  },
+  "logic": {
+    "name": "",
+    "inputs": [],
+    "outputs": []
+  },
+  "field": {
+    "name": "Gerader Wellenleiter",
+    "width": 1.4e-05,
+    "height": 4.9999999999999996e-06,
+    "cell_size": 2.5e-08,
+    "background_index": 1.444,
+    "polarization": "hz",
+    "boundary_x": "pml",
+    "boundary_y": "pml",
+    "pml_cells": 12,
+    "courant": 0.99,
+    "duration": 3e-13,
+    "shapes": [
+      {
+        "name": "Kern",
+        "kind": "rectangle",
+        "x": 7e-06,
+        "y": 2.4999999999999998e-06,
+        "width": 1.4e-05,
+        "height": 4.5e-07,
+        "rotation": 0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 2.85
+      }
+    ],
+    "sources": [
+      {
+        "name": "Einkopplung",
+        "kind": "line",
+        "x1": 1.5e-06,
+        "y1": 1.5e-06,
+        "x2": 1.5e-06,
+        "y2": 3.5e-06,
+        "beam_width": 3e-07,
+        "signal": "continuous",
+        "wavelength": 1.55e-06,
+        "amplitude": 1.0,
+        "phase": 0.0,
+        "pulse_duration": 1.5e-14,
+        "ramp_periods": 4.0
+      }
+    ],
+    "monitors": [
+      {
+        "name": "Fluss vorn",
+        "kind": "flux",
+        "x1": 3e-06,
+        "y1": 1.2e-06,
+        "x2": 3e-06,
+        "y2": 3.7999999999999996e-06
+      },
+      {
+        "name": "Fluss hinten",
+        "kind": "flux",
+        "x1": 1.2e-05,
+        "y1": 1.2e-06,
+        "x2": 1.2e-05,
+        "y2": 3.7999999999999996e-06
+      },
+      {
+        "name": "Feld im Kern",
+        "kind": "point",
+        "x1": 1.2e-05,
+        "y1": 2.4999999999999998e-06,
+        "x2": 0.0,
+        "y2": 0.0
+      }
+    ]
+  }
+}

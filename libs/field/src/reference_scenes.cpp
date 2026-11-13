@@ -19,7 +19,8 @@ FieldScene waveguide() {
   s.background_index = index_cladding;
   s.polarization = Polarization::hz;  // E in der Ebene: TE-artig für die Draufsicht auf einen Chip
   s.duration = 300e-15;
-  s.shapes = {{"Kern", ShapeKind::rectangle, 7 * um, 2.5 * um, 14 * um, 0.45 * um, 0.0, 1e-6, 0.5e-6, index_core}};
+  s.shapes = {
+      {"Kern", ShapeKind::rectangle, 7 * um, 2.5 * um, 14 * um, 0.45 * um, 0.0, 1e-6, 0.5e-6, index_core}};
   Source source;
   source.name = "Einkopplung";
   source.x1 = source.x2 = 1.5 * um;
@@ -90,8 +91,9 @@ FieldScene ring() {
   ring_shape.x = 6 * um, ring_shape.y = 5.2 * um;
   ring_shape.radius = 3 * um, ring_shape.inner_radius = 2.55 * um;
   ring_shape.index = index_core;
-  s.shapes = {{"Bus", ShapeKind::rectangle, 6 * um, 1.65 * um, 12 * um, 0.45 * um, 0.0, 1e-6, 0.5e-6, index_core},
-              ring_shape};
+  s.shapes = {
+      {"Bus", ShapeKind::rectangle, 6 * um, 1.65 * um, 12 * um, 0.45 * um, 0.0, 1e-6, 0.5e-6, index_core},
+      ring_shape};
   Source source;
   source.name = "Einkopplung";
   source.x1 = source.x2 = 1.2 * um;

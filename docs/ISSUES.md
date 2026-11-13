@@ -51,9 +51,24 @@ Offen aus Phase 3 (Folge-Issues):
 - [ ] #34 Logik-Labor: eigenes Fensterlayout je Arbeitsbereich (Platz für Tabelle und Zeugnis)
 
 ## Phase 4 – Feld: 2D-FDTD
-- [ ] #35 `libs/field/fdtd`: Yee-Gitter 2D, TE und TM getrennt, Leapfrog, Courant-Prüfung
-- [ ] #36 CPML-Ränder; Abnahme: Reflexion < −40 dB
-- [ ] #37 Quellen: Punkt, Gauß-Puls, CW mit einstellbarer Phase; mehrere Quellen
-- [ ] #38 Monitore: Schnappschuss, Poynting-Fluss, DFT-Spektrum
-- [ ] #39 Validierung: numerische Dispersion des Yee-Schemas, Fresnel-Reflexion, Energieerhaltung
-- [ ] #40 Bauteil-Labor in der GUI: Geometrie-Editor, Live-Feld als Farbkarte
+- [x] #35 `libs/field`: Yee-Gitter 2D, Ez- und Hz-Polarisation getrennt, Leapfrog, Courant-Prüfung
+- [x] #36 CPML-Ränder; Abnahme: Reflexion < −40 dB (gemessen −90 dB); außerdem periodische Ränder
+- [x] #37 Quellen: Punkt, Linie (auch Gauß-Profil), Dauerstrich und Puls mit einstellbarer Phase; mehrere Quellen
+- [x] #38 Monitore: Feld am Punkt, Poynting-Fluss durch eine Linie, Spektrum per DFT
+- [x] #39 Validierung: numerische Dispersion des Yee-Schemas, Fresnel-Reflexion, Energieerhaltung
+- [x] #40 Bauteil-Labor in der GUI: Szene bearbeiten, Live-Feld als Farbkarte, Monitor-Plots
+- [x] #34 Eigenes Layout je Arbeitsbereich: die Fenster des Chip-Designers klappen zu, wenn ein anderer vorn liegt
+
+Offen aus Phase 4 (Folge-Issues):
+- [ ] #41 Phase als Farbkarte (zyklische Skala) und zeitgemittelte Intensität
+- [ ] #42 Transmissions-Spektren: Fluss-Monitore mit laufender DFT, normiert auf einen Referenzlauf
+- [ ] #43 Glättung der Permittivität an Materialgrenzen (Subpixel) gegen Treppenstufen
+- [ ] #44 Geometrie: Polygone, boolesche Operationen, Rückgängig im Szenen-Editor
+- [ ] #45 Mehrere Threads für große Gitter (Phase 12)
+
+## Phase 5 – Modenlöser + Materialien
+- [ ] #46 `libs/materials`: Sellmeier-Gleichungen für Si, SiO2, Si3N4 mit Quellen
+- [ ] #47 Analytischer Slab-Wellenleiter (Eigenwertgleichung) als Referenz und für die Effektiv-Index-Methode
+- [ ] #48 FDE-Modenlöser (finite Differenzen, semi-vektoriell); Abnahme: Si-Streifen 500 x 220 nm, n_eff TE0 ca. 2,4
+- [ ] #49 Modenquelle und Modenüberlapp-Monitor im FDTD
+- [ ] #50 Bauteil-Labor: Querschnitt-Ansicht mit Modenprofilen

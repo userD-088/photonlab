@@ -18,6 +18,8 @@
 #include "photonlab/core/complex.hpp"
 #include "photonlab/core/thread_pool.hpp"
 #include "photonlab/core/units.hpp"
+#include "photonlab/field/fdtd.hpp"
+#include "photonlab/field/spectrum.hpp"
 #include "photonlab/io/project.hpp"
 #include "photonlab/logic/reference_gates.hpp"
 #include "photonlab/logic/report.hpp"
@@ -40,12 +42,15 @@ void print_usage() {
       "  photonlab_cli example <name>                 Referenz-Design als .plab.json ausgeben (mzi, "
       "mzi_unbalanced,\n"
       "                                               ring_allpass, ring_adddrop, xor_interference,\n"
-      "                                               and_interference, xor_directed)\n"
+      "                                               and_interference, xor_directed, field_waveguide,\n"
+      "                                               field_interface, field_interference, field_ring)\n"
       "  photonlab_cli run <datei.plab.json>          Schaltung bei der Arbeitswellenlänge rechnen\n"
       "  photonlab_cli run <datei> --sweep [--csv <aus.csv>]   Wellenlängen-Sweep aus der Datei\n"
       "  photonlab_cli run <datei> --resonances       Sweep auswerten: Resonanzen, FSR, Güte, Extinktion\n"
       "  photonlab_cli run <datei> --monte-carlo [--csv <aus.csv>]   Streuung aus der Datei rechnen\n"
       "  photonlab_cli run <datei> --logic [--gate <aus.gate.json>]  Wahrheitstabelle und Gatter-Zeugnis\n"
+      "  photonlab_cli run <datei> --field [--csv <aus.csv>]         2D-FDTD der Feld-Szene über ihre "
+      "Laufzeit\n"
       "  photonlab_cli validate [--out <ordner>]      Validierung gegen analytische Lösungen\n");
 }
 
@@ -315,6 +320,108 @@ int cmd_logic(const std::string& file, const std::string& gate_path) {
   return 0;
 }
 
+// Feld-Szene der Datei über ihre Laufzeit rechnen und die Monitore auswerten
+int cmd_field(const std::string& file, const std::string& csv_path) {
+  const io::Project project = io::load_project(file);
+  const field::FieldScene& scene = project.field;
+  if (scene.empty()) {
+    std::fprintf(stderr, "Fehler: Die Datei enthält keine Feld-Szene (Abschnitt \"field\").\n");
+    return 1;
+  }
+  if (!(scene.duration > 0.0)) {
+    std::fprintf(stderr,
+                 "Fehler: Die Szene hat keine Laufzeit (\"duration\"); ohne sie endet die Rechnung nie.\n");
+    return 1;
+  }
+  field::Fdtd sim(scene);
+  const auto steps = static_cast<std::size_t>(std::ceil(scene.duration / sim.time_step()));
+  std::printf("Szene: %s\n", scene.name.c_str());
+  std::printf(
+      "Gitter %d x %d Zellen zu %.1f nm, Zeitschritt %.4f fs, %zu Schritte (%.1f fs), Polarisation %s\n",
+      sim.nx(), sim.ny(), sim.cell_size() / units::nm, sim.time_step() / units::fs, steps,
+      scene.duration / units::fs, scene.polarization == field::Polarization::ez ? "Ez" : "Hz");
+  for (const auto& w : field::check(scene))
+    std::printf("%s %s\n", w.severe ? "WARNUNG:" : "Hinweis:", w.text.c_str());
+  std::printf(
+      "Hinweis: 2D-Rechnung; Flüsse gelten je Meter Bauteilhöhe, Abstrahlung nach oben und unten fehlt.\n");
+  sim.run(steps);
+
+  // Auswertung: Spitzenwert, bei Dauerstrich zusätzlich der Mittelwert über die letzten Perioden
+  double period = 0.0;
+  bool continuous = false;
+  for (const auto& source : scene.sources) {
+    period = source.wavelength / constants::c0;
+    continuous = continuous || source.signal == field::SignalKind::continuous;
+  }
+  for (const auto& m : sim.monitors()) {
+    double peak = 0.0;
+    for (double v : m.values) peak = std::max(peak, std::abs(v));
+    std::printf("  %-24s Spitze %.6e %s", m.name.c_str(), peak, m.unit.c_str());
+    if (m.kind == field::MonitorKind::flux && continuous && period > 0.0)
+      std::printf(", Mittel der letzten 4 Perioden %.6e %s",
+                  field::average_over_periods(m.values, m.sample_interval, period, 4), m.unit.c_str());
+    std::printf("\n");
+  }
+  std::printf("Feldenergie am Ende: %.6e J/m\n", sim.energy());
+  if (!csv_path.empty()) {
+    std::ofstream csv(csv_path);
+    if (!csv) {
+      std::fprintf(stderr, "Fehler: %s kann nicht geschrieben werden\n", csv_path.c_str());
+      return 1;
+    }
+    csv.precision(10);
+    csv << "time_s";
+    for (const auto& m : sim.monitors()) csv << ',' << m.name << '_' << m.unit;
+    csv << '\n';
+    for (std::size_t k = 0; k < steps; ++k) {
+      csv << static_cast<double>(k + 1) * sim.time_step();
+      for (const auto& m : sim.monitors()) csv << ',' << (k < m.values.size() ? m.values[k] : 0.0);
+      csv << '\n';
+    }
+    std::printf("Zeitreihen nach %s geschrieben (Fluss-Monitore liegen einen halben Zeitschritt früher)\n",
+                csv_path.c_str());
+  }
+  return 0;
+}
+
+// Abnahme Phase 4: Reflexion der Randschicht unter -40 dB. Punktquelle mit Puls; die Differenz zu einem
+// größeren Gebiet, dessen Rand im Messfenster kein Echo liefern kann, ist die Reflexion.
+bool validate_fdtd() {
+  bool ok = true;
+  for (field::Polarization polarization : {field::Polarization::ez, field::Polarization::hz}) {
+    const double dx = 40e-9;
+    auto scene = [&](int cells, int shift) {
+      const double offset = shift + 0.25;
+      field::FieldScene s;
+      s.width = cells * dx, s.height = cells * dx, s.cell_size = dx;
+      s.polarization = polarization;
+      field::Source source;
+      source.kind = field::SourceKind::point;
+      source.x1 = (offset + 40) * dx, source.y1 = (offset + 40) * dx;
+      source.signal = field::SignalKind::pulse;
+      source.pulse_duration = 6e-15;
+      s.sources = {source};
+      s.monitors = {{"Probe", field::MonitorKind::point, (offset + 16) * dx, (offset + 60) * dx, 0, 0}};
+      return s;
+    };
+    field::Fdtd small(scene(80, 0)), large(scene(480, 200));
+    const std::size_t steps = 500;
+    small.run(steps);
+    large.run(steps);
+    double difference = 0.0, peak = 0.0;
+    for (std::size_t k = 0; k < steps; ++k) {
+      difference =
+          std::max(difference, std::abs(small.monitors()[0].values[k] - large.monitors()[0].values[k]));
+      peak = std::max(peak, std::abs(large.monitors()[0].values[k]));
+    }
+    const double reflection_db = 20.0 * std::log10(difference / peak);
+    std::printf("FDTD Randschicht (%s): Reflexion %.1f dB (gefordert < -40 dB)\n",
+                polarization == field::Polarization::ez ? "Ez" : "Hz", reflection_db);
+    ok = ok && reflection_db < -40.0;
+  }
+  return ok;
+}
+
 // Abnahme Phase 3: Interferenz-XOR mit Kontrast > 20 dB im Idealfall, und das Zeugnis markiert die
 // fehlende Pegelregeneration.
 bool validate_xor() {
@@ -373,6 +480,7 @@ int cmd_validate(const std::string& out_dir) {
   if (csv.is_open()) std::printf("Bericht: %s/mzi.csv\n", out_dir.c_str());
   ok = validate_ring(out_dir) && ok;
   ok = validate_xor() && ok;
+  ok = validate_fdtd() && ok;
   std::printf("%s\n", ok ? "BESTANDEN" : "NICHT BESTANDEN");
   return ok ? 0 : 1;
 }
@@ -385,7 +493,7 @@ int main(int argc, char** argv) {
 #endif
   const std::vector<std::string> args(argv + 1, argv + argc);
   if (args.empty()) {
-    std::printf("PhotonLab CLI 0.4.0 (Phase 3)\n");
+    std::printf("PhotonLab CLI 0.5.0 (Phase 4)\n");
     print_usage();
     return 0;
   }
@@ -407,6 +515,7 @@ int main(int argc, char** argv) {
     if (command == "--info") return cmd_info();
     if (command == "components") return cmd_components();
     if (command == "example" && args.size() >= 2) return cmd_example(args[1]);
+    if (command == "run" && args.size() >= 2 && flag("--field")) return cmd_field(args[1], option("--csv"));
     if (command == "run" && args.size() >= 2 && flag("--logic")) return cmd_logic(args[1], option("--gate"));
     if (command == "run" && args.size() >= 2 && flag("--resonances")) return cmd_resonances(args[1]);
     if (command == "run" && args.size() >= 2 && flag("--monte-carlo"))

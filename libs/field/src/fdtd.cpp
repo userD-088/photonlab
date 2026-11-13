@@ -144,7 +144,8 @@ Fdtd::Fdtd(const FieldScene& scene) : polarization_(scene.polarization) {
         }
         cells.emplace(at(i, j), profile);
       }
-      for (const auto& [k, profile] : cells) active.cells.push_back({k, profile * weight_at(k, source.amplitude)});
+      for (const auto& [k, profile] : cells)
+        active.cells.push_back({k, profile * weight_at(k, source.amplitude)});
     }
     sources_.push_back(std::move(active));
   }
@@ -260,8 +261,8 @@ void Fdtd::step_ez() {
       e[0] += cf[0] * (dhy + psi_x[0] - dhx - psi_y[0]);
     }
     for (std::size_t i = 1; i < nx; ++i) {
-      const double dhy = (hy[i] - hy[i - 1]) * inv;        // dHy/dx bei (i, j)
-      const double dhx = (hx[i] - hx_prev_row[i]) * inv;   // dHx/dy bei (i, j)
+      const double dhy = (hy[i] - hy[i - 1]) * inv;       // dHy/dx bei (i, j)
+      const double dhx = (hx[i] - hx_prev_row[i]) * inv;  // dHx/dy bei (i, j)
       psi_x[i] = bxe_[i] * psi_x[i] + cxe_[i] * dhy;
       psi_y[i] = by * psi_y[i] + cy * dhx;
       e[i] += cf[i] * (dhy + psi_x[i] - dhx - psi_y[i]);
@@ -342,7 +343,8 @@ void Fdtd::record() {
           const double e = 0.5 * (f_[at(i, j)] + f_prev_[at(i, j)]);
           sum -= e * 0.5 * (gy_[at(i - 1, j)] + gy_[at(i, j)]);
         } else {  // S_x = Ey*Hz, Hz liegt bei (i -+ 1/2, j + 1/2)
-          const double h = 0.25 * (f_[at(i - 1, j)] + f_[at(i, j)] + f_prev_[at(i - 1, j)] + f_prev_[at(i, j)]);
+          const double h =
+              0.25 * (f_[at(i - 1, j)] + f_[at(i, j)] + f_prev_[at(i - 1, j)] + f_prev_[at(i, j)]);
           sum += gy_[at(i, j)] * h;
         }
       } else {
@@ -351,7 +353,8 @@ void Fdtd::record() {
           const double e = 0.5 * (f_[at(i, j)] + f_prev_[at(i, j)]);
           sum += e * 0.5 * (gx_[at(i, j - 1)] + gx_[at(i, j)]);
         } else {  // S_y = -Ex*Hz, Hz liegt bei (i + 1/2, j -+ 1/2)
-          const double h = 0.25 * (f_[at(i, j - 1)] + f_[at(i, j)] + f_prev_[at(i, j - 1)] + f_prev_[at(i, j)]);
+          const double h =
+              0.25 * (f_[at(i, j - 1)] + f_[at(i, j)] + f_prev_[at(i, j - 1)] + f_prev_[at(i, j)]);
           sum -= gx_[at(i, j)] * h;
         }
       }

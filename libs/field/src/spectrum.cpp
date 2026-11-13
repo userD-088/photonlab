@@ -14,7 +14,8 @@ std::vector<double> amplitude_spectrum(const std::vector<double>& samples, doubl
   if (samples.empty()) return result;
   for (std::size_t k = 0; k < frequencies.size(); ++k) {
     // Drehzeiger schrittweise weiterdrehen statt jedes Mal exp() zu rechnen
-    const std::complex<double> rotation = std::polar(1.0, -2.0 * constants::pi * frequencies[k] * sample_interval);
+    const std::complex<double> rotation =
+        std::polar(1.0, -2.0 * constants::pi * frequencies[k] * sample_interval);
     std::complex<double> phasor = 1.0, sum = 0.0;
     for (double x : samples) {
       sum += x * phasor;

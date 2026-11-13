@@ -53,7 +53,11 @@ TEST_CASE("Projekt: Beispieldateien entsprechen den Referenz-Designs") {
                                    std::pair{"03b_ring_adddrop.plab.json", "ring_adddrop"},
                                    std::pair{"05_interferenz_xor.plab.json", "xor_interference"},
                                    std::pair{"05b_interferenz_and.plab.json", "and_interference"},
-                                   std::pair{"10_directed_logic_xor.plab.json", "xor_directed"}}) {
+                                   std::pair{"10_directed_logic_xor.plab.json", "xor_directed"},
+                                   std::pair{"01_wellenleiter_fdtd.plab.json", "field_waveguide"},
+                                   std::pair{"01b_grenzflaeche_fdtd.plab.json", "field_interface"},
+                                   std::pair{"01c_interferenz_fdtd.plab.json", "field_interference"},
+                                   std::pair{"03c_ring_fdtd.plab.json", "field_ring"}}) {
     CHECK(io::project_to_json(io::load_project(dir / file)) ==
           io::project_to_json(io::reference_project(name)));
   }

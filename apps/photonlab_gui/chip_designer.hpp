@@ -44,6 +44,9 @@ class ChipDesigner {
 
   // Zugriff für andere Arbeitsbereiche (Logik-Labor), die dieselbe Schaltung auswerten
   io::Project& project() { return project_; }
+  std::uint64_t project_generation() const {
+    return generation_;
+  }                                                     // zählt bei jedem neu geladenen Projekt hoch
   std::uint64_t revision() const { return revision_; }  // zählt bei jeder physikalischen Änderung hoch
   void mark_dirty() { dirty_ = true; }                  // Einstellungen geändert, Physik gleich
   void touch_circuit() { touch(); }                     // Schaltung physikalisch geändert
@@ -112,7 +115,9 @@ class ChipDesigner {
   io::Project project_;
   std::string file_path_;
   bool dirty_ = false;
+  bool canvas_visible_ = true;  // liegt der Chip-Designer als Reiter vorn?
   std::uint64_t revision_ = 1;
+  std::uint64_t generation_ = 0;
   std::string status_;
   bool status_is_error_ = false;
 

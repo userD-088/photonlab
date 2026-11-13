@@ -14,7 +14,7 @@ Das hilft Menschen und Claude gleichermaßen, den Code nachzuvollziehen.
 - [`resonators.md`](resonators.md) – Ringresonatoren, Y-Splitter, Bandpass, Gitterkoppler, Resonanz-Auswertung (Phase 2)
 - [`monte_carlo.md`](monte_carlo.md) – Monte-Carlo über Parameterstreuung (Phase 2)
 - [`logic.md`](logic.md) – Logik-Labor: Wahrheitstabelle, Kontrast, Gatter-Zeugnis und seine Messvorschriften (Phase 3)
+- [`fdtd.md`](fdtd.md) – 2D-FDTD nach Yee: Gitter, Courant, Dispersion, CPML, Quellen, Monitore (Phase 4)
 
 ## Geplante Notizen
-- `fdtd.md` – Yee-Gitter, Courant, CPML (Phase 4)
 - `modesolver.md` – FDE-Eigenwertproblem (Phase 5)

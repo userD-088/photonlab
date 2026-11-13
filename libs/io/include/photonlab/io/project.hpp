@@ -5,10 +5,12 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "photonlab/circuit/monte_carlo.hpp"
 #include "photonlab/circuit/netlist.hpp"
 #include "photonlab/circuit/sweep.hpp"
+#include "photonlab/field/scene.hpp"
 #include "photonlab/logic/gate.hpp"
 #include "photonlab/logic/report.hpp"
 
@@ -23,11 +25,15 @@ struct Project {
   double wavelength = 1550e-9;  // Arbeitswellenlänge für Einzelrechnungen [m]
   circuit::SweepSettings sweep;
   circuit::MonteCarloSettings monte_carlo;
+  field::FieldScene field;     // Szene des Bauteil-Labors (2D-FDTD); leer, wenn das Projekt keine hat
   logic::GateDefinition gate;  // Gatter-Definition des Logik-Labors; leer, wenn die Schaltung kein Gatter ist
 };
 
-// Projekt aus einem Referenz-Design (photonlab/circuit/reference_designs.hpp); wirft CircuitError.
+// Projekt aus einem Referenz-Design der Schaltungs-Ebene (photonlab/circuit/reference_designs.hpp) oder
+// einer Referenz-Szene der Feld-Ebene (photonlab/field/reference_scenes.hpp). Wirft CircuitError bzw.
+// FieldError.
 Project reference_project(std::string_view name);
+std::vector<std::string> reference_project_names();
 
 inline constexpr int project_format_version = 1;
 

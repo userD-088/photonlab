@@ -75,5 +75,21 @@
     "name": "",
     "inputs": [],
     "outputs": []
+  },
+  "field": {
+    "name": "",
+    "width": 0.0,
+    "height": 0.0,
+    "cell_size": 2.5e-08,
+    "background_index": 1.0,
+    "polarization": "ez",
+    "boundary_x": "pml",
+    "boundary_y": "pml",
+    "pml_cells": 12,
+    "courant": 0.99,
+    "duration": 0.0,
+    "shapes": [],
+    "sources": [],
+    "monitors": []
   }
 }

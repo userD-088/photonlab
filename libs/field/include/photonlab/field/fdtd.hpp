@@ -79,7 +79,9 @@ class Fdtd {
   void step_ez();
   void step_hz();
   void record();
-  std::size_t at(int i, int j) const { return static_cast<std::size_t>(i) + static_cast<std::size_t>(nx_) * static_cast<std::size_t>(j); }
+  std::size_t at(int i, int j) const {
+    return static_cast<std::size_t>(i) + static_cast<std::size_t>(nx_) * static_cast<std::size_t>(j);
+  }
 
   Polarization polarization_;
   int nx_ = 0, ny_ = 0;
@@ -88,10 +90,10 @@ class Fdtd {
   std::size_t steps_ = 0;
 
   std::vector<double> f_, f_prev_, gx_, gy_;
-  std::vector<double> zero_row_;        // Nachbarzeile jenseits einer ideal leitenden Wand
-  std::vector<double> eps_f_;           // relative Permittivität am Skalarfeld
-  std::vector<double> cf_;              // Update-Koeffizient des Skalarfeldes (Ez: dt/(eps0*eps_r), Hz: dt/mu0)
-  std::vector<double> cgx_, cgy_;       // Update-Koeffizienten der Felder in der Ebene
+  std::vector<double> zero_row_;   // Nachbarzeile jenseits einer ideal leitenden Wand
+  std::vector<double> eps_f_;      // relative Permittivität am Skalarfeld
+  std::vector<double> cf_;         // Update-Koeffizient des Skalarfeldes (Ez: dt/(eps0*eps_r), Hz: dt/mu0)
+  std::vector<double> cgx_, cgy_;  // Update-Koeffizienten der Felder in der Ebene
   // CPML: Koeffizienten je Achse an ganzen (e) und halben (h) Gitterplätzen, Hilfsfelder psi
   std::vector<double> bxe_, cxe_, bxh_, cxh_, bye_, cye_, byh_, cyh_;
   std::vector<double> psi_fx_, psi_fy_, psi_gx_, psi_gy_;

@@ -1,0 +1,90 @@
+{
+  "format": "photonlab.project",
+  "version": 1,
+  "units": "SI",
+  "circuit": {
+    "name": "Grenzfläche (Fresnel)",
+    "instances": [],
+    "connections": []
+  },
+  "simulation": {
+    "wavelength": 1.55e-06,
+    "sweep": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 501
+    },
+    "monte_carlo": {
+      "samples": 500,
+      "seed": 1,
+      "variations": []
+    }
+  },
+  "logic": {
+    "name": "",
+    "inputs": [],
+    "outputs": []
+  },
+  "field": {
+    "name": "Grenzfläche (Fresnel)",
+    "width": 1.9999999999999998e-05,
+    "height": 3e-06,
+    "cell_size": 2.5e-08,
+    "background_index": 1.0,
+    "polarization": "ez",
+    "boundary_x": "pml",
+    "boundary_y": "periodic",
+    "pml_cells": 12,
+    "courant": 0.99,
+    "duration": 1.2e-13,
+    "shapes": [
+      {
+        "name": "Glas",
+        "kind": "rectangle",
+        "x": 1.4999999999999999e-05,
+        "y": 1.5e-06,
+        "width": 9.999999999999999e-06,
+        "height": 3e-06,
+        "rotation": 0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 1.5
+      }
+    ],
+    "sources": [
+      {
+        "name": "Ebene Welle",
+        "kind": "line",
+        "x1": 3e-06,
+        "y1": 0.0,
+        "x2": 3e-06,
+        "y2": 3e-06,
+        "beam_width": 0.0,
+        "signal": "pulse",
+        "wavelength": 1.55e-06,
+        "amplitude": 1.0,
+        "phase": 0.0,
+        "pulse_duration": 8e-15,
+        "ramp_periods": 4.0
+      }
+    ],
+    "monitors": [
+      {
+        "name": "vor der Grenzfläche",
+        "kind": "point",
+        "x1": 6e-06,
+        "y1": 1.5e-06,
+        "x2": 0.0,
+        "y2": 0.0
+      },
+      {
+        "name": "im Glas",
+        "kind": "point",
+        "x1": 1.4e-05,
+        "y1": 1.5e-06,
+        "x2": 0.0,
+        "y2": 0.0
+      }
+    ]
+  }
+}
