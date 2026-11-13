@@ -94,8 +94,12 @@ ordered_json scene_to_json(const field::FieldScene& scene) {
                         {"wavelength", m.wavelength}});
   ordered_json ports = ordered_json::array();
   for (const auto& p : scene.ports)
-    ports.push_back(
-        {{"name", p.name}, {"x1", p.x1}, {"y1", p.y1}, {"x2", p.x2}, {"y2", p.y2}, {"mode_order", p.mode_order}});
+    ports.push_back({{"name", p.name},
+                     {"x1", p.x1},
+                     {"y1", p.y1},
+                     {"x2", p.x2},
+                     {"y2", p.y2},
+                     {"mode_order", p.mode_order}});
   const auto& sp = scene.sparameters;
   return {{"name", scene.name},
           {"width", scene.width},
@@ -456,14 +460,16 @@ std::string sparameter_hash(const field::FieldScene& scene) {
   return buffer;
 }
 
-circuit::SParameterTable make_sparameter_table(const field::FieldScene& scene, const field::SParameterResult& result,
+circuit::SParameterTable make_sparameter_table(const field::FieldScene& scene,
+                                               const field::SParameterResult& result,
                                                const std::string& name) {
   circuit::SParameterTable table;
   table.name = name;
   table.label = name;
   char text[256];
   std::snprintf(text, sizeof text, "Aus dem 2D-FDTD extrahiert: Szene '%s', Gitter %.0f nm, Polarisation %s.",
-                scene.name.c_str(), scene.cell_size * 1e9, scene.polarization == field::Polarization::ez ? "Ez" : "Hz");
+                scene.name.c_str(), scene.cell_size * 1e9,
+                scene.polarization == field::Polarization::ez ? "Ez" : "Hz");
   table.description = text;
   table.ports = result.ports;
   table.left_port_count = result.left_port_count;
@@ -485,7 +491,8 @@ circuit::SParameterTable make_sparameter_table(const field::FieldScene& scene, c
 }
 
 std::string sparameter_to_json(const circuit::SParameterTable& table, const field::FieldScene* scene) {
-  ordered_json root = {{"format", "photonlab.sparam"}, {"version", 1}, {"units", "SI"}, {"table", table_to_json(table)}};
+  ordered_json root = {
+      {"format", "photonlab.sparam"}, {"version", 1}, {"units", "SI"}, {"table", table_to_json(table)}};
   if (scene) root["scene"] = scene_to_json(*scene);
   return root.dump(2) + "\n";
 }

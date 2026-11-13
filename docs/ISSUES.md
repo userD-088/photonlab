@@ -81,8 +81,22 @@ Offen aus Phase 5 (Folge-Issues):
 - [ ] #55 Materialdispersion im FDTD (Lorentz-Pole per ADE, Bauplan 4.4)
 
 ## Phase 6 – Brücke 1: vom Bauteil zum Chip
-- [ ] #56 S-Parameter-Extraktion: Breitband-Puls, Modenmonitore mit laufender DFT, normiert auf das Quellspektrum
-- [ ] #57 Dateiformat `.sparam.json` (Geometrie, Gitter, S(lambda), Metadaten) und Bauteilbibliothek im Chip-Designer
-- [ ] #58 Bauteil "S-Parameter-Datei" in der Component-Registry (Interpolation über die Wellenlänge)
-- [ ] #59 Parametrisierte Bauteile: Geometrie-Sweep als Tabelle; Cache über Hash der Eingabedatei
-- [ ] #60 Konsistenztest: extrahierter Richtkoppler in der Schaltung = FDTD des Gesamtaufbaus innerhalb 1 %
+- [x] #56 S-Parameter-Extraktion: Breitband-Modenpuls je Port, laufende DFT an allen Ports, Zerlegung in Laufrichtungen
+- [x] #57 Dateiformat `.sparam.json` (Tabelle und Szene) und Bauteilbibliothek im Projekt und im Chip-Designer
+- [x] #58 Bauteil "S-Parameter" in der Component-Registry (Interpolation von Betrag und Phase über die Wellenlänge)
+- [x] #59 Cache über den Fingerabdruck der Szene (ohne Name, Laufzeit, Quellen, Monitore)
+- [x] #60 Konsistenztest: zwei extrahierte Spalte in der Schaltung = FDTD des Gesamtaufbaus auf 0,3 % (gefordert 1 %)
+
+Offen aus Phase 6 (Folge-Issues):
+- [ ] #61 Parametrisierte Bauteile: Geometrie-Sweep als Tabelle (z. B. Koppellänge), im Chip-Designer interpoliert
+- [ ] #62 Mehrere Moden je Port (Modenumwandlung sichtbar machen statt als Verlust zu verbuchen)
+- [ ] #63 Referenz-Design: Mach-Zehnder aus zwei extrahierten Kopplern, verglichen mit dem Gesamt-FDTD
+- [ ] #64 Kompaktmodell-Parameter für nichtlineare Bauteile aus dem FDTD (Güte, Modenvolumen; Phase 8)
+- [ ] #65 Objektliste im Bauteil-Labor: gleichnamige Formen (Segmente einer Kurve) zusammenfassen
+
+## Phase 7 – Photonische Kristalle
+- [ ] #66 PWE-Löser (Plane Wave Expansion) für 2D-Kristalle, Bandstruktur entlang Gamma-M-K-Gamma
+- [ ] #67 Abnahme: Bandlücke des Dreiecksgitters stimmt mit der Literatur (Joannopoulos)
+- [ ] #68 Geometrie-Generatoren: Dreiecks- und Quadratgitter, Liniendefekte (gerade, 60°-Knick, Y), Punktdefekte
+- [ ] #69 PhC-Gatter (NOT, AND, OR, XOR) und Halbaddierer im FDTD; Wahrheitstabelle automatisch auf Feld-Ebene
+- [ ] #70 Bandstruktur-Ansicht im Bauteil-Labor

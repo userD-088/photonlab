@@ -1,13 +1,12 @@
 #include "photonlab/field/sparameters.hpp"
 
+#include <Eigen/Dense>
 #include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstdio>
 #include <memory>
 #include <numeric>
-
-#include <Eigen/Dense>
 
 #include "photonlab/core/parallel_for.hpp"
 #include "photonlab/core/units.hpp"
@@ -21,24 +20,24 @@ using cplx = std::complex<double>;
 // Lage einer Portlinie auf dem Gitter und die Indizes der Feldwerte, aus denen die Mode gemessen wird.
 struct PortGrid {
   bool vertical = true;
-  int inward = +1;                      // +1: Richtung ins Bauteil entlang der positiven Achse
-  int fixed = 0;                        // Spalte (senkrecht) bzw. Zeile (waagerecht) der Linie
-  int from = 0, to = 0;                 // Bereich der Querkoordinate, einschließlich
+  int inward = +1;                              // +1: Richtung ins Bauteil entlang der positiven Achse
+  int fixed = 0;                                // Spalte (senkrecht) bzw. Zeile (waagerecht) der Linie
+  int from = 0, to = 0;                         // Bereich der Querkoordinate, einschließlich
   std::vector<std::size_t> scalar_a, scalar_b;  // Skalarfeld: Mittel aus a und b (bei Ez ist a = b)
   std::vector<std::size_t> plane_a, plane_b;    // Querfeld in der Ebene: Mittel aus a und b (bei Hz a = b)
-  std::vector<double> eps_point;        // relative Permittivität an den Messpunkten (siehe Physik-Notiz)
-  std::vector<double> eps_between;      // TM: zwischen den Punkten k-1 und k (Größe m + 1)
+  std::vector<double> eps_point;    // relative Permittivität an den Messpunkten (siehe Physik-Notiz)
+  std::vector<double> eps_between;  // TM: zwischen den Punkten k-1 und k (Größe m + 1)
   std::size_t count() const { return scalar_a.size(); }
 };
 
 // Mode einer Portlinie bei einer Frequenz, auf dem Gitter gerechnet (siehe Physik-Notiz).
 struct PortMode {
-  std::vector<double> profile;          // Maximum = +1
-  double beta_numeric = 0.0;            // beta' = 2*sin(beta_grid*dx/2)/dx
-  double n_eff = 0.0;                   // beta_grid / k0 (Index auf dem Gitter, mit numerischer Dispersion)
-  double impedance = 0.0;               // Ez: Admittanz Y [S]; Hz: Z0 [Ohm] (siehe Physik-Notiz)
-  double norm = 0.0;                    // Leistung je |a|² [W/m]
-  double weight_sum = 0.0;              // Summe f² * w
+  std::vector<double> profile;  // Maximum = +1
+  double beta_numeric = 0.0;    // beta' = 2*sin(beta_grid*dx/2)/dx
+  double n_eff = 0.0;           // beta_grid / k0 (Index auf dem Gitter, mit numerischer Dispersion)
+  double impedance = 0.0;       // Ez: Admittanz Y [S]; Hz: Z0 [Ohm] (siehe Physik-Notiz)
+  double norm = 0.0;            // Leistung je |a|² [W/m]
+  double weight_sum = 0.0;      // Summe f² * w
 };
 
 PortGrid build_port_grid(const FieldScene& scene, const Fdtd& sim, const Port& port) {
@@ -93,8 +92,8 @@ PortGrid build_port_grid(const FieldScene& scene, const Fdtd& sim, const Port& p
 
 // Mode der Portlinie bei der Vakuumwellenlänge wavelength. Die Gleichung ist genau die des Yee-Gitters für
 // eine in Ausbreitungsrichtung gleichförmige Struktur: k0 und beta werden durch ihre Gitterformen ersetzt.
-PortMode solve_port_mode(const PortGrid& g, Polarization polarization, double wavelength, double dx, double dt,
-                         int order, const std::string& who) {
+PortMode solve_port_mode(const PortGrid& g, Polarization polarization, double wavelength, double dx,
+                         double dt, int order, const std::string& who) {
   const auto m = static_cast<Eigen::Index>(g.count());
   const double omega = omega_from_wavelength(wavelength);
   const double omega_numeric = 2.0 * std::sin(0.5 * omega * dt) / dt;
@@ -120,12 +119,14 @@ PortMode solve_port_mode(const PortGrid& g, Polarization polarization, double wa
 
   Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> solver;
   solver.computeFromTridiagonal(diagonal, off);
-  if (solver.info() != Eigen::Success) throw FieldError(who + "das Eigenwertproblem der Portmode ist nicht konvergiert");
+  if (solver.info() != Eigen::Success)
+    throw FieldError(who + "das Eigenwertproblem der Portmode ist nicht konvergiert");
   const Eigen::Index index = m - 1 - order;
   const double beta2 = index >= 0 ? solver.eigenvalues()(index) : -1.0;
   const double cladding = std::max(g.eps_point.front(), g.eps_point.back());
   char text[160];
-  std::snprintf(text, sizeof text, "bei %.1f nm wird keine Mode der Ordnung %d geführt", wavelength * 1e9, order);
+  std::snprintf(text, sizeof text, "bei %.1f nm wird keine Mode der Ordnung %d geführt", wavelength * 1e9,
+                order);
   if (!(beta2 > k0 * k0 * cladding)) throw FieldError(who + text);
 
   PortMode mode;
@@ -144,7 +145,8 @@ PortMode solve_port_mode(const PortGrid& g, Polarization polarization, double wa
   for (double& v : mode.profile) v /= peak;
   // Die Mode muss innerhalb der Linie abklingen; sonst schneidet die Linie sie ab und das Ergebnis ist falsch
   if (std::max(std::abs(mode.profile.front()), std::abs(mode.profile.back())) > 0.05)
-    throw FieldError(who + "die Linie ist zu kurz: die Mode reicht über ihre Enden hinaus (Linie verlängern)");
+    throw FieldError(who +
+                     "die Linie ist zu kurz: die Mode reicht über ihre Enden hinaus (Linie verlängern)");
   for (Eigen::Index k = 0; k < m; ++k) {
     const double f = mode.profile[static_cast<std::size_t>(k)];
     mode.weight_sum += ez ? f * f : f * f / g.eps_point[static_cast<std::size_t>(k)];
@@ -210,8 +212,8 @@ void validate_sparameter_setup(const FieldScene& scene) {
     const double back = -port_inward_sign(scene, port) * s.source_offset;
     const bool vertical = port_is_vertical(scene, port);
     const double sx = vertical ? back : 0.0, sy = vertical ? 0.0 : back;
-    if (in_pml(port.x1 + sx, port.y1 + sy) || in_pml(port.x2 + sx, port.y2 + sy) ||
-        port.x1 + sx < 0.0 || port.x1 + sx > scene.width || port.y1 + sy < 0.0 || port.y1 + sy > scene.height)
+    if (in_pml(port.x1 + sx, port.y1 + sy) || in_pml(port.x2 + sx, port.y2 + sy) || port.x1 + sx < 0.0 ||
+        port.x1 + sx > scene.width || port.y1 + sy < 0.0 || port.y1 + sy > scene.height)
       throw FieldError(who + "hinter der Linie ist kein Platz für die Anregung vor der Randschicht");
   }
 }
@@ -237,11 +239,12 @@ SParameterResult extract_sparameters(const FieldScene& scene, ThreadPool* pool, 
   const auto frequencies = static_cast<std::size_t>(settings.points);
   for (std::size_t k = 0; k < frequencies; ++k)
     result.wavelengths.push_back(settings.wavelength_start +
-                                 (settings.wavelength_stop - settings.wavelength_start) * static_cast<double>(k) /
-                                     static_cast<double>(frequencies - 1));
+                                 (settings.wavelength_stop - settings.wavelength_start) *
+                                     static_cast<double>(k) / static_cast<double>(frequencies - 1));
 
   // Breitbandiger Puls: Trägerfrequenz in der Mitte des Bereichs, Spektrum an den Rändern auf etwa 1/e
-  const double f_low = constants::c0 / settings.wavelength_stop, f_high = constants::c0 / settings.wavelength_start;
+  const double f_low = constants::c0 / settings.wavelength_stop,
+               f_high = constants::c0 / settings.wavelength_start;
   const double center_wavelength = constants::c0 / (0.5 * (f_low + f_high));
   const double half_width = constants::pi * (f_high - f_low);  // halbe Breite in omega
   const double pulse_duration = 2.0 / half_width;
@@ -270,8 +273,9 @@ SParameterResult extract_sparameters(const FieldScene& scene, ThreadPool* pool, 
       grids.push_back(build_port_grid(scene, sim, scene.ports[p]));
       const std::string who = "Port '" + scene.ports[p].name + "': ";
       for (double wavelength : result.wavelengths)
-        port_modes[grids.size() - 1].push_back(
-            solve_port_mode(grids.back(), scene.polarization, wavelength, scene.cell_size, dt, scene.ports[p].mode_order, who));
+        port_modes[grids.size() - 1].push_back(solve_port_mode(grids.back(), scene.polarization, wavelength,
+                                                               scene.cell_size, dt, scene.ports[p].mode_order,
+                                                               who));
     }
   }
   for (std::size_t p = 0; p < port_count; ++p) {
@@ -337,7 +341,8 @@ SParameterResult extract_sparameters(const FieldScene& scene, ThreadPool* pool, 
         while (step < max_steps) {
           sim.step();
           ++step;
-          // Zeit des Skalarfeldes nach dem Schritt: step*dt; Drehzeiger alle 1024 Schritte neu, gegen Rundungsdrift
+          // Zeit des Skalarfeldes nach dem Schritt: step*dt; Drehzeiger alle 1024 Schritte neu, gegen
+          // Rundungsdrift
           for (std::size_t k = 0; k < frequencies; ++k)
             phasor[k] = (step & 1023u) == 0 ? std::polar(1.0, omega[k] * dt * static_cast<double>(step))
                                             : (step == 1 ? rotation[k] : phasor[k] * rotation[k]);
@@ -430,16 +435,19 @@ SParameterResult extract_sparameters(const FieldScene& scene, ThreadPool* pool, 
       const cplx incident = runs[j].incoming[j][k];
       weakest = std::min(weakest, std::abs(incident));
       strongest = std::max(strongest, std::abs(incident));
-      for (std::size_t i = 0; i < port_count; ++i) result.s[k][i * port_count + j] = runs[j].outgoing[i][k] / incident;
+      for (std::size_t i = 0; i < port_count; ++i)
+        result.s[k][i * port_count + j] = runs[j].outgoing[i][k] / incident;
     }
     if (runs[j].time >= settings.max_time * 0.999)
-      result.warnings.push_back("Anregung an Port '" + result.ports[j] +
-                                "': das Feld ist bis zur Höchstdauer nicht abgeklungen (Resonanz?); das Spektrum "
-                                "ist abgeschnitten.");
+      result.warnings.push_back(
+          "Anregung an Port '" + result.ports[j] +
+          "': das Feld ist bis zur Höchstdauer nicht abgeklungen (Resonanz?); das Spektrum "
+          "ist abgeschnitten.");
   }
   if (weakest < 1e-3 * strongest)
-    result.warnings.push_back("Das Spektrum der Anregung ist an den Rändern des Bereichs sehr schwach; dort sind "
-                              "die S-Parameter ungenau.");
+    result.warnings.push_back(
+        "Das Spektrum der Anregung ist an den Rändern des Bereichs sehr schwach; dort sind "
+        "die S-Parameter ungenau.");
   return result;
 }
 

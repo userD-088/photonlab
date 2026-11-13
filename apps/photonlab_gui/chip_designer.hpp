@@ -22,6 +22,11 @@ struct SDL_Window;
 
 namespace photonlab::gui {
 
+// Registry des geladenen Projekts (eingebaute Bauteile plus Bauteilbibliothek). Nur im GUI-Thread lesen;
+// Jobs nehmen sich mit active_registry_ptr() eine eigene Kopie des Zeigers mit.
+const circuit::ComponentRegistry& active_registry();
+std::shared_ptr<const circuit::ComponentRegistry> active_registry_ptr();
+
 class ChipDesigner {
  public:
   // Fenstertitel (auch für das Standard-Layout in main.cpp)
@@ -53,7 +58,11 @@ class ChipDesigner {
   void load_example(const std::string& name) { request(Pending::load_example, name); }
   void show_status(std::string text, bool is_error = false) { set_status(std::move(text), is_error); }
   SDL_Window* window() const { return window_; }
-  std::function<void(const std::string& path)> on_save_gate;  // Ziel für den Dialog "Gatter exportieren"
+  std::function<void(const std::string& path)> on_save_gate;    // Ziel für den Dialog "Gatter exportieren"
+  std::function<void(const std::string& path)> on_save_sparam;  // Ziel für "S-Parameter speichern"
+  std::function<void(const std::string& path)> on_open_sparam;  // Ziel für "S-Parameter laden"
+  // Bauteilbibliothek geändert: Registry neu aufbauen und Schaltung neu rechnen
+  void library_changed();
 
  private:
   enum class Pending { none, new_project, open_project, load_example, quit };

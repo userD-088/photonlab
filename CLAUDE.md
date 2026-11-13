@@ -11,7 +11,7 @@ Ziel: physikalisch realistisch und ehrlich bewertet.
 Bauplan: `docs/PhotonLab_Bauplan_v2.pdf` (Roadmap = Abschnitt 15).
 Interaktiver Prototyp (JS, gleiche Physik): `docs/prototypes/photonische_gatter.html`.
 Offene Aufgaben: `docs/ISSUES.md`.
-**Aktuelle Phase: 6 (Brücke 1: S-Parameter vom Feld zur Schaltung).** Umgesetzt: Phase 1 und 2 (Schaltung), Phase 3 (Logik-Labor, linear), Phase 4 (2D-FDTD), Phase 5 (Materialien, Modenlöser).
+**Aktuelle Phase: 7 (Photonische Kristalle).** Umgesetzt: Phase 1 und 2 (Schaltung), Phase 3 (Logik-Labor, linear), Phase 4 (2D-FDTD), Phase 5 (Materialien, Modenlöser), Phase 6 (S-Parameter vom Feld zur Schaltung).
 
 ## Build
 ```
@@ -23,14 +23,14 @@ Ohne GUI (schneller, z. B. für reine Physik-Arbeit): `-DPHOTONLAB_BUILD_GUI=OFF
 
 ## Struktur
 - `libs/core` – Einheiten, Konstanten, komplexe Zahlen, Threadpool, JobControl, `parallel_for`
-- `libs/circuit` – Component-Interface und -Registry, Netzliste, linearer Löser, Sweep, Resonanz-Auswertung, Monte-Carlo, Referenz-Designs
+- `libs/circuit` – Component-Interface und -Registry, S-Parameter-Bauteil (`sparam:<name>`), Netzliste, linearer Löser, Sweep, Resonanz-Auswertung, Monte-Carlo, Referenz-Designs
 - `libs/materials` – Sellmeier-Gleichungen (Si, SiO2, Si3N4), Gruppenindex, dn/dT; jede Zahl mit Quelle
 - `libs/modes` – Schichtwellenleiter analytisch, 1D-Profil-Löser, semi-vektorieller Modenlöser für Querschnitte
-- `libs/field` – Feld-Szene (Formen, Quellen, Monitore), 2D-FDTD nach Yee mit CPML, Moden- und Linienquellen, Spektrum
+- `libs/field` – Feld-Szene (Formen, Quellen, Monitore, Ports), 2D-FDTD nach Yee mit CPML, Moden- und Linienquellen, Spektrum, S-Parameter-Extraktion
 - `libs/logic` – Gatter-Definition, Wahrheitstabellen-Läufer, Schwellwert-Analyse, Gatter-Zeugnis, Optimierer
-- `libs/io` – Projektdatei `.plab.json` und charakterisiertes Gatter `.gate.json` (alle Zahlen in SI)
-- `apps/photonlab_gui` – SDL3 + Dear ImGui (Docking) + ImPlot; Bauteil-Labor in `field_lab.cpp` (Feld) und `mode_view.cpp` (Querschnitt), Chip-Designer in `chip_designer.cpp`, Logik-Labor in `logic_lab.cpp`
-- `apps/photonlab_cli` – Kommandozeile: `components`, `example`, `materials`, `run [--sweep | --resonances | --monte-carlo | --logic | --field | --modes] [--csv]`, `validate`
+- `libs/io` – Projektdatei `.plab.json` (mit Bauteilbibliothek), `.sparam.json`, `.gate.json` (alle Zahlen in SI); `make_registry(project)` liefert die Registry eines Projekts
+- `apps/photonlab_gui` – SDL3 + Dear ImGui (Docking) + ImPlot; Bauteil-Labor in `field_lab.cpp` (Feld), `mode_view.cpp` (Querschnitt) und `sparam_view.cpp` (S-Parameter), Chip-Designer in `chip_designer.cpp`, Logik-Labor in `logic_lab.cpp`
+- `apps/photonlab_cli` – Kommandozeile: `components`, `example`, `materials`, `run [--sweep | --resonances | --monte-carlo | --logic | --field | --modes | --sparam] [--csv | --out]`, `validate`
 - `examples` – Referenz-Designs als `.plab.json` (erzeugt mit `photonlab_cli example <name>`)
 - `tests` – doctest; Physik-Validierung gegen analytische Lösungen
 - `cmake/Dependencies.cmake` – alle externen Abhängigkeiten, Versionen gepinnt
@@ -54,6 +54,7 @@ Ohne GUI (schneller, z. B. für reine Physik-Arbeit): `-DPHOTONLAB_BUILD_GUI=OFF
 - GUI-Jobs, die laufend Bilder liefern (FDTD): Löser, Steuerung und Schnappschuss per `shared_ptr` an den Job geben; der Job greift nie auf Objekte der Oberfläche zu.
 - Eigenwertprobleme: Ergebnisse immer über das Residuum prüfen und nur geprüfte Moden melden (eigener Löser in `libs/modes/src/fde.cpp`; Spectra lieferte ungenaue Werte und ist nicht eingebunden).
 - Brechzahlen nie fest eintippen: aus `libs/materials` bzw. aus dem Schichtlöser berechnen.
+- Registry: nie `ComponentRegistry::builtin()` für geladene Projekte verwenden, sondern `io::make_registry(project)` (GUI: `active_registry()`, in Jobs `active_registry_ptr()` mitnehmen), sonst fehlen die Bauteile der Bibliothek.
 - Code-Stil: `.clang-format`; Funktionen/Variablen snake_case, Klassen PascalCase; Kommentare auf Deutsch.
 
 ## Physik-Referenzen

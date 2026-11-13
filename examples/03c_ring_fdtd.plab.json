@@ -102,7 +102,16 @@
         "mode_order": 0,
         "wavelength": 0.0
       }
-    ]
+    ],
+    "ports": [],
+    "sparameters": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 51,
+      "source_offset": 3e-07,
+      "decay": 1e-05,
+      "max_time": 5e-12
+    }
   },
   "cross_section": {
     "core": "Si",
@@ -117,5 +126,6 @@
     "wavelength": 1.55e-06,
     "polarization": "quasi_te",
     "modes": 4
-  }
+  },
+  "sparameters": []
 }

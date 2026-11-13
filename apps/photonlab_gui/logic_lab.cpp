@@ -17,7 +17,7 @@
 namespace photonlab::gui {
 namespace {
 
-const circuit::ComponentRegistry& registry() { return circuit::ComponentRegistry::builtin(); }
+const circuit::ComponentRegistry& registry() { return active_registry(); }
 
 ImVec4 rating_color(logic::Rating rating) {
   switch (rating) {
@@ -118,18 +118,18 @@ void LogicLab::update() {
   if (project.gate.empty() || result_.key == current) return;
 
   // Die Charakterisierung läuft als Job; er besitzt Kopien von Schaltung und Definition.
-  future_ = pool_.submit(
-      [circuit = project.circuit, gate = project.gate, wavelength = project.wavelength, current] {
-        Result result;
-        result.key = current;
-        result.gate = gate;
-        try {
-          result.report = logic::characterize(circuit, registry(), gate, wavelength);
-        } catch (const std::exception& e) {
-          result.error = e.what();
-        }
-        return result;
-      });
+  future_ = pool_.submit([circuit = project.circuit, gate = project.gate, wavelength = project.wavelength,
+                          current, registry = active_registry_ptr()] {
+    Result result;
+    result.key = current;
+    result.gate = gate;
+    try {
+      result.report = logic::characterize(circuit, *registry, gate, wavelength);
+    } catch (const std::exception& e) {
+      result.error = e.what();
+    }
+    return result;
+  });
 }
 
 void LogicLab::draw() {

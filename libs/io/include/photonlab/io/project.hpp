@@ -10,8 +10,8 @@
 
 #include "photonlab/circuit/monte_carlo.hpp"
 #include "photonlab/circuit/netlist.hpp"
-#include "photonlab/circuit/sweep.hpp"
 #include "photonlab/circuit/sparameter_table.hpp"
+#include "photonlab/circuit/sweep.hpp"
 #include "photonlab/field/scene.hpp"
 #include "photonlab/field/sparameters.hpp"
 #include "photonlab/logic/gate.hpp"
@@ -57,11 +57,13 @@ std::shared_ptr<const circuit::ComponentRegistry> make_registry(const Project& p
 std::string sparameter_hash(const field::FieldScene& scene);
 
 // Ergebnis der Extraktion als Tabelle für die Bauteilbibliothek.
-circuit::SParameterTable make_sparameter_table(const field::FieldScene& scene, const field::SParameterResult& result,
+circuit::SParameterTable make_sparameter_table(const field::FieldScene& scene,
+                                               const field::SParameterResult& result,
                                                const std::string& name);
 
 // Eigene Datei .sparam.json: Tabelle und die Szene, aus der sie stammt (Bauplan Abschnitt 6).
-std::string sparameter_to_json(const circuit::SParameterTable& table, const field::FieldScene* scene = nullptr);
+std::string sparameter_to_json(const circuit::SParameterTable& table,
+                               const field::FieldScene* scene = nullptr);
 circuit::SParameterTable sparameter_from_json(std::string_view text);  // wirft IoError
 void save_sparameters(const circuit::SParameterTable& table, const field::FieldScene* scene,
                       const std::filesystem::path& path);

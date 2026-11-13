@@ -58,7 +58,8 @@ FieldScene gap_chain(int copies) {
   s.background_index = index_cladding;
   s.polarization = Polarization::ez;
   s.duration = 250e-15;
-  s.shapes = {{"Kern", ShapeKind::rectangle, 0.5 * s.width, 1.5 * um, s.width, 0.3 * um, 0.0, 1e-6, 0.5e-6, index_core}};
+  s.shapes = {{"Kern", ShapeKind::rectangle, 0.5 * s.width, 1.5 * um, s.width, 0.3 * um, 0.0, 1e-6, 0.5e-6,
+               index_core}};
   for (int c = 0; c < copies; ++c)
     s.shapes.push_back({"Spalt " + std::to_string(c + 1), ShapeKind::rectangle, 3 * um + c * period, 1.5 * um,
                         0.1 * um, 0.3 * um, 0.0, 1e-6, 0.5e-6, index_cladding});
@@ -67,8 +68,9 @@ FieldScene gap_chain(int copies) {
   source.kind = SourceKind::mode;
   source.x1 = source.x2 = 0.9 * um, source.y1 = 0.6 * um, source.y2 = 2.4 * um;
   s.sources = {source};
-  s.monitors = {{"Fluss davor", MonitorKind::flux, 1.4 * um, 0.6 * um, 1.4 * um, 2.4 * um},
-                {"Fluss dahinter", MonitorKind::flux, s.width - 1.4 * um, 0.6 * um, s.width - 1.4 * um, 2.4 * um}};
+  s.monitors = {
+      {"Fluss davor", MonitorKind::flux, 1.4 * um, 0.6 * um, 1.4 * um, 2.4 * um},
+      {"Fluss dahinter", MonitorKind::flux, s.width - 1.4 * um, 0.6 * um, s.width - 1.4 * um, 2.4 * um}};
   s.ports = {{"ein", 1.5 * um, 0.6 * um, 1.5 * um, 2.4 * um},
              {"aus", s.width - 1.5 * um, 0.6 * um, s.width - 1.5 * um, 2.4 * um}};
   return s;
@@ -83,8 +85,8 @@ void add_s_bend(std::vector<Shape>& shapes, const std::string& name, double x0, 
     const double xa = x0 + t0 * length, xb = x0 + t1 * length, ya = y(t0), yb = y(t1);
     const double segment = std::hypot(xb - xa, yb - ya);
     // etwas länger als nötig, damit an den Knicken keine Lücken entstehen
-    shapes.push_back({name, ShapeKind::rectangle, 0.5 * (xa + xb), 0.5 * (ya + yb), segment + 0.6 * width, width,
-                      std::atan2(yb - ya, xb - xa), 1e-6, 0.5e-6, index});
+    shapes.push_back({name, ShapeKind::rectangle, 0.5 * (xa + xb), 0.5 * (ya + yb), segment + 0.6 * width,
+                      width, std::atan2(yb - ya, xb - xa), 1e-6, 0.5e-6, index});
   }
 }
 
@@ -100,12 +102,13 @@ FieldScene coupler() {
   s.polarization = Polarization::hz;
   s.duration = 400e-15;
   const double center = 0.5 * s.height, near = 0.5 * (width + gap), far = near + offset;
-  const double x_bend1 = 2.5 * um, x_straight = x_bend1 + bend, x_bend2 = x_straight + straight, x_out = x_bend2 + bend;
+  const double x_bend1 = 2.5 * um, x_straight = x_bend1 + bend, x_bend2 = x_straight + straight,
+               x_out = x_bend2 + bend;
   for (int arm : {-1, +1}) {
     const std::string name = arm < 0 ? "oben" : "unten";
     const double y_far = center + arm * far, y_near = center + arm * near;
-    s.shapes.push_back({"Zuleitung " + name, ShapeKind::rectangle, 0.5 * x_bend1 + 0.1 * um, y_far, x_bend1 + 0.2 * um,
-                        width, 0.0, 1e-6, 0.5e-6, index_core});
+    s.shapes.push_back({"Zuleitung " + name, ShapeKind::rectangle, 0.5 * x_bend1 + 0.1 * um, y_far,
+                        x_bend1 + 0.2 * um, width, 0.0, 1e-6, 0.5e-6, index_core});
     add_s_bend(s.shapes, "Kurve " + name, x_bend1, y_far, bend, y_near - y_far, width, index_core);
     s.shapes.push_back({"Koppelstrecke " + name, ShapeKind::rectangle, x_straight + 0.5 * straight, y_near,
                         straight + 0.2 * um, width, 0.0, 1e-6, 0.5e-6, index_core});
@@ -119,10 +122,10 @@ FieldScene coupler() {
   source.x1 = source.x2 = 1.0 * um;
   source.y1 = center - far - 0.9 * um, source.y2 = center - far + 0.9 * um;
   s.sources = {source};
-  s.monitors = {{"Fluss oben", MonitorKind::flux, s.width - 1.5 * um, center - far - 0.9 * um, s.width - 1.5 * um,
-                 center - far + 0.9 * um},
-                {"Fluss unten", MonitorKind::flux, s.width - 1.5 * um, center + far - 0.9 * um, s.width - 1.5 * um,
-                 center + far + 0.9 * um}};
+  s.monitors = {{"Fluss oben", MonitorKind::flux, s.width - 1.5 * um, center - far - 0.9 * um,
+                 s.width - 1.5 * um, center - far + 0.9 * um},
+                {"Fluss unten", MonitorKind::flux, s.width - 1.5 * um, center + far - 0.9 * um,
+                 s.width - 1.5 * um, center + far + 0.9 * um}};
   for (int arm : {-1, +1}) {
     const double y = center + arm * far;
     const std::string side = arm < 0 ? "1" : "2";

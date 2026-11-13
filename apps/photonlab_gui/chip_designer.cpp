@@ -43,7 +43,11 @@ const ImU32 color_muted = IM_COL32(152, 164, 182, 255);
 const ImVec4 color_bad = ImVec4(1.0f, 0.48f, 0.42f, 1.0f);
 const ImVec4 color_good = ImVec4(0.36f, 0.77f, 0.55f, 1.0f);
 
-const ComponentRegistry& registry() { return ComponentRegistry::builtin(); }
+// Registry des Projekts; anfangs die eingebaute
+std::shared_ptr<const ComponentRegistry> g_registry =
+    std::make_shared<const ComponentRegistry>(ComponentRegistry::builtin());
+
+const ComponentRegistry& registry() { return *g_registry; }
 
 // Anzahl der Portreihen eines Bauteils im Schaltplan (links und rechts getrennt gezählt)
 float body_rows(const ComponentType& type) {
@@ -79,6 +83,9 @@ ImVec2 operator-(ImVec2 a, ImVec2 b) { return {a.x - b.x, a.y - b.y}; }
 
 }  // namespace
 
+const ComponentRegistry& active_registry() { return *g_registry; }
+std::shared_ptr<const ComponentRegistry> active_registry_ptr() { return g_registry; }
+
 ChipDesigner::ChipDesigner(ThreadPool& pool, SDL_Window* window, float ui_scale)
     : pool_(pool), window_(window), ui_scale_(ui_scale), cell_(28.0f * ui_scale) {
   io::Project project;
@@ -109,8 +116,24 @@ void ChipDesigner::set_status(std::string text, bool is_error) {
   status_is_error_ = is_error;
 }
 
+void ChipDesigner::library_changed() {
+  try {
+    g_registry = io::make_registry(project_);
+  } catch (const std::exception& e) {
+    g_registry = std::make_shared<const ComponentRegistry>(ComponentRegistry::builtin());
+    set_status(e.what(), true);
+  }
+  touch();
+}
+
 void ChipDesigner::set_project(io::Project project, std::string path) {
   project_ = std::move(project);
+  try {
+    g_registry = io::make_registry(project_);
+  } catch (const std::exception& e) {
+    g_registry = std::make_shared<const ComponentRegistry>(ComponentRegistry::builtin());
+    set_status(e.what(), true);
+  }
   file_path_ = std::move(path);
   dirty_ = false;
   ++revision_;
@@ -211,6 +234,12 @@ void ChipDesigner::handle_dialog_result() {
     std::string path = result->path;
     if (path_from_utf8(path).extension().empty()) path += ".gate.json";
     if (on_save_gate) on_save_gate(path);
+  } else if (result->kind == DialogKind::save_sparam) {
+    std::string path = result->path;
+    if (path_from_utf8(path).extension().empty()) path += ".sparam.json";
+    if (on_save_sparam) on_save_sparam(path);
+  } else if (result->kind == DialogKind::open_sparam) {
+    if (on_open_sparam) on_open_sparam(result->path);
   } else {
     std::string path = result->path;
     if (path_from_utf8(path).extension().empty()) path += ".plab.json";
@@ -230,7 +259,10 @@ void ChipDesigner::add_instance(const std::string& type_name, int grid_x, int gr
                        });
   };
   while (occupied(grid_x, grid_y)) grid_y += 4;
-  const std::string name = project_.circuit.unique_name(type->name);
+  // Instanzname ohne Präfix: aus "sparam:koppler" wird "koppler1"
+  const std::string base =
+      type->name.substr(type->name.find(':') == std::string::npos ? 0 : type->name.find(':') + 1);
+  const std::string name = project_.circuit.unique_name(base);
   project_.circuit.add(name, type->name, type->default_params(), grid_x, grid_y);
   selected_ = name;
   rename_buffer_ = name;
@@ -885,11 +917,11 @@ void ChipDesigner::start_monte_carlo() {
   // Der Job besitzt Kopien von Schaltung und Einstellungen; die GUI darf währenddessen weiter bearbeiten.
   mc_future_ = pool_.submit([circuit = project_.circuit, settings = project_.monte_carlo,
                              wavelength = project_.wavelength, key = monte_carlo_key(), control = mc_control_,
-                             pool = &pool_] {
+                             pool = &pool_, registry = g_registry] {
     MonteCarloData data;
     data.key = key;
     try {
-      data.result = circuit::monte_carlo(circuit, registry(), wavelength, settings, pool, control.get());
+      data.result = circuit::monte_carlo(circuit, *registry, wavelength, settings, pool, control.get());
     } catch (const std::exception& e) {
       data.error = e.what();
     }

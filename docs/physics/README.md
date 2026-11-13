@@ -17,5 +17,6 @@ Das hilft Menschen und Claude gleichermaßen, den Code nachzuvollziehen.
 - [`fdtd.md`](fdtd.md) – 2D-FDTD nach Yee: Gitter, Courant, Dispersion, CPML, Quellen, Monitore (Phase 4)
 - [`materials.md`](materials.md) – Sellmeier-Gleichungen, Gruppenindex, Quellen und Grenzen (Phase 5)
 - [`modes.md`](modes.md) – Schichtwellenleiter, Modenlöser für Querschnitte, Modenquelle im FDTD (Phase 5)
+- [`sparameters.md`](sparameters.md) – S-Parameter aus dem FDTD: Zerlegung in Laufrichtungen auf dem Gitter, Bauteil in der Schaltung (Phase 6)
 
 ## Geplante Notizen

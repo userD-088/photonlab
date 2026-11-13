@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -20,6 +21,8 @@
 #include "photonlab/core/thread_pool.hpp"
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/fdtd.hpp"
+#include "photonlab/field/reference_scenes.hpp"
+#include "photonlab/field/sparameters.hpp"
 #include "photonlab/field/spectrum.hpp"
 #include "photonlab/io/project.hpp"
 #include "photonlab/logic/reference_gates.hpp"
@@ -46,7 +49,8 @@ void print_usage() {
       "mzi_unbalanced,\n"
       "                                               ring_allpass, ring_adddrop, xor_interference,\n"
       "                                               and_interference, xor_directed, field_waveguide,\n"
-      "                                               field_interface, field_interference, field_ring)\n"
+      "                                               field_interface, field_interference, field_ring,\n"
+      "                                               field_gap, field_gap_pair, field_coupler)\n"
       "  photonlab_cli run <datei.plab.json>          Schaltung bei der Arbeitswellenlänge rechnen\n"
       "  photonlab_cli run <datei> --sweep [--csv <aus.csv>]   Wellenlängen-Sweep aus der Datei\n"
       "  photonlab_cli run <datei> --resonances       Sweep auswerten: Resonanzen, FSR, Güte, Extinktion\n"
@@ -55,6 +59,8 @@ void print_usage() {
       "  photonlab_cli run <datei> --field [--csv <aus.csv>]         2D-FDTD der Feld-Szene über ihre "
       "Laufzeit\n"
       "  photonlab_cli run <datei> --modes            Moden des Wellenleiter-Querschnitts der Datei\n"
+      "  photonlab_cli run <datei> --sparam [--out <aus.sparam.json>] [--name <name>]\n"
+      "                                               S-Parameter der Feld-Szene an ihren Ports extrahieren\n"
       "  photonlab_cli materials [wellenlaenge_nm]    Brechzahl und Gruppenindex der Materialbibliothek\n"
       "  photonlab_cli validate [--out <ordner>]      Validierung gegen analytische Lösungen\n");
 }
@@ -90,7 +96,7 @@ int cmd_example(std::string_view name) {
 
 int cmd_run(const std::string& file, bool do_sweep, const std::string& csv_path) {
   const io::Project project = io::load_project(file);
-  const circuit::CompiledCircuit compiled(project.circuit, circuit::ComponentRegistry::builtin());
+  const circuit::CompiledCircuit compiled(project.circuit, *io::make_registry(project));
   // Kopfzeile nach stderr, damit ein Sweep auf stdout reines CSV bleibt
   std::fprintf(stderr, "Schaltung: %s (%d Bauteile, %d Ports)\n", project.circuit.name.c_str(),
                compiled.instance_count(), compiled.port_count());
@@ -142,7 +148,7 @@ int cmd_run(const std::string& file, bool do_sweep, const std::string& csv_path)
 // Sweep rechnen und jede Leistungs-Messgröße auf Resonanzen untersuchen
 int cmd_resonances(const std::string& file) {
   const io::Project project = io::load_project(file);
-  const circuit::CompiledCircuit compiled(project.circuit, circuit::ComponentRegistry::builtin());
+  const circuit::CompiledCircuit compiled(project.circuit, *io::make_registry(project));
   ThreadPool pool;
   const auto solutions = circuit::sweep(compiled, project.sweep, &pool);
   std::vector<double> wavelengths;
@@ -179,7 +185,8 @@ int cmd_resonances(const std::string& file) {
 
 int cmd_monte_carlo(const std::string& file, const std::string& csv_path) {
   const io::Project project = io::load_project(file);
-  const auto& registry = circuit::ComponentRegistry::builtin();
+  const auto registry_ptr = io::make_registry(project);
+  const auto& registry = *registry_ptr;
   if (project.monte_carlo.variations.empty())
     std::fprintf(stderr, "Hinweis: Die Datei enthält keine Streuungen, alle Stichproben sind gleich.\n");
   ThreadPool pool;
@@ -315,8 +322,8 @@ int cmd_logic(const std::string& file, const std::string& gate_path) {
     std::fprintf(stderr, "Fehler: Die Datei enthält keine Gatter-Definition (Abschnitt \"logic\").\n");
     return 1;
   }
-  const logic::GateReport report = logic::characterize(project.circuit, circuit::ComponentRegistry::builtin(),
-                                                       project.gate, project.wavelength);
+  const logic::GateReport report =
+      logic::characterize(project.circuit, *io::make_registry(project), project.gate, project.wavelength);
   print_report(project.gate, report);
   if (!gate_path.empty()) {
     io::save_gate_report(project.gate, report, gate_path);
@@ -356,6 +363,112 @@ void print_modes(const modes::CrossSection& section, const modes::CrossSectionRe
   std::printf(
       "Hinweis: semi-vektorieller Löser; bei stark führenden Wellenleitern liegt n_eff einige Prozent "
       "über vollvektoriellen Werten.\n");
+}
+
+int cmd_sparam(const std::string& file, const std::string& out_path, const std::string& name_option) {
+  const io::Project project = io::load_project(file);
+  const field::FieldScene& scene = project.field;
+  if (scene.empty() || scene.ports.empty()) {
+    std::fprintf(stderr, "Fehler: Die Datei enthält keine Feld-Szene mit Ports.\n");
+    return 1;
+  }
+  const auto& settings = scene.sparameters;
+  std::printf("Szene: %s, %zu Ports, %d Wellenlängen von %.1f bis %.1f nm\n", scene.name.c_str(),
+              scene.ports.size(), settings.points, settings.wavelength_start / units::nm,
+              settings.wavelength_stop / units::nm);
+  ThreadPool pool;
+  const field::SParameterResult result = field::extract_sparameters(scene, &pool);
+  std::printf("%zu Zeitschritte, längste Anregung %.0f fs\n", result.steps,
+              result.simulated_time / units::fs);
+  for (const auto& w : result.warnings) std::printf("Hinweis: %s\n", w.c_str());
+  std::printf("Hinweis: 2D-Rechnung; Abstrahlung nach oben und unten fehlt, Brechzahlen ohne Dispersion.\n");
+
+  const std::size_t n = result.port_count();
+  const std::size_t stride = std::max<std::size_t>(1, result.wavelengths.size() / 5);
+  for (std::size_t k = 0; k < result.wavelengths.size(); k += stride) {
+    std::printf("\n%.1f nm  |S_ij|² (Zeile = Ausgang, Spalte = Eingang)\n        ",
+                result.wavelengths[k] / units::nm);
+    for (const auto& p : result.ports) std::printf("%10s", p.c_str());
+    std::printf("\n");
+    for (std::size_t i = 0; i < n; ++i) {
+      std::printf("  %-6s", result.ports[i].c_str());
+      for (std::size_t j = 0; j < n; ++j) std::printf("%10.5f", std::norm(result.at(k, i, j)));
+      std::printf("\n");
+    }
+  }
+  // Reziprozität und Passivität über alle Wellenlängen
+  double asymmetry = 0.0, worst_column = 0.0;
+  for (std::size_t k = 0; k < result.wavelengths.size(); ++k)
+    for (std::size_t j = 0; j < n; ++j) {
+      double column = 0.0;
+      for (std::size_t i = 0; i < n; ++i) {
+        column += std::norm(result.at(k, i, j));
+        asymmetry = std::max(asymmetry, std::abs(result.at(k, i, j) - result.at(k, j, i)));
+      }
+      worst_column = std::max(worst_column, column);
+    }
+  std::printf("\nReziprozität: größte Abweichung |S_ij - S_ji| = %.1e\n", asymmetry);
+  std::printf("Passivität: größte Summe einer Spalte = %.4f (muss <= 1 sein; der Rest wird abgestrahlt)\n",
+              worst_column);
+
+  if (!out_path.empty()) {
+    std::string name = name_option;
+    if (name.empty()) {
+      name = std::filesystem::path(out_path).filename().string();
+      for (const char* suffix : {".sparam.json", ".json"})
+        if (name.size() > std::strlen(suffix) && name.ends_with(suffix)) {
+          name.resize(name.size() - std::strlen(suffix));
+          break;
+        }
+    }
+    io::save_sparameters(io::make_sparameter_table(scene, result, name), &scene, out_path);
+    std::printf("S-Parameter als Bauteil 'sparam:%s' nach %s geschrieben\n", name.c_str(), out_path.c_str());
+  }
+  return 0;
+}
+
+// Abnahme Phase 6: zwei extrahierte Spalte, in der Schaltung hintereinander, gegen das FDTD des
+// Gesamtaufbaus.
+bool validate_sparameters(const std::string& out_dir) {
+  ThreadPool pool;
+  field::FieldScene single = field::reference_scene("field_gap");
+  field::FieldScene pair = field::reference_scene("field_gap_pair");
+  single.sparameters.points = pair.sparameters.points = 11;
+  const field::SParameterResult one = field::extract_sparameters(single, &pool);
+  const field::SParameterResult both = field::extract_sparameters(pair, &pool);
+  io::Project project;
+  project.sparameters = {io::make_sparameter_table(single, one, "spalt")};
+  const auto registry = io::make_registry(project);
+  circuit::Circuit c;
+  c.add("a", "sparam:spalt");
+  c.add("b", "sparam:spalt");
+  c.connect("a.aus", "b.ein");
+  const circuit::CompiledCircuit compiled(c, *registry);
+  std::ofstream csv;
+  if (!out_dir.empty()) {
+    csv.open(std::filesystem::path(out_dir) / "sparameters.csv");
+    csv.precision(8);
+    csv << "wavelength_m,t2_circuit,t2_fdtd,r2_circuit,r2_fdtd\n";
+  }
+  double worst = 0.0;
+  for (std::size_t k = 0; k < one.wavelengths.size(); ++k) {
+    circuit::CVector a = circuit::CVector::Zero(compiled.port_count());
+    a(compiled.port_index("a", "ein")) = 1.0;
+    const circuit::Solution solution = compiled.solve(one.wavelengths[k], &a);
+    const double t_circuit = std::norm(solution.b(compiled.port_index("b", "aus")));
+    const double r_circuit = std::norm(solution.b(compiled.port_index("a", "ein")));
+    const double t_fdtd = std::norm(both.at(k, 1, 0)), r_fdtd = std::norm(both.at(k, 0, 0));
+    worst = std::max({worst, std::abs(t_circuit - t_fdtd), std::abs(r_circuit - r_fdtd)});
+    if (csv.is_open())
+      csv << one.wavelengths[k] << ',' << t_circuit << ',' << t_fdtd << ',' << r_circuit << ',' << r_fdtd
+          << '\n';
+  }
+  std::printf(
+      "Brücke 1: zwei extrahierte Spalte in der Schaltung gegen das Gesamt-FDTD: größte Abweichung der "
+      "Leistung %.4f (Toleranz 0,01)\n",
+      worst);
+  if (csv.is_open()) std::printf("Bericht: %s/sparameters.csv\n", out_dir.c_str());
+  return worst < 0.01;
 }
 
 int cmd_modes(const std::string& file) {
@@ -564,6 +677,7 @@ int cmd_validate(const std::string& out_dir) {
   ok = validate_xor() && ok;
   ok = validate_fdtd() && ok;
   ok = validate_modes(out_dir) && ok;
+  ok = validate_sparameters(out_dir) && ok;
   std::printf("%s\n", ok ? "BESTANDEN" : "NICHT BESTANDEN");
   return ok ? 0 : 1;
 }
@@ -576,7 +690,7 @@ int main(int argc, char** argv) {
 #endif
   const std::vector<std::string> args(argv + 1, argv + argc);
   if (args.empty()) {
-    std::printf("PhotonLab CLI 0.6.0 (Phase 5)\n");
+    std::printf("PhotonLab CLI 0.7.0 (Phase 6)\n");
     print_usage();
     return 0;
   }
@@ -601,6 +715,8 @@ int main(int argc, char** argv) {
     if (command == "materials")
       return cmd_materials(args.size() >= 2 ? std::atof(args[1].c_str()) * units::nm : 1550e-9);
     if (command == "run" && args.size() >= 2 && flag("--modes")) return cmd_modes(args[1]);
+    if (command == "run" && args.size() >= 2 && flag("--sparam"))
+      return cmd_sparam(args[1], option("--out"), option("--name"));
     if (command == "run" && args.size() >= 2 && flag("--field")) return cmd_field(args[1], option("--csv"));
     if (command == "run" && args.size() >= 2 && flag("--logic")) return cmd_logic(args[1], option("--gate"));
     if (command == "run" && args.size() >= 2 && flag("--resonances")) return cmd_resonances(args[1]);

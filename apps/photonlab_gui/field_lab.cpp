@@ -12,6 +12,7 @@
 #include "implot.h"
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/reference_scenes.hpp"
+#include "photonlab/field/sparameters.hpp"
 #include "photonlab/field/spectrum.hpp"
 #include "photonlab/materials/material.hpp"
 #include "ui_util.hpp"
@@ -26,6 +27,7 @@ using units::um;
 
 const ImU32 color_source = IM_COL32(255, 176, 74, 255);
 const ImU32 color_monitor = IM_COL32(93, 220, 140, 255);
+const ImU32 color_port = IM_COL32(214, 132, 255, 255);
 const ImU32 color_outline = IM_COL32(227, 232, 239, 110);
 const ImU32 color_selected = IM_COL32(255, 255, 255, 255);
 const ImU32 color_pml = IM_COL32(152, 164, 182, 120);
@@ -125,7 +127,8 @@ FieldLab::FieldLab(ThreadPool& pool, ChipDesigner& designer, SDL_Renderer* rende
       designer_(designer),
       renderer_(renderer),
       ui_scale_(ui_scale),
-      mode_view_(pool, designer, renderer, ui_scale) {}
+      mode_view_(pool, designer, renderer, ui_scale),
+      sparam_view_(pool, designer) {}
 
 FieldLab::~FieldLab() {
   pause();
@@ -347,6 +350,10 @@ void FieldLab::draw() {
     }
     if (ImGui::BeginTabItem("Querschnitt (Moden)")) {
       mode_view_.draw();
+      ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("S-Parameter")) {
+      sparam_view_.draw();
       ImGui::EndTabItem();
     }
     ImGui::EndTabBar();
@@ -582,6 +589,8 @@ void FieldLab::draw_objects() {
     row(ObjectKind::source, i, scene.sources[static_cast<std::size_t>(i)].name, "Quelle: ", color_source);
   for (int i = 0; i < static_cast<int>(scene.monitors.size()); ++i)
     row(ObjectKind::monitor, i, scene.monitors[static_cast<std::size_t>(i)].name, "Monitor: ", color_monitor);
+  for (int i = 0; i < static_cast<int>(scene.ports.size()); ++i)
+    row(ObjectKind::port, i, scene.ports[static_cast<std::size_t>(i)].name, "Port: ", color_port);
 
   const double cx = scene.width / 2, cy = scene.height / 2;
   if (ImGui::SmallButton("+ Rechteck")) {
@@ -634,6 +643,18 @@ void FieldLab::draw_objects() {
     scene.monitors.push_back(m);
     selected_kind_ = ObjectKind::monitor, selected_index_ = static_cast<int>(scene.monitors.size()) - 1;
     changed = true;
+  }
+  ImGui::SameLine();
+  if (ImGui::SmallButton("+ Port")) {
+    // neuer Port senkrecht über die Mitte der linken bzw. rechten Hälfte; Ports ändern die Rechnung nicht
+    field::Port p;
+    p.name = "p" + std::to_string(scene.ports.size() + 1);
+    const bool right = scene.ports.size() % 2 == 1;
+    p.x1 = p.x2 = right ? 0.8 * scene.width : 0.2 * scene.width;
+    p.y1 = std::max(0.0, cy - 1 * um), p.y2 = std::min(scene.height, cy + 1 * um);
+    scene.ports.push_back(p);
+    selected_kind_ = ObjectKind::port, selected_index_ = static_cast<int>(scene.ports.size()) - 1;
+    designer_.mark_dirty();
   }
   if (changed) {
     scene_changed_ = true;
@@ -795,6 +816,28 @@ void FieldLab::draw_selected_object() {
       scene.monitors.erase(scene.monitors.begin() + selected_index_);
       removed = true;
     }
+  } else if (selected_kind_ == ObjectKind::port && index < scene.ports.size()) {
+    // Ports wirken nur bei der S-Parameter-Extraktion: Änderungen starten die Feldrechnung nicht neu
+    field::Port& p = scene.ports[index];
+    name_field(&p.name);
+    bool port_changed = false;
+    port_changed |= drag_um("x Anfang", &p.x1, 0.0, w);
+    port_changed |= drag_um("y Anfang", &p.y1, 0.0, h);
+    port_changed |= drag_um("x Ende", &p.x2, 0.0, w);
+    port_changed |= drag_um("y Ende", &p.y2, 0.0, h);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
+    port_changed |=
+        ImGui::DragInt("Modenordnung", &p.mode_order, 0.05f, 0, 9, "%d", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::TextDisabled(
+        "Linie quer über den Wellenleiter, bis in den\nMantel; waagerecht oder senkrecht. Die Richtung\nins "
+        "Bauteil folgt aus der Lage (Pfeil).");
+    if (port_changed) designer_.mark_dirty();
+    if (ImGui::SmallButton("Port löschen")) {
+      scene.ports.erase(scene.ports.begin() + selected_index_);
+      selected_kind_ = ObjectKind::none;
+      selected_index_ = -1;
+      designer_.mark_dirty();
+    }
   }
   ImGui::PopID();
   if (removed) {
@@ -846,19 +889,25 @@ void FieldLab::draw_canvas(float height) {
     for (int i = 0; i < static_cast<int>(scene.monitors.size()); ++i) {
       const auto& m = scene.monitors[static_cast<std::size_t>(i)];
       const ImVec2 a = to_screen(m.x1, m.y1),
-                   b = m.kind == field::MonitorKind::flux ? to_screen(m.x2, m.y2) : a;
+                   b = m.kind != field::MonitorKind::point ? to_screen(m.x2, m.y2) : a;
       if (distance_to_segment(io.MousePos, a, b) <= grab)
         selected_kind_ = ObjectKind::monitor, selected_index_ = i;
+    }
+    for (int i = 0; i < static_cast<int>(scene.ports.size()); ++i) {
+      const auto& p = scene.ports[static_cast<std::size_t>(i)];
+      if (distance_to_segment(io.MousePos, to_screen(p.x1, p.y1), to_screen(p.x2, p.y2)) <= grab)
+        selected_kind_ = ObjectKind::port, selected_index_ = i;
     }
     for (int i = 0; i < static_cast<int>(scene.sources.size()); ++i) {
       const auto& s = scene.sources[static_cast<std::size_t>(i)];
       const ImVec2 a = to_screen(s.x1, s.y1),
-                   b = s.kind == field::SourceKind::line ? to_screen(s.x2, s.y2) : a;
+                   b = s.kind != field::SourceKind::point ? to_screen(s.x2, s.y2) : a;
       if (distance_to_segment(io.MousePos, a, b) <= grab)
         selected_kind_ = ObjectKind::source, selected_index_ = i;
     }
   }
-  // Ziehen verschiebt das ausgewählte Objekt; neu gerechnet wird beim Loslassen
+  // Ziehen verschiebt das ausgewählte Objekt; neu gerechnet wird beim Loslassen (Ports: gar nicht)
+  bool return_after_port_drag = false;
   if (ImGui::IsItemActive() && selected_kind_ != ObjectKind::none &&
       ImGui::IsMouseDragging(ImGuiMouseButton_Left, 2.0f)) {
     const double dx = io.MouseDelta.x / px_per_m, dy = io.MouseDelta.y / px_per_m;
@@ -875,8 +924,13 @@ void FieldLab::draw_canvas(float height) {
     } else if (selected_kind_ == ObjectKind::monitor && index < scene.monitors.size()) {
       move(&scene.monitors[index].x1, &scene.monitors[index].y1);
       move(&scene.monitors[index].x2, &scene.monitors[index].y2);
+    } else if (selected_kind_ == ObjectKind::port && index < scene.ports.size()) {
+      move(&scene.ports[index].x1, &scene.ports[index].y1);
+      move(&scene.ports[index].x2, &scene.ports[index].y2);
+      designer_.mark_dirty();
+      return_after_port_drag = true;
     }
-    if (dx != 0.0 || dy != 0.0) {
+    if ((dx != 0.0 || dy != 0.0) && !return_after_port_drag) {
       dragging_ = true;
       scene_changed_ = true;
       designer_.mark_dirty();
@@ -951,6 +1005,25 @@ void FieldLab::draw_canvas(float height) {
       draw->AddLine({a.x, a.y - r}, {a.x, a.y + r}, color_monitor, 2.0f);
     }
     draw->AddText({a.x + 7.0f, a.y + 3.0f}, color_monitor, m.name.c_str());
+  }
+  for (int i = 0; i < static_cast<int>(scene.ports.size()); ++i) {
+    const auto& p = scene.ports[static_cast<std::size_t>(i)];
+    const bool selected = selected_kind_ == ObjectKind::port && selected_index_ == i;
+    const ImVec2 a = to_screen(p.x1, p.y1), b = to_screen(p.x2, p.y2);
+    draw->AddLine(a, b, color_port, selected ? 3.5f : 2.0f);
+    // Pfeil in der Mitte, Richtung ins Bauteil
+    const bool vertical = std::abs(p.x2 - p.x1) < 0.5 * scene.cell_size;
+    const int inward = field::port_inward_sign(scene, p);
+    const ImVec2 mid = {0.5f * (a.x + b.x), 0.5f * (a.y + b.y)};
+    const float length = 14.0f * ui_scale_, head = 5.0f * ui_scale_;
+    const ImVec2 dir =
+        vertical ? ImVec2(static_cast<float>(inward), 0.0f) : ImVec2(0.0f, static_cast<float>(inward));
+    const ImVec2 tip = {mid.x + dir.x * length, mid.y + dir.y * length};
+    draw->AddLine(mid, tip, color_port, 2.0f);
+    draw->AddTriangleFilled(tip, {tip.x - dir.x * head - dir.y * head, tip.y - dir.y * head - dir.x * head},
+                            {tip.x - dir.x * head + dir.y * head, tip.y - dir.y * head + dir.x * head},
+                            color_port);
+    draw->AddText({b.x + 5.0f, b.y - ImGui::GetFontSize()}, color_port, p.name.c_str());
   }
   // Maßstab unten links
   {

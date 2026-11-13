@@ -13,6 +13,7 @@
 #include "mode_view.hpp"
 #include "photonlab/core/thread_pool.hpp"
 #include "photonlab/field/fdtd.hpp"
+#include "sparam_view.hpp"
 
 struct SDL_Renderer;
 struct SDL_Texture;
@@ -49,7 +50,7 @@ class FieldLab {
     double energy = 0.0;
     bool fresh = false;
   };
-  enum class ObjectKind { none, shape, source, monitor };
+  enum class ObjectKind { none, shape, source, monitor, port };
   enum class DisplayMode { field, intensity };
 
   void rebuild();  // Szene geändert: Löser neu aufsetzen
@@ -75,6 +76,7 @@ class FieldLab {
   SDL_Renderer* renderer_;
   float ui_scale_;
   ModeView mode_view_;
+  SParamView sparam_view_;
 
   std::uint64_t seen_generation_ = 0;
   bool scene_changed_ = false;

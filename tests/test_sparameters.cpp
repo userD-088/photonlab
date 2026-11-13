@@ -44,8 +44,9 @@ TEST_CASE("S-Parameter-Bauteil: Interpolation von Betrag und Phase, keine Extrap
   const double middle = 0.5 * (table.wavelengths[3] + table.wavelengths[4]);
   const cplx t = circuit::interpolate(table, middle)(1, 0);
   CHECK(std::abs(t) == doctest::Approx(0.9).epsilon(1e-12));
-  const double expected = std::arg(table.s[3](1, 0)) +
-                          0.5 * std::remainder(std::arg(table.s[4](1, 0)) - std::arg(table.s[3](1, 0)), 2 * constants::pi);
+  const double expected =
+      std::arg(table.s[3](1, 0)) +
+      0.5 * std::remainder(std::arg(table.s[4](1, 0)) - std::arg(table.s[3](1, 0)), 2 * constants::pi);
   CHECK(std::abs(std::remainder(std::arg(t) - expected, 2 * constants::pi)) < 1e-12);
   CHECK_THROWS_AS(circuit::interpolate(table, 1400e-9), circuit::CircuitError);
   CHECK_THROWS_AS(circuit::interpolate(table, 1700e-9), circuit::CircuitError);
@@ -99,7 +100,8 @@ TEST_CASE("Gerader Wellenleiter: |S21| = 1, keine Reflexion, Phase nach dem Inde
   }
 }
 
-TEST_CASE("Abnahme Phase 6: zwei extrahierte Spalte in der Schaltung = FDTD des Gesamtaufbaus innerhalb 1 %") {
+TEST_CASE(
+    "Abnahme Phase 6: zwei extrahierte Spalte in der Schaltung = FDTD des Gesamtaufbaus innerhalb 1 %") {
   ThreadPool pool(2);
   field::FieldScene single = field::reference_scene("field_gap");
   field::FieldScene pair = field::reference_scene("field_gap_pair");
@@ -141,7 +143,9 @@ TEST_CASE("Abnahme Phase 6: zwei extrahierte Spalte in der Schaltung = FDTD des 
   CHECK(worst_field < 0.02);
 }
 
-TEST_CASE("Bauteilbibliothek: Projektdatei und .sparam.json verlustfrei, Fingerabdruck reagiert auf die Geometrie") {
+TEST_CASE(
+    "Bauteilbibliothek: Projektdatei und .sparam.json verlustfrei, Fingerabdruck reagiert auf die "
+    "Geometrie") {
   io::Project project;
   project.field = field::reference_scene("field_gap");
   project.sparameters = {test_table()};

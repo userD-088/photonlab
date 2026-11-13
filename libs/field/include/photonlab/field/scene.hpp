@@ -96,9 +96,9 @@ struct SParameterSettings {
   double wavelength_start = 1500e-9;  // [m]
   double wavelength_stop = 1600e-9;   // [m]
   int points = 51;
-  double source_offset = 0.3e-6;      // Abstand der Anregung hinter der Portlinie (nach außen) [m]
-  double decay = 1e-5;                // Rechnung endet, wenn die Feldenergie auf diesen Anteil gefallen ist
-  double max_time = 5e-12;            // Obergrenze der simulierten Zeit je Anregung [s]
+  double source_offset = 0.3e-6;  // Abstand der Anregung hinter der Portlinie (nach außen) [m]
+  double decay = 1e-5;            // Rechnung endet, wenn die Feldenergie auf diesen Anteil gefallen ist
+  double max_time = 5e-12;        // Obergrenze der simulierten Zeit je Anregung [s]
   bool operator==(const SParameterSettings&) const = default;
 };
 
@@ -117,7 +117,7 @@ struct FieldScene {
   std::vector<Shape> shapes;
   std::vector<Source> sources;
   std::vector<Monitor> monitors;
-  std::vector<Port> ports;        // nur für die S-Parameter-Extraktion; die normale Rechnung ignoriert sie
+  std::vector<Port> ports;  // nur für die S-Parameter-Extraktion; die normale Rechnung ignoriert sie
   SParameterSettings sparameters;
 
   bool empty() const { return !(width > 0.0) || !(height > 0.0); }

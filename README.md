@@ -12,10 +12,9 @@ Realistischer Photonik-Simulator in C++20 mit SDL3: vom elektromagnetischen Feld
 Der vollständige Bauplan steht in [`docs/PhotonLab_Bauplan_v2.pdf`](docs/PhotonLab_Bauplan_v2.pdf).
 Einen interaktiven Vorgeschmack gibt [`docs/prototypes/photonische_gatter.html`](docs/prototypes/photonische_gatter.html) (im Browser öffnen).
 
-**Status:** Phase 5 – Materialien und Modenlöser. Das Bauteil-Labor rechnet Licht als Feld (2D-FDTD) und
-berechnet die Moden von Wellenleiter-Querschnitten, der Chip-Designer rechnet Schaltungen aus Kompaktmodellen,
-das Logik-Labor prüft sie als Logikgatter. Die Brücke vom Feld zur Schaltung (S-Parameter aus dem FDTD) und
-der Quanten-Modus fehlen noch.
+**Status:** Phase 6 – Brücke vom Feld zur Schaltung. Im Bauteil-Labor lassen sich die S-Parameter eines
+Bauteils aus dem 2D-FDTD messen und als Bauteil in den Chip-Designer übernehmen. Dazu: Modenlöser für
+Querschnitte, Schaltungen aus Kompaktmodellen und das Logik-Labor. Der Quanten-Modus fehlt noch.
 
 ## Voraussetzungen (Windows)
 
@@ -86,6 +85,19 @@ Chip-Designer übernehmen“ schreibt die Werte in alle Wellenleiter und Ringe d
 Der Löser ist semi-vektoriell: bei stark führenden Silizium-Drähten liegt der effektive Index etwa 2 % über
 vollvektoriellen Literaturwerten.
 
+### S-Parameter: vom Bauteil zum Chip
+
+1. Datei → Beispiele → „Feld: Richtkoppler mit S-Kurven“ laden. Die violetten Linien sind die Ports; der
+   Pfeil zeigt ins Bauteil. Eigene Ports legt „+ Port“ im Reiter „Feld“ an.
+2. Reiter „S-Parameter“ → „S-Parameter extrahieren“. Je Port läuft eine Rechnung (parallel); der Fortschritt
+   steht daneben.
+3. Ergebnis prüfen (Reziprozität und Passivität stehen über dem Plot), dann „In die Bauteilbibliothek
+   übernehmen“. Im Chip-Designer erscheint das Bauteil in der Bauteilbibliothek und lässt sich wie jedes
+   andere verschalten.
+
+Die Bibliothek wird mit dem Projekt gespeichert; einzelne Bauteile lassen sich als `.sparam.json` speichern
+und laden. Hat sich die Szene nicht geändert, bietet PhotonLab das vorhandene Ergebnis an (Cache).
+
 ## Logik-Labor bedienen
 
 Datei → Beispiele → „Interferenz-XOR/XNOR“ laden und den Reiter „Logik-Labor“ öffnen.
@@ -114,6 +126,7 @@ photonlab_cli run examples/05_interferenz_xor.plab.json --logic       # Wahrheit
 photonlab_cli run examples/01_wellenleiter_fdtd.plab.json --field     # 2D-FDTD über die Laufzeit der Szene
 photonlab_cli run examples/02_mach_zehnder.plab.json --modes          # Moden des Querschnitts der Datei
 photonlab_cli materials 1310                              # Brechzahlen der Materialbibliothek bei 1310 nm
+photonlab_cli run examples/04c_richtkoppler_fdtd.plab.json --sparam --out koppler.sparam.json
 photonlab_cli validate --out docs/validation              # Validierung gegen analytische Lösungen
 ```
 

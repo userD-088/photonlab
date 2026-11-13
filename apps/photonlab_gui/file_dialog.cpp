@@ -29,7 +29,7 @@ void SDLCALL on_dialog_done(void* userdata, const char* const* filelist, int /*f
 
 void show_file_dialog(DialogKind kind, SDL_Window* window) {
   void* userdata = reinterpret_cast<void*>(static_cast<std::intptr_t>(kind));
-  if (kind == DialogKind::open_project)
+  if (kind == DialogKind::open_project || kind == DialogKind::open_sparam)
     SDL_ShowOpenFileDialog(on_dialog_done, userdata, window, g_filters, 2, nullptr, false);
   else
     SDL_ShowSaveFileDialog(on_dialog_done, userdata, window, g_filters, 2, nullptr);

@@ -22,12 +22,13 @@ class SParameterComponent final : public Component {
 }  // namespace
 
 bool SParameterTable::operator==(const SParameterTable& other) const {
-  if (name != other.name || label != other.label || description != other.description || ports != other.ports ||
-      left_port_count != other.left_port_count || wavelengths != other.wavelengths ||
+  if (name != other.name || label != other.label || description != other.description ||
+      ports != other.ports || left_port_count != other.left_port_count || wavelengths != other.wavelengths ||
       source_hash != other.source_hash || s.size() != other.s.size())
     return false;
   for (std::size_t k = 0; k < s.size(); ++k)
-    if (s[k].rows() != other.s[k].rows() || s[k].cols() != other.s[k].cols() || s[k] != other.s[k]) return false;
+    if (s[k].rows() != other.s[k].rows() || s[k].cols() != other.s[k].cols() || s[k] != other.s[k])
+      return false;
   return true;
 }
 
@@ -36,21 +37,26 @@ std::string sparameter_type_name(const std::string& table_name) { return "sparam
 void validate(const SParameterTable& table) {
   const std::string who = "S-Parameter '" + table.name + "': ";
   if (table.name.empty()) throw CircuitError("S-Parameter-Tabelle ohne Namen");
-  if (table.name.find('.') != std::string::npos) throw CircuitError(who + "der Name darf keinen Punkt enthalten");
+  if (table.name.find('.') != std::string::npos)
+    throw CircuitError(who + "der Name darf keinen Punkt enthalten");
   if (table.ports.empty()) throw CircuitError(who + "keine Ports");
   for (std::size_t i = 0; i < table.ports.size(); ++i)
     for (std::size_t j = 0; j < i; ++j)
-      if (table.ports[i] == table.ports[j]) throw CircuitError(who + "Portname '" + table.ports[i] + "' doppelt");
+      if (table.ports[i] == table.ports[j])
+        throw CircuitError(who + "Portname '" + table.ports[i] + "' doppelt");
   if (table.wavelengths.size() < 2) throw CircuitError(who + "mindestens zwei Wellenlängen nötig");
-  if (table.wavelengths.size() != table.s.size()) throw CircuitError(who + "Zahl der Matrizen passt nicht zu den Wellenlängen");
+  if (table.wavelengths.size() != table.s.size())
+    throw CircuitError(who + "Zahl der Matrizen passt nicht zu den Wellenlängen");
   const auto n = static_cast<Eigen::Index>(table.ports.size());
   for (std::size_t k = 0; k < table.s.size(); ++k) {
-    if (table.s[k].rows() != n || table.s[k].cols() != n) throw CircuitError(who + "Matrix hat die falsche Größe");
+    if (table.s[k].rows() != n || table.s[k].cols() != n)
+      throw CircuitError(who + "Matrix hat die falsche Größe");
     if (!table.s[k].allFinite()) throw CircuitError(who + "Matrix enthält ungültige Zahlen");
     if (k > 0 && !(table.wavelengths[k] > table.wavelengths[k - 1]))
       throw CircuitError(who + "Wellenlängen müssen streng steigen");
   }
-  if (table.left_port_count > static_cast<int>(table.ports.size())) throw CircuitError(who + "zu viele linke Ports");
+  if (table.left_port_count > static_cast<int>(table.ports.size()))
+    throw CircuitError(who + "zu viele linke Ports");
 }
 
 CMatrix interpolate(const SParameterTable& table, double wavelength) {
@@ -65,7 +71,8 @@ CMatrix interpolate(const SParameterTable& table, double wavelength) {
   }
   const double x = std::clamp(wavelength, w.front(), w.back());
   const auto upper = std::upper_bound(w.begin(), w.end(), x);
-  const std::size_t k = std::min<std::size_t>(static_cast<std::size_t>(std::max<std::ptrdiff_t>(upper - w.begin(), 1)) - 1, w.size() - 2);
+  const std::size_t k = std::min<std::size_t>(
+      static_cast<std::size_t>(std::max<std::ptrdiff_t>(upper - w.begin(), 1)) - 1, w.size() - 2);
   const double t = (x - w[k]) / (w[k + 1] - w[k]);
   const CMatrix& a = table.s[k];
   const CMatrix& b = table.s[k + 1];
@@ -88,12 +95,13 @@ void register_sparameter_table(ComponentRegistry& registry, std::shared_ptr<cons
   char range[96];
   std::snprintf(range, sizeof range, " Gültig von %.1f bis %.1f nm.", table->wavelengths.front() / units::nm,
                 table->wavelengths.back() / units::nm);
-  ComponentType type{sparameter_type_name(table->name),
-                     table->label.empty() ? table->name : table->label,
-                     (table->description.empty() ? std::string("Gemessene S-Matrix.") : table->description) + range,
-                     table->ports,
-                     {},
-                     [table](const ParamMap&) { return std::make_unique<SParameterComponent>(table); }};
+  ComponentType type{
+      sparameter_type_name(table->name),
+      table->label.empty() ? table->name : table->label,
+      (table->description.empty() ? std::string("Gemessene S-Matrix.") : table->description) + range,
+      table->ports,
+      {},
+      [table](const ParamMap&) { return std::make_unique<SParameterComponent>(table); }};
   type.left_port_count = table->left_port_count;
   registry.add(std::move(type));
 }
