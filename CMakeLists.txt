@@ -22,6 +22,7 @@ endif()
 
 add_subdirectory(libs/core)
 add_subdirectory(libs/circuit)
+add_subdirectory(libs/logic)
 add_subdirectory(libs/io)
 add_subdirectory(apps/photonlab_cli)
 

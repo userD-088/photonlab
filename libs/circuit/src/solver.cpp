@@ -50,7 +50,7 @@ int CompiledCircuit::port_index(std::string_view instance, std::string_view port
   throw CircuitError("Unbekannter Port '" + label + "'");
 }
 
-Solution CompiledCircuit::solve(double wavelength, const CVector* a_ext) const {
+Solution CompiledCircuit::solve(double wavelength, const CVector* a_ext, double source_scale) const {
   if (!(wavelength > 0.0) || !std::isfinite(wavelength))
     throw CircuitError("Wellenlänge muss positiv und endlich sein");
   const int n = port_count();
@@ -71,7 +71,7 @@ Solution CompiledCircuit::solve(double wavelength, const CVector* a_ext) const {
     if (block.rows() != slot.port_count || block.cols() != slot.port_count)
       throw CircuitError("Bauteil '" + slot.name + "' liefert eine S-Matrix falscher Größe");
     s.block(slot.first_port, slot.first_port, slot.port_count, slot.port_count) = block;
-    rhs.segment(slot.first_port, slot.port_count) = components_[k]->source(wavelength);
+    rhs.segment(slot.first_port, slot.port_count) = source_scale * components_[k]->source(wavelength);
   }
   if (a_ext) rhs += s * (*a_ext);
 

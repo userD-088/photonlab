@@ -25,6 +25,15 @@ Circuit reference_ring_allpass();
 // Design 3b: Ringresonator zwischen zwei Bussen (Add-Drop) mit Detektoren an through und drop.
 Circuit reference_ring_adddrop();
 
+// Design 5: Interferenz-XOR/XNOR mit Phasencodierung (Detektoren "det_xor", "det_xnor").
+Circuit reference_xor_interference();
+
+// Lineares AND mit Intensitätscodierung (Aufbau wie das XOR): Negativbeispiel für Kontrast und Kaskade.
+Circuit reference_and_interference();
+
+// Design 10: Directed Logic aus zwei elektrisch abgestimmten Add-Drop-Ringen (XOR und XNOR).
+Circuit reference_xor_directed();
+
 // Referenz-Design samt passender Simulationseinstellungen (Sweep-Bereich, Beispiel-Streuungen).
 struct ReferenceSetup {
   Circuit circuit;

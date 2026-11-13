@@ -51,7 +51,9 @@ class CompiledCircuit {
 
   // Löst die Schaltung bei einer Wellenlänge. a_ext (optional, Länge port_count) speist offene Ports.
   // Wirft CircuitError, wenn das System singulär ist (verlustfreie Schleife exakt in Resonanz).
-  Solution solve(double wavelength, const CVector* a_ext = nullptr) const;
+  // source_scale skaliert die Amplituden aller Quellen-Bauteile (1 = Nennwert); damit lässt sich messen,
+  // wie Ausgangspegel auf weniger Eingangslicht reagieren, ohne einzelne Bauteile zu kennen.
+  Solution solve(double wavelength, const CVector* a_ext = nullptr, double source_scale = 1.0) const;
 
   std::vector<InstanceMeasurement> measurements(const Solution& solution) const;
   PowerBalance power_balance(const Solution& solution, const CVector* a_ext = nullptr) const;

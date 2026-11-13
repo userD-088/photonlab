@@ -1,0 +1,149 @@
+{
+  "format": "photonlab.project",
+  "version": 1,
+  "units": "SI",
+  "circuit": {
+    "name": "Interferenz-AND (Intensität)",
+    "instances": [
+      {
+        "name": "laser_a",
+        "type": "laser",
+        "params": {
+          "power": 0.001
+        },
+        "grid": [
+          1,
+          3
+        ]
+      },
+      {
+        "name": "laser_b",
+        "type": "laser",
+        "params": {
+          "power": 0.001
+        },
+        "grid": [
+          1,
+          5
+        ]
+      },
+      {
+        "name": "bias",
+        "type": "phase_shifter",
+        "params": {
+          "phase": -1.5707963267948966
+        },
+        "grid": [
+          8,
+          5
+        ]
+      },
+      {
+        "name": "koppler",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.5
+        },
+        "grid": [
+          15,
+          3
+        ]
+      },
+      {
+        "name": "det",
+        "type": "detector",
+        "params": {},
+        "grid": [
+          22,
+          3
+        ]
+      },
+      {
+        "name": "det_rest",
+        "type": "detector",
+        "params": {},
+        "grid": [
+          22,
+          5
+        ]
+      }
+    ],
+    "connections": [
+      {
+        "from": "laser_a.out",
+        "to": "koppler.in1"
+      },
+      {
+        "from": "laser_b.out",
+        "to": "bias.in"
+      },
+      {
+        "from": "bias.out",
+        "to": "koppler.in2"
+      },
+      {
+        "from": "koppler.out1",
+        "to": "det.in"
+      },
+      {
+        "from": "koppler.out2",
+        "to": "det_rest.in"
+      }
+    ]
+  },
+  "simulation": {
+    "wavelength": 1.55e-06,
+    "sweep": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 501
+    },
+    "monte_carlo": {
+      "samples": 500,
+      "seed": 1,
+      "variations": [
+        {
+          "type": "laser",
+          "param": "power",
+          "sigma": 0.05,
+          "relative": true,
+          "correlated": false
+        }
+      ]
+    }
+  },
+  "logic": {
+    "name": "Interferenz-AND",
+    "inputs": [
+      {
+        "name": "A",
+        "instance": "laser_a",
+        "param": "power",
+        "value0": 0.0,
+        "value1": 0.001,
+        "encoding": "intensity"
+      },
+      {
+        "name": "B",
+        "instance": "laser_b",
+        "param": "power",
+        "value0": 0.0,
+        "value1": 0.001,
+        "encoding": "intensity"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "Y",
+        "instance": "det",
+        "measurement": "Leistung",
+        "expected": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    ]
+  }
+}

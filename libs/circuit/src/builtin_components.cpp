@@ -160,18 +160,20 @@ class RingAllPass final : public Component {
   explicit RingAllPass(const ParamMap& p)
       : path_(p),
         length_(2.0 * constants::pi * p.at("radius")),
-        t_(std::sqrt(1.0 - p.at("power_coupling"))) {}
+        t_(std::sqrt(1.0 - p.at("power_coupling"))),
+        tuning_(expi(p.at("tuning_phase"))) {}
 
   int port_count() const override { return 2; }
 
   CMatrix s_matrix(double wavelength) const override {
-    const cplx round_trip = path_.transmission(wavelength, length_);
+    const cplx round_trip = tuning_ * path_.transmission(wavelength, length_);
     return two_port((t_ - round_trip) / (1.0 - t_ * round_trip));
   }
 
  private:
   GuidedPath path_;
   double length_, t_;
+  cplx tuning_;  // Zusatzphase pro Umlauf (Heizer oder Modulator)
 };
 
 // Add-Drop-Ring: zwei Buswellenleiter, zwei Koppler. Mit H = a*exp(i*phi) und h = sqrt(H) (halber Umlauf):
@@ -184,12 +186,13 @@ class RingAddDrop final : public Component {
         t1_(std::sqrt(1.0 - p.at("power_coupling_1"))),
         t2_(std::sqrt(1.0 - p.at("power_coupling_2"))),
         k1_(std::sqrt(p.at("power_coupling_1"))),
-        k2_(std::sqrt(p.at("power_coupling_2"))) {}
+        k2_(std::sqrt(p.at("power_coupling_2"))),
+        half_tuning_(expi(0.5 * p.at("tuning_phase"))) {}
 
   int port_count() const override { return 4; }
 
   CMatrix s_matrix(double wavelength) const override {
-    const cplx half = path_.transmission(wavelength, 0.5 * length_);
+    const cplx half = half_tuning_ * path_.transmission(wavelength, 0.5 * length_);
     const cplx round_trip = half * half;
     const cplx denominator = 1.0 - t1_ * t2_ * round_trip;
     const cplx through = (t1_ - t2_ * round_trip) / denominator;
@@ -207,6 +210,7 @@ class RingAddDrop final : public Component {
  private:
   GuidedPath path_;
   double length_, t1_, t2_, k1_, k2_;
+  cplx half_tuning_;  // halbe Zusatzphase je halbem Umlauf
 };
 
 // Y-Splitter (1x2-MMI): ideale, wellenlängenunabhängige 50:50-Aufteilung, reziprok.
@@ -347,10 +351,13 @@ void register_builtin_components(ComponentRegistry& registry) {
       {"n_group", "Gruppenindex", 4.2, 1.0, 10.0, "", 1.0},
       {"wavelength_ref", "Bezugswellenlänge", 1550e-9, 100e-9, 20e-6, "nm", 1e-9},
       {"loss_db_per_cm", "Verlust", 2.0, 0.0, 1000.0, "dB/cm", 1.0}};
+  // Zusatzphase pro Umlauf: steht für Heizer oder Plasma-Modulator am Ring (noch ohne Treibermodell).
+  const ParamSpec tuning = {"tuning_phase", "Abstimmphase", 0.0, -2.0 * two_pi, 2.0 * two_pi, "rad", 1.0};
 
   {
     std::vector<ParamSpec> params = {{"radius", "Radius", 10e-6, 1e-6, 1e-2, "µm", 1e-6},
                                      {"power_coupling", "Kopplung (Leistung)", 0.02, 0.0, 1.0, "", 1.0}};
+    params.push_back(tuning);
     params.insert(params.end(), guided.begin(), guided.end());
     registry.add({"ring_allpass",
                   "Ring (All-Pass)",
@@ -365,6 +372,7 @@ void register_builtin_components(ComponentRegistry& registry) {
         {"radius", "Radius", 10e-6, 1e-6, 1e-2, "µm", 1e-6},
         {"power_coupling_1", "Kopplung Bus 1 (Leistung)", 0.02, 0.0, 1.0, "", 1.0},
         {"power_coupling_2", "Kopplung Bus 2 (Leistung)", 0.02, 0.0, 1.0, "", 1.0}};
+    params.push_back(tuning);
     params.insert(params.end(), guided.begin(), guided.end());
     ComponentType type{
         "ring_adddrop",

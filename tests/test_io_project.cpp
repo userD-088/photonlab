@@ -50,7 +50,10 @@ TEST_CASE("Projekt: Beispieldateien entsprechen den Referenz-Designs") {
   for (const auto& [file, name] : {std::pair{"02_mach_zehnder.plab.json", "mzi"},
                                    std::pair{"02b_mach_zehnder_unbalanciert.plab.json", "mzi_unbalanced"},
                                    std::pair{"03_ring_allpass.plab.json", "ring_allpass"},
-                                   std::pair{"03b_ring_adddrop.plab.json", "ring_adddrop"}}) {
+                                   std::pair{"03b_ring_adddrop.plab.json", "ring_adddrop"},
+                                   std::pair{"05_interferenz_xor.plab.json", "xor_interference"},
+                                   std::pair{"05b_interferenz_and.plab.json", "and_interference"},
+                                   std::pair{"10_directed_logic_xor.plab.json", "xor_directed"}}) {
     CHECK(io::project_to_json(io::load_project(dir / file)) ==
           io::project_to_json(io::reference_project(name)));
   }

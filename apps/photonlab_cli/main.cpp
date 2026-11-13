@@ -19,6 +19,8 @@
 #include "photonlab/core/thread_pool.hpp"
 #include "photonlab/core/units.hpp"
 #include "photonlab/io/project.hpp"
+#include "photonlab/logic/reference_gates.hpp"
+#include "photonlab/logic/report.hpp"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -37,11 +39,13 @@ void print_usage() {
       "  photonlab_cli components                     alle Bauteiltypen mit Ports und Parametern\n"
       "  photonlab_cli example <name>                 Referenz-Design als .plab.json ausgeben (mzi, "
       "mzi_unbalanced,\n"
-      "                                               ring_allpass, ring_adddrop)\n"
+      "                                               ring_allpass, ring_adddrop, xor_interference,\n"
+      "                                               and_interference, xor_directed)\n"
       "  photonlab_cli run <datei.plab.json>          Schaltung bei der Arbeitswellenlänge rechnen\n"
       "  photonlab_cli run <datei> --sweep [--csv <aus.csv>]   Wellenlängen-Sweep aus der Datei\n"
       "  photonlab_cli run <datei> --resonances       Sweep auswerten: Resonanzen, FSR, Güte, Extinktion\n"
       "  photonlab_cli run <datei> --monte-carlo [--csv <aus.csv>]   Streuung aus der Datei rechnen\n"
+      "  photonlab_cli run <datei> --logic [--gate <aus.gate.json>]  Wahrheitstabelle und Gatter-Zeugnis\n"
       "  photonlab_cli validate [--out <ordner>]      Validierung gegen analytische Lösungen\n");
 }
 
@@ -259,6 +263,71 @@ bool validate_ring(const std::string& out_dir) {
   return fsr_error < 1e-4 && fwhm_error < 1e-2 && extinction_error < 0.05;
 }
 
+void print_report(const logic::GateDefinition& gate, const logic::GateReport& report) {
+  // Wahrheitstabelle mit gemessenen Leistungen
+  for (const auto& in : gate.inputs) std::printf("%-3s", in.name.c_str());
+  for (const auto& out : gate.outputs) std::printf(" | %-22s", out.name.c_str());
+  std::printf("\n");
+  for (std::size_t row = 0; row < report.table.rows.size(); ++row) {
+    for (int bit : report.table.rows[row].bits) std::printf("%-3d", bit);
+    for (std::size_t k = 0; k < gate.outputs.size(); ++k) {
+      const double p = report.table.rows[row].power[k];
+      const auto& a = report.outputs[k];
+      const bool decided = p > a.threshold;
+      std::printf(" | %10.4f µW -> %d %-4s", p / 1e-6, decided ? 1 : 0, decided == (a.bits[row] != 0) ? "" : "FALSCH");
+    }
+    std::printf("\n");
+  }
+  for (std::size_t k = 0; k < gate.outputs.size(); ++k) {
+    const auto& a = report.outputs[k];
+    std::printf("%s: %s, Entscheidungspegel %.4f µW, Kontrast %s, Extinktion %s\n", gate.outputs[k].name.c_str(),
+                a.function.empty() ? "unbekannte Funktion" : a.function.c_str(), a.threshold / 1e-6,
+                logic::format_db(a.contrast_db).c_str(), logic::format_db(a.extinction_db).c_str());
+  }
+  std::printf("\nZeugnis \"%s\" bei %.3f nm\n", report.gate_name.c_str(), report.wavelength / units::nm);
+  for (const auto& c : report.criteria) {
+    const char* mark = c.rating == logic::Rating::good      ? "[ gut ]"
+                       : c.rating == logic::Rating::limited ? "[ ~~~ ]"
+                       : c.rating == logic::Rating::bad     ? "[NEIN ]"
+                                                            : "[  -  ]";
+    std::printf("%s %-30s %s\n          %s\n", mark, c.name.c_str(), c.value.c_str(), c.remark.c_str());
+  }
+  std::printf("\n%d von %d bewerteten Kriterien erfüllt: %s\n", report.good_count, report.rated_count,
+              report.real_gate ? "erfüllt alle Anforderungen an ein Logikelement."
+                               : "Demonstrator, kein beliebig kaskadierbares Logikelement.");
+}
+
+int cmd_logic(const std::string& file, const std::string& gate_path) {
+  const io::Project project = io::load_project(file);
+  if (project.gate.empty()) {
+    std::fprintf(stderr, "Fehler: Die Datei enthält keine Gatter-Definition (Abschnitt \"logic\").\n");
+    return 1;
+  }
+  const logic::GateReport report = logic::characterize(
+      project.circuit, circuit::ComponentRegistry::builtin(), project.gate, project.wavelength);
+  print_report(project.gate, report);
+  if (!gate_path.empty()) {
+    io::save_gate_report(project.gate, report, gate_path);
+    std::printf("Charakterisiertes Gatter nach %s geschrieben\n", gate_path.c_str());
+  }
+  return 0;
+}
+
+// Abnahme Phase 3: Interferenz-XOR mit Kontrast > 20 dB im Idealfall, und das Zeugnis markiert die
+// fehlende Pegelregeneration.
+bool validate_xor() {
+  const io::Project project = io::reference_project("xor_interference");
+  const logic::GateReport report = logic::characterize(
+      project.circuit, circuit::ComponentRegistry::builtin(), project.gate, project.wavelength);
+  const logic::Criterion* regeneration = report.find("regeneration");
+  const bool contrast_ok = report.function_correct && report.worst_contrast_db > 20.0;
+  const bool regeneration_flagged = regeneration && regeneration->rating == logic::Rating::bad;
+  std::printf("XOR Kontrast:         %s (gefordert > 20 dB)\n", logic::format_db(report.worst_contrast_db).c_str());
+  std::printf("XOR Pegelregeneration: %s (erwartet: nicht erfüllt)\n",
+              regeneration ? std::string(logic::to_string(regeneration->rating)).c_str() : "fehlt");
+  return contrast_ok && regeneration_flagged;
+}
+
 // Referenzfall MZI (Bauplan Abschnitt 16): Ausgänge folgen sin²/cos² der Phasendifferenz, Energie bleibt
 // erhalten.
 int cmd_validate(const std::string& out_dir) {
@@ -300,6 +369,7 @@ int cmd_validate(const std::string& out_dir) {
   std::printf("MZI Energieerhaltung:   größte Abweichung %.3e (Toleranz %.0e)\n", worst_energy, tolerance);
   if (csv.is_open()) std::printf("Bericht: %s/mzi.csv\n", out_dir.c_str());
   ok = validate_ring(out_dir) && ok;
+  ok = validate_xor() && ok;
   std::printf("%s\n", ok ? "BESTANDEN" : "NICHT BESTANDEN");
   return ok ? 0 : 1;
 }
@@ -312,7 +382,7 @@ int main(int argc, char** argv) {
 #endif
   const std::vector<std::string> args(argv + 1, argv + argc);
   if (args.empty()) {
-    std::printf("PhotonLab CLI 0.3.0 (Phase 2)\n");
+    std::printf("PhotonLab CLI 0.4.0 (Phase 3)\n");
     print_usage();
     return 0;
   }
@@ -334,6 +404,7 @@ int main(int argc, char** argv) {
     if (command == "--info") return cmd_info();
     if (command == "components") return cmd_components();
     if (command == "example" && args.size() >= 2) return cmd_example(args[1]);
+    if (command == "run" && args.size() >= 2 && flag("--logic")) return cmd_logic(args[1], option("--gate"));
     if (command == "run" && args.size() >= 2 && flag("--resonances")) return cmd_resonances(args[1]);
     if (command == "run" && args.size() >= 2 && flag("--monte-carlo"))
       return cmd_monte_carlo(args[1], option("--csv"));

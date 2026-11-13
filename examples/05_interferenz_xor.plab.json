@@ -1,0 +1,167 @@
+{
+  "format": "photonlab.project",
+  "version": 1,
+  "units": "SI",
+  "circuit": {
+    "name": "Interferenz-XOR/XNOR",
+    "instances": [
+      {
+        "name": "laser_a",
+        "type": "laser",
+        "params": {
+          "power": 0.001
+        },
+        "grid": [
+          1,
+          3
+        ]
+      },
+      {
+        "name": "laser_b",
+        "type": "laser",
+        "params": {
+          "power": 0.001
+        },
+        "grid": [
+          1,
+          5
+        ]
+      },
+      {
+        "name": "bias",
+        "type": "phase_shifter",
+        "params": {
+          "phase": 1.5707963267948966
+        },
+        "grid": [
+          8,
+          5
+        ]
+      },
+      {
+        "name": "koppler",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.5
+        },
+        "grid": [
+          15,
+          3
+        ]
+      },
+      {
+        "name": "det_xor",
+        "type": "detector",
+        "params": {},
+        "grid": [
+          22,
+          3
+        ]
+      },
+      {
+        "name": "det_xnor",
+        "type": "detector",
+        "params": {},
+        "grid": [
+          22,
+          5
+        ]
+      }
+    ],
+    "connections": [
+      {
+        "from": "laser_a.out",
+        "to": "koppler.in1"
+      },
+      {
+        "from": "laser_b.out",
+        "to": "bias.in"
+      },
+      {
+        "from": "bias.out",
+        "to": "koppler.in2"
+      },
+      {
+        "from": "koppler.out1",
+        "to": "det_xor.in"
+      },
+      {
+        "from": "koppler.out2",
+        "to": "det_xnor.in"
+      }
+    ]
+  },
+  "simulation": {
+    "wavelength": 1.55e-06,
+    "sweep": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 501
+    },
+    "monte_carlo": {
+      "samples": 500,
+      "seed": 1,
+      "variations": [
+        {
+          "type": "coupler",
+          "param": "power_coupling",
+          "sigma": 0.02,
+          "relative": false,
+          "correlated": false
+        },
+        {
+          "type": "phase_shifter",
+          "param": "phase",
+          "sigma": 0.05,
+          "relative": false,
+          "correlated": false
+        }
+      ]
+    }
+  },
+  "logic": {
+    "name": "Interferenz-XOR/XNOR",
+    "inputs": [
+      {
+        "name": "A",
+        "instance": "laser_a",
+        "param": "phase",
+        "value0": 0.0,
+        "value1": 3.141592653589793,
+        "encoding": "phase"
+      },
+      {
+        "name": "B",
+        "instance": "laser_b",
+        "param": "phase",
+        "value0": 0.0,
+        "value1": 3.141592653589793,
+        "encoding": "phase"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "XOR",
+        "instance": "det_xor",
+        "measurement": "Leistung",
+        "expected": [
+          0,
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "name": "XNOR",
+        "instance": "det_xnor",
+        "measurement": "Leistung",
+        "expected": [
+          1,
+          0,
+          0,
+          1
+        ]
+      }
+    ]
+  }
+}

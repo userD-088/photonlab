@@ -1,10 +1,12 @@
 #include "photonlab/io/project.hpp"
 
+#include <cmath>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <sstream>
 
 #include "photonlab/circuit/reference_designs.hpp"
+#include "photonlab/logic/reference_gates.hpp"
 
 namespace photonlab::io {
 
@@ -12,7 +14,48 @@ using nlohmann::ordered_json;
 
 namespace {
 constexpr const char* format_name = "photonlab.project";
+constexpr const char* gate_format_name = "photonlab.gate";
+
+ordered_json gate_to_json(const logic::GateDefinition& gate) {
+  ordered_json inputs = ordered_json::array(), outputs = ordered_json::array();
+  for (const auto& in : gate.inputs)
+    inputs.push_back({{"name", in.name},
+                      {"instance", in.instance},
+                      {"param", in.param},
+                      {"value0", in.value0},
+                      {"value1", in.value1},
+                      {"encoding", std::string(logic::to_string(in.encoding))}});
+  for (const auto& out : gate.outputs)
+    outputs.push_back({{"name", out.name},
+                       {"instance", out.instance},
+                       {"measurement", out.measurement},
+                       {"expected", out.expected}});
+  return {{"name", gate.name}, {"inputs", std::move(inputs)}, {"outputs", std::move(outputs)}};
 }
+
+logic::GateDefinition gate_from_json(const ordered_json& json) {
+  logic::GateDefinition gate;
+  gate.name = json.value("name", "");
+  if (json.contains("inputs"))
+    for (const auto& in : json.at("inputs"))
+      gate.inputs.push_back({in.at("name").get<std::string>(), in.at("instance").get<std::string>(),
+                             in.at("param").get<std::string>(), in.at("value0").get<double>(),
+                             in.at("value1").get<double>(),
+                             logic::encoding_from_string(in.value("encoding", "intensity"))});
+  if (json.contains("outputs"))
+    for (const auto& out : json.at("outputs"))
+      gate.outputs.push_back({out.at("name").get<std::string>(), out.at("instance").get<std::string>(),
+                              out.value("measurement", "Leistung"),
+                              out.contains("expected") ? out.at("expected").get<std::vector<int>>()
+                                                       : std::vector<int>{}});
+  return gate;
+}
+
+// JSON kennt weder unendlich noch NaN: null steht für "nicht messbar bzw. unendlich"
+ordered_json finite_or_null(double value) {
+  return std::isfinite(value) ? ordered_json(value) : ordered_json(nullptr);
+}
+}  // namespace
 
 std::string project_to_json(const Project& project) {
   ordered_json instances = ordered_json::array();
@@ -36,6 +79,8 @@ std::string project_to_json(const Project& project) {
                           {"relative", v.relative},
                           {"correlated", v.correlated}});
 
+  const ordered_json logic_json = gate_to_json(project.gate);
+
   const ordered_json root = {{"format", format_name},
                              {"version", project_format_version},
                              {"units", "SI"},
@@ -52,7 +97,8 @@ std::string project_to_json(const Project& project) {
                                {"monte_carlo",
                                 {{"samples", project.monte_carlo.samples},
                                  {"seed", project.monte_carlo.seed},
-                                 {"variations", std::move(variations)}}}}}};
+                                 {"variations", std::move(variations)}}}}},
+                             {"logic", logic_json}};
   return root.dump(2) + "\n";
 }
 
@@ -104,6 +150,7 @@ Project project_from_json(std::string_view text) {
                  v.at("sigma").get<double>(), v.value("relative", false), v.value("correlated", false)});
       }
     }
+    if (root.contains("logic")) project.gate = gate_from_json(root.at("logic"));
     return project;
   } catch (const nlohmann::json::exception& e) {
     throw IoError(std::string("Projektdatei fehlerhaft: ") + e.what());
@@ -119,7 +166,61 @@ Project reference_project(std::string_view name) {
   project.wavelength = setup.wavelength;
   project.sweep = setup.sweep;
   project.monte_carlo = std::move(setup.monte_carlo);
+  if (logic::has_reference_gate(name)) project.gate = logic::reference_gate(name);
   return project;
+}
+
+std::string gate_report_to_json(const logic::GateDefinition& gate, const logic::GateReport& report) {
+  ordered_json rows = ordered_json::array();
+  for (const auto& row : report.table.rows) rows.push_back({{"inputs", row.bits}, {"power", row.power}});
+  ordered_json outputs = ordered_json::array();
+  for (std::size_t k = 0; k < report.outputs.size() && k < gate.outputs.size(); ++k) {
+    const auto& a = report.outputs[k];
+    outputs.push_back({{"name", gate.outputs[k].name},
+                       {"function", a.function},
+                       {"bits", a.bits},
+                       {"threshold", a.threshold},
+                       {"p1_min", a.p1_min},
+                       {"p0_max", a.p0_max},
+                       {"contrast_db", finite_or_null(a.contrast_db)},
+                       {"extinction_db", finite_or_null(a.extinction_db)}});
+  }
+  ordered_json criteria = ordered_json::array();
+  for (const auto& c : report.criteria)
+    criteria.push_back({{"key", c.key},
+                        {"name", c.name},
+                        {"rating", std::string(logic::to_string(c.rating))},
+                        {"value", c.value},
+                        {"remark", c.remark}});
+  const ordered_json root = {
+      {"format", gate_format_name},
+      {"version", 1},
+      {"units", "SI"},
+      {"gate", gate_to_json(gate)},
+      {"wavelength", report.wavelength},
+      {"truth_table", std::move(rows)},
+      {"outputs", std::move(outputs)},
+      {"measured",
+       {{"latency", report.latency},
+        {"input_power", report.input_power},
+        {"fan_out", report.fan_out},
+        {"isolation_db", finite_or_null(report.isolation_db)},
+        {"phase_tolerance", finite_or_null(report.phase_tolerance)},
+        {"wavelength_tolerance", report.wavelength_tolerance},
+        {"level_slope_db_per_db", report.level_slope_db_per_db},
+        {"cascade_possible", report.cascade.possible},
+        {"cascade_logic_preserved", report.cascade.logic_preserved}}},
+      {"report", {{"real_gate", report.real_gate}, {"good", report.good_count}, {"rated", report.rated_count},
+                  {"criteria", std::move(criteria)}}}};
+  return root.dump(2) + "\n";
+}
+
+void save_gate_report(const logic::GateDefinition& gate, const logic::GateReport& report,
+                      const std::filesystem::path& path) {
+  std::ofstream out(path, std::ios::binary);
+  if (!out) throw IoError("Datei kann nicht geschrieben werden: " + path.string());
+  out << gate_report_to_json(gate, report);
+  if (!out.flush()) throw IoError("Schreiben fehlgeschlagen: " + path.string());
 }
 
 void save_project(const Project& project, const std::filesystem::path& path) {

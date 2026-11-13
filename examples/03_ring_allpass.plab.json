@@ -70,5 +70,10 @@
         }
       ]
     }
+  },
+  "logic": {
+    "name": "",
+    "inputs": [],
+    "outputs": []
   }
 }

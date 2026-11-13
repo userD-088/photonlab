@@ -130,5 +130,10 @@
         }
       ]
     }
+  },
+  "logic": {
+    "name": "",
+    "inputs": [],
+    "outputs": []
   }
 }
