@@ -76,6 +76,10 @@ FieldScene gap_chain(int copies) {
   return s;
 }
 
+// Auf Pikometer bzw. Piko-Radiant runden: berechnete Geometrie unterscheidet sich je nach Compiler und
+// Mathe-Bibliothek im letzten Bit; gerundet sind die Beispieldateien auf allen Plattformen gleich.
+double round_pico(double value) { return std::round(value * 1e12) / 1e12; }
+
 // Rechteck-Segmente entlang einer S-Kurve y(x) = y0 + offset * (1 - cos(pi*t)) / 2, t = (x - x0)/length.
 void add_s_bend(std::vector<Shape>& shapes, const std::string& name, double x0, double y0, double length,
                 double offset, double width, double index, int segments = 16) {
@@ -85,8 +89,9 @@ void add_s_bend(std::vector<Shape>& shapes, const std::string& name, double x0, 
     const double xa = x0 + t0 * length, xb = x0 + t1 * length, ya = y(t0), yb = y(t1);
     const double segment = std::hypot(xb - xa, yb - ya);
     // etwas länger als nötig, damit an den Knicken keine Lücken entstehen
-    shapes.push_back({name, ShapeKind::rectangle, 0.5 * (xa + xb), 0.5 * (ya + yb), segment + 0.6 * width,
-                      width, std::atan2(yb - ya, xb - xa), 1e-6, 0.5e-6, index});
+    shapes.push_back({name, ShapeKind::rectangle, round_pico(0.5 * (xa + xb)), round_pico(0.5 * (ya + yb)),
+                      round_pico(segment + 0.6 * width), width, round_pico(std::atan2(yb - ya, xb - xa)), 1e-6,
+                      0.5e-6, index});
   }
 }
 
