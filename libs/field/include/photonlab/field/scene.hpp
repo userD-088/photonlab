@@ -80,6 +80,28 @@ struct Monitor {
   bool operator==(const Monitor&) const = default;
 };
 
+// Port für die S-Parameter-Extraktion: achsenparallele Linie quer über einen Wellenleiter am Rand des
+// Bauteils. Die Richtung ins Bauteil ergibt sich aus der Lage: senkrechte Linien in der linken Hälfte
+// zeigen nach rechts (+x), in der rechten nach links; waagerechte in der oberen Hälfte nach unten (+y).
+struct Port {
+  std::string name;
+  double x1 = 0.0, y1 = 0.0;  // Anfang der Linie [m]
+  double x2 = 0.0, y2 = 0.0;  // Ende der Linie [m]
+  int mode_order = 0;         // Ordnung der Mode, auf die sich der Port bezieht
+  bool operator==(const Port&) const = default;
+};
+
+// Einstellungen der S-Parameter-Extraktion (Bauplan Abschnitt 6).
+struct SParameterSettings {
+  double wavelength_start = 1500e-9;  // [m]
+  double wavelength_stop = 1600e-9;   // [m]
+  int points = 51;
+  double source_offset = 0.3e-6;      // Abstand der Anregung hinter der Portlinie (nach außen) [m]
+  double decay = 1e-5;                // Rechnung endet, wenn die Feldenergie auf diesen Anteil gefallen ist
+  double max_time = 5e-12;            // Obergrenze der simulierten Zeit je Anregung [s]
+  bool operator==(const SParameterSettings&) const = default;
+};
+
 struct FieldScene {
   std::string name;
   double width = 0.0;             // Ausdehnung in x einschließlich Randschichten [m]; 0 = keine Szene
@@ -95,6 +117,8 @@ struct FieldScene {
   std::vector<Shape> shapes;
   std::vector<Source> sources;
   std::vector<Monitor> monitors;
+  std::vector<Port> ports;        // nur für die S-Parameter-Extraktion; die normale Rechnung ignoriert sie
+  SParameterSettings sparameters;
 
   bool empty() const { return !(width > 0.0) || !(height > 0.0); }
   bool operator==(const FieldScene&) const = default;

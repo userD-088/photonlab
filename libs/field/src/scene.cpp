@@ -105,6 +105,16 @@ void validate(const FieldScene& scene) {
         throw FieldError(who + "die Linie muss waagerecht oder senkrecht liegen und eine Länge haben");
     }
   }
+  for (const auto& port : scene.ports) {
+    const std::string who = "Port '" + port.name + "': ";
+    if (!inside(port.x1, port.y1) || !inside(port.x2, port.y2))
+      throw FieldError(who + "liegt außerhalb des Rechengebiets");
+    const bool vertical = std::abs(port.x2 - port.x1) < 0.5 * scene.cell_size;
+    const bool horizontal = std::abs(port.y2 - port.y1) < 0.5 * scene.cell_size;
+    if (vertical == horizontal)
+      throw FieldError(who + "die Linie muss waagerecht oder senkrecht liegen und eine Länge haben");
+    if (port.mode_order < 0) throw FieldError(who + "die Modenordnung darf nicht negativ sein");
+  }
 }
 
 double cells_per_wavelength(const FieldScene& scene) {

@@ -62,7 +62,10 @@ TEST_CASE("Projekt: Beispieldateien entsprechen den Referenz-Designs") {
                                    std::pair{"01_wellenleiter_fdtd.plab.json", "field_waveguide"},
                                    std::pair{"01b_grenzflaeche_fdtd.plab.json", "field_interface"},
                                    std::pair{"01c_interferenz_fdtd.plab.json", "field_interference"},
-                                   std::pair{"03c_ring_fdtd.plab.json", "field_ring"}}) {
+                                   std::pair{"03c_ring_fdtd.plab.json", "field_ring"},
+                                   std::pair{"04_spalt_fdtd.plab.json", "field_gap"},
+                                   std::pair{"04b_zwei_spalte_fdtd.plab.json", "field_gap_pair"},
+                                   std::pair{"04c_richtkoppler_fdtd.plab.json", "field_coupler"}}) {
     CHECK(io::project_to_json(io::load_project(dir / file)) ==
           io::project_to_json(io::reference_project(name)));
   }

@@ -1,6 +1,8 @@
 #include "photonlab/io/project.hpp"
 
 #include <cmath>
+#include <cstdint>
+#include <cstdio>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <sstream>
@@ -90,6 +92,11 @@ ordered_json scene_to_json(const field::FieldScene& scene) {
                         {"y2", m.y2},
                         {"mode_order", m.mode_order},
                         {"wavelength", m.wavelength}});
+  ordered_json ports = ordered_json::array();
+  for (const auto& p : scene.ports)
+    ports.push_back(
+        {{"name", p.name}, {"x1", p.x1}, {"y1", p.y1}, {"x2", p.x2}, {"y2", p.y2}, {"mode_order", p.mode_order}});
+  const auto& sp = scene.sparameters;
   return {{"name", scene.name},
           {"width", scene.width},
           {"height", scene.height},
@@ -103,7 +110,15 @@ ordered_json scene_to_json(const field::FieldScene& scene) {
           {"duration", scene.duration},
           {"shapes", std::move(shapes)},
           {"sources", std::move(sources)},
-          {"monitors", std::move(monitors)}};
+          {"monitors", std::move(monitors)},
+          {"ports", std::move(ports)},
+          {"sparameters",
+           {{"wavelength_start", sp.wavelength_start},
+            {"wavelength_stop", sp.wavelength_stop},
+            {"points", sp.points},
+            {"source_offset", sp.source_offset},
+            {"decay", sp.decay},
+            {"max_time", sp.max_time}}}};
 }
 
 field::FieldScene scene_from_json(const ordered_json& json) {
@@ -167,7 +182,69 @@ field::FieldScene scene_from_json(const ordered_json& json) {
       m.wavelength = j.value("wavelength", 0.0);
       scene.monitors.push_back(std::move(m));
     }
+  if (json.contains("ports"))
+    for (const auto& j : json.at("ports"))
+      scene.ports.push_back({j.value("name", ""), j.at("x1").get<double>(), j.at("y1").get<double>(),
+                             j.at("x2").get<double>(), j.at("y2").get<double>(), j.value("mode_order", 0)});
+  if (json.contains("sparameters")) {
+    const auto& j = json.at("sparameters");
+    auto& sp = scene.sparameters;
+    sp.wavelength_start = j.value("wavelength_start", sp.wavelength_start);
+    sp.wavelength_stop = j.value("wavelength_stop", sp.wavelength_stop);
+    sp.points = j.value("points", sp.points);
+    sp.source_offset = j.value("source_offset", sp.source_offset);
+    sp.decay = j.value("decay", sp.decay);
+    sp.max_time = j.value("max_time", sp.max_time);
+  }
   return scene;
+}
+
+ordered_json table_to_json(const circuit::SParameterTable& t) {
+  ordered_json matrices = ordered_json::array();
+  for (const auto& m : t.s) {
+    // Zeile für Zeile, je Eintrag [Realteil, Imaginärteil]
+    ordered_json rows = ordered_json::array();
+    for (Eigen::Index i = 0; i < m.rows(); ++i) {
+      ordered_json row = ordered_json::array();
+      for (Eigen::Index j = 0; j < m.cols(); ++j) row.push_back({m(i, j).real(), m(i, j).imag()});
+      rows.push_back(std::move(row));
+    }
+    matrices.push_back(std::move(rows));
+  }
+  return {{"name", t.name},
+          {"label", t.label},
+          {"description", t.description},
+          {"ports", t.ports},
+          {"left_port_count", t.left_port_count},
+          {"source_hash", t.source_hash},
+          {"wavelengths", t.wavelengths},
+          {"s", std::move(matrices)}};
+}
+
+circuit::SParameterTable table_from_json(const ordered_json& j) {
+  circuit::SParameterTable t;
+  t.name = j.at("name").get<std::string>();
+  t.label = j.value("label", "");
+  t.description = j.value("description", "");
+  t.ports = j.at("ports").get<std::vector<std::string>>();
+  t.left_port_count = j.value("left_port_count", -1);
+  t.source_hash = j.value("source_hash", "");
+  t.wavelengths = j.at("wavelengths").get<std::vector<double>>();
+  const auto n = static_cast<Eigen::Index>(t.ports.size());
+  for (const auto& rows : j.at("s")) {
+    circuit::CMatrix m(n, n);
+    if (static_cast<Eigen::Index>(rows.size()) != n) throw IoError("S-Matrix hat die falsche Zeilenzahl");
+    for (Eigen::Index r = 0; r < n; ++r) {
+      const auto& row = rows.at(static_cast<std::size_t>(r));
+      if (static_cast<Eigen::Index>(row.size()) != n) throw IoError("S-Matrix hat die falsche Spaltenzahl");
+      for (Eigen::Index c = 0; c < n; ++c)
+        m(r, c) = {row.at(static_cast<std::size_t>(c)).at(0).get<double>(),
+                   row.at(static_cast<std::size_t>(c)).at(1).get<double>()};
+    }
+    t.s.push_back(std::move(m));
+  }
+  circuit::validate(t);
+  return t;
 }
 
 ordered_json cross_section_to_json(const modes::CrossSection& c) {
@@ -235,6 +312,8 @@ std::string project_to_json(const Project& project) {
                           {"correlated", v.correlated}});
 
   const ordered_json logic_json = gate_to_json(project.gate);
+  ordered_json library = ordered_json::array();
+  for (const auto& table : project.sparameters) library.push_back(table_to_json(table));
 
   const ordered_json root = {{"format", format_name},
                              {"version", project_format_version},
@@ -255,7 +334,8 @@ std::string project_to_json(const Project& project) {
                                  {"variations", std::move(variations)}}}}},
                              {"logic", logic_json},
                              {"field", scene_to_json(project.field)},
-                             {"cross_section", cross_section_to_json(project.cross_section)}};
+                             {"cross_section", cross_section_to_json(project.cross_section)},
+                             {"sparameters", std::move(library)}};
   return root.dump(2) + "\n";
 }
 
@@ -311,6 +391,8 @@ Project project_from_json(std::string_view text) {
     if (root.contains("field")) project.field = scene_from_json(root.at("field"));
     if (root.contains("cross_section"))
       project.cross_section = cross_section_from_json(root.at("cross_section"));
+    if (root.contains("sparameters"))
+      for (const auto& table : root.at("sparameters")) project.sparameters.push_back(table_from_json(table));
     return project;
   } catch (const nlohmann::json::exception& e) {
     throw IoError(std::string("Projektdatei fehlerhaft: ") + e.what());
@@ -342,6 +424,100 @@ Project reference_project(std::string_view name) {
   project.monte_carlo = std::move(setup.monte_carlo);
   if (logic::has_reference_gate(name)) project.gate = logic::reference_gate(name);
   return project;
+}
+
+std::shared_ptr<const circuit::ComponentRegistry> make_registry(const Project& project) {
+  auto registry = std::make_shared<circuit::ComponentRegistry>(circuit::ComponentRegistry::builtin());
+  try {
+    for (const auto& table : project.sparameters)
+      circuit::register_sparameter_table(*registry, std::make_shared<const circuit::SParameterTable>(table));
+  } catch (const circuit::CircuitError& e) {
+    throw IoError(std::string("Bauteilbibliothek fehlerhaft: ") + e.what());
+  }
+  return registry;
+}
+
+std::string sparameter_hash(const field::FieldScene& scene) {
+  // Name und Laufzeit ändern das Ergebnis nicht; Quellen und Monitore spielen bei der Extraktion keine Rolle
+  field::FieldScene canonical = scene;
+  canonical.name.clear();
+  canonical.duration = 0.0;
+  canonical.sources.clear();
+  canonical.monitors.clear();
+  for (auto& port : canonical.ports) port.name.clear();
+  const std::string text = scene_to_json(canonical).dump();
+  std::uint64_t hash = 1469598103934665603ull;  // FNV-1a, 64 Bit
+  for (unsigned char c : text) {
+    hash ^= c;
+    hash *= 1099511628211ull;
+  }
+  char buffer[24];
+  std::snprintf(buffer, sizeof buffer, "%016llx", static_cast<unsigned long long>(hash));
+  return buffer;
+}
+
+circuit::SParameterTable make_sparameter_table(const field::FieldScene& scene, const field::SParameterResult& result,
+                                               const std::string& name) {
+  circuit::SParameterTable table;
+  table.name = name;
+  table.label = name;
+  char text[256];
+  std::snprintf(text, sizeof text, "Aus dem 2D-FDTD extrahiert: Szene '%s', Gitter %.0f nm, Polarisation %s.",
+                scene.name.c_str(), scene.cell_size * 1e9, scene.polarization == field::Polarization::ez ? "Ez" : "Hz");
+  table.description = text;
+  table.ports = result.ports;
+  table.left_port_count = result.left_port_count;
+  table.wavelengths = result.wavelengths;
+  const auto n = static_cast<Eigen::Index>(result.ports.size());
+  for (const auto& values : result.s) {
+    circuit::CMatrix m(n, n);
+    for (Eigen::Index i = 0; i < n; ++i)
+      for (Eigen::Index j = 0; j < n; ++j) m(i, j) = values[static_cast<std::size_t>(i * n + j)];
+    table.s.push_back(std::move(m));
+  }
+  table.source_hash = sparameter_hash(scene);
+  try {
+    circuit::validate(table);
+  } catch (const circuit::CircuitError& e) {
+    throw IoError(e.what());
+  }
+  return table;
+}
+
+std::string sparameter_to_json(const circuit::SParameterTable& table, const field::FieldScene* scene) {
+  ordered_json root = {{"format", "photonlab.sparam"}, {"version", 1}, {"units", "SI"}, {"table", table_to_json(table)}};
+  if (scene) root["scene"] = scene_to_json(*scene);
+  return root.dump(2) + "\n";
+}
+
+circuit::SParameterTable sparameter_from_json(std::string_view text) {
+  try {
+    const ordered_json root = ordered_json::parse(text);
+    if (root.value("format", "") != "photonlab.sparam")
+      throw IoError("Keine PhotonLab-S-Parameter-Datei (Feld \"format\" fehlt oder ist falsch)");
+    if (root.value("version", 0) != 1) throw IoError("Nicht unterstützte Version der S-Parameter-Datei");
+    return table_from_json(root.at("table"));
+  } catch (const nlohmann::json::exception& e) {
+    throw IoError(std::string("S-Parameter-Datei fehlerhaft: ") + e.what());
+  } catch (const circuit::CircuitError& e) {
+    throw IoError(std::string("S-Parameter-Datei fehlerhaft: ") + e.what());
+  }
+}
+
+void save_sparameters(const circuit::SParameterTable& table, const field::FieldScene* scene,
+                      const std::filesystem::path& path) {
+  std::ofstream out(path, std::ios::binary);
+  if (!out) throw IoError("Datei kann nicht geschrieben werden: " + path.string());
+  out << sparameter_to_json(table, scene);
+  if (!out.flush()) throw IoError("Schreiben fehlgeschlagen: " + path.string());
+}
+
+circuit::SParameterTable load_sparameters(const std::filesystem::path& path) {
+  std::ifstream in(path, std::ios::binary);
+  if (!in) throw IoError("Datei kann nicht gelesen werden: " + path.string());
+  std::ostringstream buffer;
+  buffer << in.rdbuf();
+  return sparameter_from_json(buffer.str());
 }
 
 std::string gate_report_to_json(const logic::GateDefinition& gate, const logic::GateReport& report) {

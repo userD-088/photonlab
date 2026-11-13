@@ -2,6 +2,7 @@ add_library(photonlab_field
   src/fdtd.cpp
   src/reference_scenes.cpp
   src/scene.cpp
+  src/sparameters.cpp
   src/spectrum.cpp)
 add_library(photonlab::field ALIAS photonlab_field)
 target_include_directories(photonlab_field PUBLIC include)

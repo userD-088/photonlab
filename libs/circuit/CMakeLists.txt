@@ -6,6 +6,7 @@ add_library(photonlab_circuit
   src/reference_designs.cpp
   src/registry.cpp
   src/solver.cpp
+  src/sparameter_table.cpp
   src/sweep.cpp)
 add_library(photonlab::circuit ALIAS photonlab_circuit)
 target_include_directories(photonlab_circuit PUBLIC include)
