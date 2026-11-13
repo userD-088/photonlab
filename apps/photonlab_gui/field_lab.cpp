@@ -13,6 +13,7 @@
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/reference_scenes.hpp"
 #include "photonlab/field/spectrum.hpp"
+#include "photonlab/materials/material.hpp"
 #include "ui_util.hpp"
 
 // Hinweis: Alle Texte bleiben im Latin-1-Zeichenvorrat (eingebaute ImGui-Schrift).
@@ -76,7 +77,8 @@ bool drag_um(const char* label, double* value, double low, double high) {
   return false;
 }
 
-bool drag_index(const char* label, double* value) {
+// Brechzahl mit Schnellwahl aus der Materialbibliothek (bei der Wellenlänge der ersten Quelle)
+bool drag_index(const char* label, double* value, const FieldScene& scene) {
   const double lo = 1.0, hi = 5.0;
   bool changed = false;
   ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
@@ -87,16 +89,29 @@ bool drag_index(const char* label, double* value) {
   ImGui::PushID(label);
   if (ImGui::SmallButton("Material")) ImGui::OpenPopup("material");
   if (ImGui::BeginPopup("material")) {
-    for (const auto& preset : field::material_presets()) {
-      char text[96];
-      std::snprintf(text, sizeof text, "%s  (n = %.3f)", preset.name, preset.index);
+    auto entry = [&](const std::string& name, double index, const std::string& note) {
+      char text[128];
+      std::snprintf(text, sizeof text, "%s  (n = %.3f)", name.c_str(), index);
       if (ImGui::MenuItem(text)) {
-        *value = preset.index;
+        *value = index;
         changed = true;
       }
-      if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("Quelle: %s\nBei 1550 nm, ohne Dispersion.", preset.source);
-    }
+      if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", note.c_str());
+    };
+    for (const auto& material : materials::library())
+      entry(material.label, field::material_index(scene, material.name),
+            "Quelle: " + material.source +
+                "\nBei der Wellenlänge der ersten Quelle; die Rechnung selbst hat keine Dispersion.");
+    ImGui::Separator();
+    // Draufsicht auf einen Chip: effektiver Index der Schicht statt der Brechzahl des Materials
+    const bool te = scene.polarization == field::Polarization::hz;
+    const std::string note =
+        std::string("Effektiver Index der ") + (te ? "TE" : "TM") +
+        "0-Mode der Schicht in SiO2 (Effektiv-Index-Methode),\npassend zur Polarisation der Szene.";
+    entry("Si-Schicht 220 nm, von oben gesehen", field::layer_effective_index(scene, "Si", "SiO2", 220e-9),
+          note);
+    entry("Si3N4-Schicht 400 nm, von oben gesehen",
+          field::layer_effective_index(scene, "Si3N4", "SiO2", 400e-9), note);
     ImGui::EndPopup();
   }
   ImGui::PopID();
@@ -106,7 +121,11 @@ bool drag_index(const char* label, double* value) {
 }  // namespace
 
 FieldLab::FieldLab(ThreadPool& pool, ChipDesigner& designer, SDL_Renderer* renderer, float ui_scale)
-    : pool_(pool), designer_(designer), renderer_(renderer), ui_scale_(ui_scale) {}
+    : pool_(pool),
+      designer_(designer),
+      renderer_(renderer),
+      ui_scale_(ui_scale),
+      mode_view_(pool, designer, renderer, ui_scale) {}
 
 FieldLab::~FieldLab() {
   pause();
@@ -282,7 +301,7 @@ void FieldLab::update_spectrum() {
     frequencies[static_cast<std::size_t>(i)] = constants::c0 / wavelength;
   }
   for (const auto& monitor : monitors_) {
-    if (monitor.kind != field::MonitorKind::point || monitor.values.empty()) continue;
+    if (monitor.kind == field::MonitorKind::flux || monitor.values.empty()) continue;
     // höchstens die letzten 30000 Proben, damit die Oberfläche flüssig bleibt
     const std::size_t count = std::min<std::size_t>(monitor.values.size(), 30000);
     const std::vector<double> tail(monitor.values.end() - static_cast<std::ptrdiff_t>(count),
@@ -318,10 +337,27 @@ void FieldLab::draw() {
     ImGui::End();
     return;
   }
+  // Zwei Ansichten: das Feld von oben (2D-FDTD) und der Querschnitt eines Wellenleiters (Modenlöser)
+  if (ImGui::BeginTabBar("ansichten")) {
+    if (ImGui::BeginTabItem("Feld (2D-FDTD)")) {
+      draw_field_tab();
+      ImGui::EndTabItem();
+    } else {
+      pause();  // im anderen Reiter keine Rechenzeit verbrauchen
+    }
+    if (ImGui::BeginTabItem("Querschnitt (Moden)")) {
+      mode_view_.draw();
+      ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
+  }
+  ImGui::End();
+}
+
+void FieldLab::draw_field_tab() {
   FieldScene& scene = designer_.project().field;
   if (scene.empty()) {
     draw_empty_state();
-    ImGui::End();
     return;
   }
 
@@ -348,7 +384,6 @@ void FieldLab::draw() {
   draw_canvas(available - plot_height - (monitors_.empty() ? 0.0f : ImGui::GetStyle().ItemSpacing.y));
   if (!monitors_.empty()) draw_plots();
   ImGui::EndChild();
-  ImGui::End();
 }
 
 void FieldLab::draw_empty_state() {
@@ -479,7 +514,7 @@ void FieldLab::draw_scene_settings() {
     scene.cell_size = cell_nm * units::nm;
     changed = true;
   }
-  changed |= drag_index("Hintergrund n", &scene.background_index);
+  changed |= drag_index("Hintergrund n", &scene.background_index, scene);
 
   int polarization = scene.polarization == field::Polarization::ez ? 0 : 1;
   const char* polarizations[] = {"Ez (E senkrecht zur Ebene)", "Hz (E in der Ebene)"};
@@ -646,7 +681,7 @@ void FieldLab::draw_selected_object() {
         s.inner_radius = std::min(s.inner_radius, s.radius - 1e-9);
       }
     }
-    changed |= drag_index("Brechzahl", &s.index);
+    changed |= drag_index("Brechzahl", &s.index, scene);
     if (ImGui::SmallButton("Form löschen")) {
       scene.shapes.erase(scene.shapes.begin() + selected_index_);
       removed = true;
@@ -654,12 +689,12 @@ void FieldLab::draw_selected_object() {
   } else if (selected_kind_ == ObjectKind::source && index < scene.sources.size()) {
     field::Source& s = scene.sources[index];
     name_field(&s.name);
-    int kind = s.kind == field::SourceKind::point ? 0 : 1;
-    const char* kinds[] = {"Punkt", "Linie"};
+    int kind = static_cast<int>(s.kind);
+    const char* kinds[] = {"Punkt", "Linie", "Mode"};
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
-    if (ImGui::Combo("Art", &kind, kinds, 2)) {
-      s.kind = kind == 0 ? field::SourceKind::point : field::SourceKind::line;
-      if (s.kind == field::SourceKind::line && s.x1 == s.x2 && s.y1 == s.y2) {
+    if (ImGui::Combo("Art", &kind, kinds, 3)) {
+      s.kind = static_cast<field::SourceKind>(kind);
+      if (s.kind != field::SourceKind::point && s.x1 == s.x2 && s.y1 == s.y2) {
         s.y1 = std::max(0.0, s.y1 - 1 * um);
         s.y2 = std::min(h, s.y2 + 1 * um);
       }
@@ -667,12 +702,21 @@ void FieldLab::draw_selected_object() {
     }
     changed |= drag_um(s.kind == field::SourceKind::point ? "x" : "x Anfang", &s.x1, 0.0, w);
     changed |= drag_um(s.kind == field::SourceKind::point ? "y" : "y Anfang", &s.y1, 0.0, h);
-    if (s.kind == field::SourceKind::line) {
+    if (s.kind != field::SourceKind::point) {
       changed |= drag_um("x Ende", &s.x2, 0.0, w);
       changed |= drag_um("y Ende", &s.y2, 0.0, h);
+    }
+    if (s.kind == field::SourceKind::line) {
       changed |= drag_um("Strahlbreite", &s.beam_width, 0.0, std::max(w, h));
       if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
         ImGui::SetTooltip("1/e-Halbbreite eines Gauß-Profils entlang der Linie; 0 = gleichmäßig.");
+    }
+    if (s.kind == field::SourceKind::mode) {
+      ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
+      if (ImGui::DragInt("Modenordnung", &s.mode_order, 0.05f, 0, 9, "%d", ImGuiSliderFlags_AlwaysClamp))
+        changed = true;
+      ImGui::TextDisabled(
+          "Linie quer über den Wellenleiter legen\n(waagerecht oder senkrecht, bis in den Mantel).");
     }
     double wavelength_nm = s.wavelength / units::nm;
     const double lo = 200.0, hi = 20000.0;
@@ -719,12 +763,12 @@ void FieldLab::draw_selected_object() {
   } else if (selected_kind_ == ObjectKind::monitor && index < scene.monitors.size()) {
     field::Monitor& m = scene.monitors[index];
     name_field(&m.name);
-    int kind = m.kind == field::MonitorKind::point ? 0 : 1;
-    const char* kinds[] = {"Feld an einem Punkt", "Leistungsfluss durch eine Linie"};
+    int kind = static_cast<int>(m.kind);
+    const char* kinds[] = {"Feld an einem Punkt", "Leistungsfluss durch eine Linie", "Amplitude einer Mode"};
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 13.0f);
-    if (ImGui::Combo("##art", &kind, kinds, 2)) {
-      m.kind = kind == 0 ? field::MonitorKind::point : field::MonitorKind::flux;
-      if (m.kind == field::MonitorKind::flux && m.x1 == m.x2 && m.y1 == m.y2) {
+    if (ImGui::Combo("##art", &kind, kinds, 3)) {
+      m.kind = static_cast<field::MonitorKind>(kind);
+      if (m.kind != field::MonitorKind::point && m.x1 == m.x2 && m.y1 == m.y2) {
         m.x2 = m.x1;
         m.y1 = std::max(0.0, m.y1 - 1 * um);
         m.y2 = std::min(h, m.y2 + 1 * um);
@@ -733,10 +777,19 @@ void FieldLab::draw_selected_object() {
     }
     changed |= drag_um(m.kind == field::MonitorKind::point ? "x" : "x Anfang", &m.x1, 0.0, w);
     changed |= drag_um(m.kind == field::MonitorKind::point ? "y" : "y Anfang", &m.y1, 0.0, h);
-    if (m.kind == field::MonitorKind::flux) {
+    if (m.kind != field::MonitorKind::point) {
       changed |= drag_um("x Ende", &m.x2, 0.0, w);
       changed |= drag_um("y Ende", &m.y2, 0.0, h);
+    }
+    if (m.kind == field::MonitorKind::flux)
       ImGui::TextDisabled("Linie waagerecht oder senkrecht;\nFluss zählt nach rechts bzw. unten positiv.");
+    if (m.kind == field::MonitorKind::mode) {
+      ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
+      if (ImGui::DragInt("Modenordnung", &m.mode_order, 0.05f, 0, 9, "%d", ImGuiSliderFlags_AlwaysClamp))
+        changed = true;
+      ImGui::TextDisabled(
+          "Überlapp des Feldes mit dem Modenprofil:\nzeigt, wie viel in dieser Mode steckt\n(beide "
+          "Laufrichtungen zusammen).");
     }
     if (ImGui::SmallButton("Monitor löschen")) {
       scene.monitors.erase(scene.monitors.begin() + selected_index_);
@@ -881,7 +934,7 @@ void FieldLab::draw_canvas(float height) {
     const auto& s = scene.sources[static_cast<std::size_t>(i)];
     const bool selected = selected_kind_ == ObjectKind::source && selected_index_ == i;
     const ImVec2 a = to_screen(s.x1, s.y1);
-    if (s.kind == field::SourceKind::line)
+    if (s.kind != field::SourceKind::point)
       draw->AddLine(a, to_screen(s.x2, s.y2), color_source, selected ? 3.5f : 2.0f);
     draw->AddCircleFilled(a, (selected ? 5.5f : 4.0f) * ui_scale_, color_source);
     draw->AddText({a.x + 7.0f, a.y - ImGui::GetFontSize() - 2.0f}, color_source, s.name.c_str());
@@ -891,7 +944,7 @@ void FieldLab::draw_canvas(float height) {
     const bool selected = selected_kind_ == ObjectKind::monitor && selected_index_ == i;
     const ImVec2 a = to_screen(m.x1, m.y1);
     const float r = (selected ? 6.5f : 5.0f) * ui_scale_;
-    if (m.kind == field::MonitorKind::flux) {
+    if (m.kind != field::MonitorKind::point) {
       draw->AddLine(a, to_screen(m.x2, m.y2), color_monitor, selected ? 3.5f : 2.0f);
     } else {
       draw->AddLine({a.x - r, a.y}, {a.x + r, a.y}, color_monitor, 2.0f);
@@ -920,12 +973,12 @@ void FieldLab::draw_plots() {
   const FieldScene& scene = designer_.project().field;
   if (!ImGui::BeginTabBar("plots")) return;
   // Lange Zeitreihen ausgedünnt zeichnen (höchstens etwa 4000 Punkte je Kurve)
-  auto plot_series = [&](field::MonitorKind kind, const char* y_label) {
+  auto plot_series = [&](bool flux, const char* y_label) {
     if (ImPlot::BeginPlot("##zeit", ImVec2(-1.0f, -1.0f))) {
       ImPlot::SetupAxes("Zeit [fs]", y_label, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
       ImPlot::SetupLegend(ImPlotLocation_NorthWest);
       for (const auto& m : monitors_) {
-        if (m.kind != kind || m.values.empty()) continue;
+        if ((m.kind == field::MonitorKind::flux) != flux || m.values.empty()) continue;
         const int stride = std::max(1, static_cast<int>(m.values.size() / 4000));
         ImPlot::PlotLine(m.name.c_str(), m.values.data(), static_cast<int>(m.values.size()) / stride,
                          m.sample_interval * stride / units::fs, m.start_time / units::fs, 0, 0,
@@ -935,12 +988,11 @@ void FieldLab::draw_plots() {
     }
   };
   const bool has_points = std::any_of(monitors_.begin(), monitors_.end(),
-                                      [](const auto& m) { return m.kind == field::MonitorKind::point; });
+                                      [](const auto& m) { return m.kind != field::MonitorKind::flux; });
   const bool has_flux = std::any_of(monitors_.begin(), monitors_.end(),
                                     [](const auto& m) { return m.kind == field::MonitorKind::flux; });
-  if (has_points && ImGui::BeginTabItem("Feld am Punkt")) {
-    plot_series(field::MonitorKind::point,
-                scene.polarization == field::Polarization::ez ? "Ez [V/m]" : "Hz [A/m]");
+  if (has_points && ImGui::BeginTabItem("Feld und Moden")) {
+    plot_series(false, scene.polarization == field::Polarization::ez ? "Ez [V/m]" : "Hz [A/m]");
     ImGui::EndTabItem();
   }
   if (has_flux && ImGui::BeginTabItem("Leistungsfluss")) {
@@ -957,7 +1009,7 @@ void FieldLab::draw_plots() {
         }
       ImGui::TextDisabled("%s", line.c_str());
     }
-    plot_series(field::MonitorKind::flux, "Fluss [W/m]");
+    plot_series(true, "Fluss [W/m]");
     ImGui::EndTabItem();
   }
   if (has_points && ImGui::BeginTabItem("Spektrum")) {

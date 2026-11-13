@@ -11,7 +11,7 @@ Ziel: physikalisch realistisch und ehrlich bewertet.
 Bauplan: `docs/PhotonLab_Bauplan_v2.pdf` (Roadmap = Abschnitt 15).
 Interaktiver Prototyp (JS, gleiche Physik): `docs/prototypes/photonische_gatter.html`.
 Offene Aufgaben: `docs/ISSUES.md`.
-**Aktuelle Phase: 5 (Modenlöser + Materialien).** Umgesetzt: Phase 1 und 2 (Schaltung), Phase 3 (Logik-Labor, linear), Phase 4 (2D-FDTD).
+**Aktuelle Phase: 6 (Brücke 1: S-Parameter vom Feld zur Schaltung).** Umgesetzt: Phase 1 und 2 (Schaltung), Phase 3 (Logik-Labor, linear), Phase 4 (2D-FDTD), Phase 5 (Materialien, Modenlöser).
 
 ## Build
 ```
@@ -24,11 +24,13 @@ Ohne GUI (schneller, z. B. für reine Physik-Arbeit): `-DPHOTONLAB_BUILD_GUI=OFF
 ## Struktur
 - `libs/core` – Einheiten, Konstanten, komplexe Zahlen, Threadpool, JobControl, `parallel_for`
 - `libs/circuit` – Component-Interface und -Registry, Netzliste, linearer Löser, Sweep, Resonanz-Auswertung, Monte-Carlo, Referenz-Designs
-- `libs/field` – Feld-Szene (Formen, Quellen, Monitore), 2D-FDTD nach Yee mit CPML, Spektrum; hängt nur von `libs/core` ab
+- `libs/materials` – Sellmeier-Gleichungen (Si, SiO2, Si3N4), Gruppenindex, dn/dT; jede Zahl mit Quelle
+- `libs/modes` – Schichtwellenleiter analytisch, 1D-Profil-Löser, semi-vektorieller Modenlöser für Querschnitte
+- `libs/field` – Feld-Szene (Formen, Quellen, Monitore), 2D-FDTD nach Yee mit CPML, Moden- und Linienquellen, Spektrum
 - `libs/logic` – Gatter-Definition, Wahrheitstabellen-Läufer, Schwellwert-Analyse, Gatter-Zeugnis, Optimierer
 - `libs/io` – Projektdatei `.plab.json` und charakterisiertes Gatter `.gate.json` (alle Zahlen in SI)
-- `apps/photonlab_gui` – SDL3 + Dear ImGui (Docking) + ImPlot; Bauteil-Labor in `field_lab.cpp`, Chip-Designer in `chip_designer.cpp`, Logik-Labor in `logic_lab.cpp`
-- `apps/photonlab_cli` – Kommandozeile: `components`, `example`, `run [--sweep | --resonances | --monte-carlo | --logic | --field] [--csv]`, `validate`
+- `apps/photonlab_gui` – SDL3 + Dear ImGui (Docking) + ImPlot; Bauteil-Labor in `field_lab.cpp` (Feld) und `mode_view.cpp` (Querschnitt), Chip-Designer in `chip_designer.cpp`, Logik-Labor in `logic_lab.cpp`
+- `apps/photonlab_cli` – Kommandozeile: `components`, `example`, `materials`, `run [--sweep | --resonances | --monte-carlo | --logic | --field | --modes] [--csv]`, `validate`
 - `examples` – Referenz-Designs als `.plab.json` (erzeugt mit `photonlab_cli example <name>`)
 - `tests` – doctest; Physik-Validierung gegen analytische Lösungen
 - `cmake/Dependencies.cmake` – alle externen Abhängigkeiten, Versionen gepinnt
@@ -50,6 +52,8 @@ Ohne GUI (schneller, z. B. für reine Physik-Arbeit): `-DPHOTONLAB_BUILD_GUI=OFF
 - Bewertungen (Ampeln im Zeugnis) immer messen, nie annehmen; Schwellen und Messvorschrift in `docs/physics/logic.md` dokumentieren und als Festlegung kennzeichnen.
 - Feld-Ebene: Polarisationen heißen nach ihrer Feldkomponente (`ez`, `hz`), nie TE/TM ohne Erklärung; Orte bei Hz in Zellmitten angeben (Rundung an Zellkanten).
 - GUI-Jobs, die laufend Bilder liefern (FDTD): Löser, Steuerung und Schnappschuss per `shared_ptr` an den Job geben; der Job greift nie auf Objekte der Oberfläche zu.
+- Eigenwertprobleme: Ergebnisse immer über das Residuum prüfen und nur geprüfte Moden melden (eigener Löser in `libs/modes/src/fde.cpp`; Spectra lieferte ungenaue Werte und ist nicht eingebunden).
+- Brechzahlen nie fest eintippen: aus `libs/materials` bzw. aus dem Schichtlöser berechnen.
 - Code-Stil: `.clang-format`; Funktionen/Variablen snake_case, Klassen PascalCase; Kommentare auf Deutsch.
 
 ## Physik-Referenzen
@@ -58,5 +62,6 @@ Ohne GUI (schneller, z. B. für reine Physik-Arbeit): `-DPHOTONLAB_BUILD_GUI=OFF
 - Schaltungslöser: (I - S*C) b = S a_ext + b_src (Details: `docs/physics/circuit_solver.md`)
 - Wellenleiter: n_eff(lambda) = n_eff0 + (n_eff0 - n_g) * (lambda - lambda0) / lambda0
 - Ring (All-Pass): tau = (t - H)/(1 - t*H), H = a*exp(i*phi); FSR = lambda²/(n_g*L) (Details: `docs/physics/resonators.md`)
+- Schichtwellenleiter: kappa*d = atan(w2*g2/kappa) + atan(w3*g3/kappa) + m*pi, w = 1 (TE) bzw. (n1/n_Mantel)² (TM) (Details: `docs/physics/modes.md`)
 - Kerr: n = n0 + n2 * I
 - Kontrastverhältnis: CR = 10*log10(P1_min / P0_max)

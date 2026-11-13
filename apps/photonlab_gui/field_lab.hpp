@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "chip_designer.hpp"
+#include "mode_view.hpp"
 #include "photonlab/core/thread_pool.hpp"
 #include "photonlab/field/fdtd.hpp"
 
@@ -60,6 +61,7 @@ class FieldLab {
   void update_spectrum();
   bool running() const { return job_.valid(); }
 
+  void draw_field_tab();
   void draw_empty_state();
   void draw_controls();
   void draw_scene_settings();
@@ -72,6 +74,7 @@ class FieldLab {
   ChipDesigner& designer_;
   SDL_Renderer* renderer_;
   float ui_scale_;
+  ModeView mode_view_;
 
   std::uint64_t seen_generation_ = 0;
   bool scene_changed_ = false;

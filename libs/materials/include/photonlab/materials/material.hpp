@@ -14,18 +14,18 @@ struct MaterialError : std::runtime_error {
 
 // Ein Sellmeier-Term: B * lambda² / (lambda² - C²), C in Metern.
 struct SellmeierTerm {
-  double strength;    // B, dimensionslos
-  double resonance;   // C [m]
+  double strength;   // B, dimensionslos
+  double resonance;  // C [m]
 };
 
 struct Material {
-  std::string name;        // Schlüssel, z. B. "Si"
-  std::string label;       // deutscher Anzeigename
-  std::string source;      // Literaturquelle der Sellmeier-Koeffizienten
+  std::string name;                  // Schlüssel, z. B. "Si"
+  std::string label;                 // deutscher Anzeigename
+  std::string source;                // Literaturquelle der Sellmeier-Koeffizienten
   std::vector<SellmeierTerm> terms;  // n² = 1 + Summe der Terme; leer = konstante Brechzahl 1
-  double valid_min = 0.0;  // Gültigkeitsbereich der Gleichung [m]
+  double valid_min = 0.0;            // Gültigkeitsbereich der Gleichung [m]
   double valid_max = 0.0;
-  double thermo_optic = 0.0;       // dn/dT bei Raumtemperatur nahe 1550 nm [1/K]
+  double thermo_optic = 0.0;  // dn/dT bei Raumtemperatur nahe 1550 nm [1/K]
   std::string thermo_optic_source;
 
   // Brechzahl bei der Vakuumwellenlänge [m] (reell; Absorption wird nicht modelliert).

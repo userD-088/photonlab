@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -23,6 +24,8 @@
 #include "photonlab/io/project.hpp"
 #include "photonlab/logic/reference_gates.hpp"
 #include "photonlab/logic/report.hpp"
+#include "photonlab/materials/material.hpp"
+#include "photonlab/modes/cross_section.hpp"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -51,6 +54,8 @@ void print_usage() {
       "  photonlab_cli run <datei> --logic [--gate <aus.gate.json>]  Wahrheitstabelle und Gatter-Zeugnis\n"
       "  photonlab_cli run <datei> --field [--csv <aus.csv>]         2D-FDTD der Feld-Szene über ihre "
       "Laufzeit\n"
+      "  photonlab_cli run <datei> --modes            Moden des Wellenleiter-Querschnitts der Datei\n"
+      "  photonlab_cli materials [wellenlaenge_nm]    Brechzahl und Gruppenindex der Materialbibliothek\n"
       "  photonlab_cli validate [--out <ordner>]      Validierung gegen analytische Lösungen\n");
 }
 
@@ -320,6 +325,83 @@ int cmd_logic(const std::string& file, const std::string& gate_path) {
   return 0;
 }
 
+int cmd_materials(double wavelength) {
+  std::printf("Materialbibliothek bei %.1f nm\n", wavelength / units::nm);
+  for (const auto& m : materials::library()) {
+    std::printf("  %-6s n = %.5f   n_g = %.5f   dn/dT = %.2e 1/K   %s\n", m.name.c_str(), m.index(wavelength),
+                m.group_index(wavelength), m.thermo_optic,
+                m.in_valid_range(wavelength) ? "" : "(außerhalb des Gültigkeitsbereichs!)");
+    std::printf("         %s\n", m.source.c_str());
+  }
+  return 0;
+}
+
+void print_modes(const modes::CrossSection& section, const modes::CrossSectionResult& result) {
+  std::printf("Querschnitt: %s %.0f x %.0f nm", section.core.c_str(), section.width / units::nm,
+              section.height / units::nm);
+  if (section.slab_height > 0.0) std::printf(" (Rippe, Schicht %.0f nm)", section.slab_height / units::nm);
+  std::printf(" auf %s, Deckschicht %s, %.1f nm, %s\n", section.lower.c_str(), section.upper.c_str(),
+              section.wavelength / units::nm,
+              section.polarization == modes::FdePolarization::quasi_te ? "quasi-TE (E waagerecht)"
+                                                                       : "quasi-TM (E senkrecht)");
+  std::printf("Gitter %d x %d Zellen zu %.0f nm\n", result.grid.nx, result.grid.ny,
+              section.cell_size / units::nm);
+  std::printf("  Nr  n_eff     n_g      geführt  Einschluss  Modenfläche\n");
+  for (std::size_t k = 0; k < result.modes.size(); ++k) {
+    const auto& m = result.modes[k];
+    std::printf("  %-3zu %.5f   %.4f   %-7s  %5.1f %%     %.4f µm²\n", k, m.n_eff, m.n_group,
+                m.guided ? "ja" : "nein", 100.0 * m.confinement, m.effective_area / 1e-12);
+  }
+  if (result.modes.empty()) std::printf("  keine konvergierte Mode gefunden\n");
+  std::printf(
+      "Hinweis: semi-vektorieller Löser; bei stark führenden Wellenleitern liegt n_eff einige Prozent "
+      "über vollvektoriellen Werten.\n");
+}
+
+int cmd_modes(const std::string& file) {
+  const io::Project project = io::load_project(file);
+  print_modes(project.cross_section, modes::analyze(project.cross_section, true));
+  return 0;
+}
+
+// Abnahme Phase 5: Si-Streifen 500 x 220 nm in SiO2, n_eff der TE0-Mode im Bereich der Literatur (ca. 2,44).
+bool validate_modes(const std::string& out_dir) {
+  const modes::CrossSection section;
+  const modes::CrossSectionResult result = modes::analyze(section, true);
+  if (result.modes.empty()) {
+    std::printf("Modenlöser: keine Mode gefunden\n");
+    return false;
+  }
+  const auto& te0 = result.modes.front();
+  const double literature_n = 2.44, literature_g = 4.2;  // Chrostowski/Hochberg 2015, Kap. 3 (vollvektoriell)
+  const double n_error = std::abs(te0.n_eff / literature_n - 1.0);
+  const double g_error = std::abs(te0.n_group / literature_g - 1.0);
+  std::printf(
+      "Si-Streifen 500 x 220 nm, TE0: n_eff %.4f (Literatur ca. %.2f, Abweichung %.1f %%, Toleranz 3 %%)\n",
+      te0.n_eff, literature_n, 100.0 * n_error);
+  std::printf(
+      "                               n_g   %.4f (Literatur ca. %.1f, Abweichung %.1f %%, Toleranz 5 %%)\n",
+      te0.n_group, literature_g, 100.0 * g_error);
+
+  const double n_si = materials::get("Si").index(section.wavelength);
+  const double n_ox = materials::get("SiO2").index(section.wavelength);
+  const double slab =
+      modes::slab_modes(n_si, n_ox, n_ox, 220e-9, section.wavelength, modes::SlabPolarization::te)
+          .front()
+          .n_eff;
+  std::printf("Si-Schicht 220 nm, TE0 (Eigenwertgleichung): n_eff %.4f\n", slab);
+  if (!out_dir.empty()) {
+    std::ofstream csv(std::filesystem::path(out_dir) / "modes.csv");
+    csv.precision(8);
+    csv << "quantity,simulation,literature\n";
+    csv << "strip_500x220_te0_n_eff," << te0.n_eff << ',' << literature_n << '\n';
+    csv << "strip_500x220_te0_n_group," << te0.n_group << ',' << literature_g << '\n';
+    csv << "slab_220_te0_n_eff," << slab << ",2.85\n";
+    std::printf("Bericht: %s/modes.csv\n", out_dir.c_str());
+  }
+  return te0.guided && n_error < 0.03 && g_error < 0.05 && std::abs(slab - 2.85) < 0.03;
+}
+
 // Feld-Szene der Datei über ihre Laufzeit rechnen und die Monitore auswerten
 int cmd_field(const std::string& file, const std::string& csv_path) {
   const io::Project project = io::load_project(file);
@@ -481,6 +563,7 @@ int cmd_validate(const std::string& out_dir) {
   ok = validate_ring(out_dir) && ok;
   ok = validate_xor() && ok;
   ok = validate_fdtd() && ok;
+  ok = validate_modes(out_dir) && ok;
   std::printf("%s\n", ok ? "BESTANDEN" : "NICHT BESTANDEN");
   return ok ? 0 : 1;
 }
@@ -493,7 +576,7 @@ int main(int argc, char** argv) {
 #endif
   const std::vector<std::string> args(argv + 1, argv + argc);
   if (args.empty()) {
-    std::printf("PhotonLab CLI 0.5.0 (Phase 4)\n");
+    std::printf("PhotonLab CLI 0.6.0 (Phase 5)\n");
     print_usage();
     return 0;
   }
@@ -515,6 +598,9 @@ int main(int argc, char** argv) {
     if (command == "--info") return cmd_info();
     if (command == "components") return cmd_components();
     if (command == "example" && args.size() >= 2) return cmd_example(args[1]);
+    if (command == "materials")
+      return cmd_materials(args.size() >= 2 ? std::atof(args[1].c_str()) * units::nm : 1550e-9);
+    if (command == "run" && args.size() >= 2 && flag("--modes")) return cmd_modes(args[1]);
     if (command == "run" && args.size() >= 2 && flag("--field")) return cmd_field(args[1], option("--csv"));
     if (command == "run" && args.size() >= 2 && flag("--logic")) return cmd_logic(args[1], option("--gate"));
     if (command == "run" && args.size() >= 2 && flag("--resonances")) return cmd_resonances(args[1]);

@@ -9,7 +9,8 @@ double Material::index(double wavelength) const {
   const double l2 = wavelength * wavelength;
   double n2 = 1.0;
   for (const auto& term : terms) n2 += term.strength * l2 / (l2 - term.resonance * term.resonance);
-  if (!(n2 > 0.0)) throw MaterialError("Sellmeier-Gleichung von '" + name + "' ist bei dieser Wellenlänge ungültig");
+  if (!(n2 > 0.0))
+    throw MaterialError("Sellmeier-Gleichung von '" + name + "' ist bei dieser Wellenlänge ungültig");
   return std::sqrt(n2);
 }
 

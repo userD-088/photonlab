@@ -14,7 +14,8 @@ namespace photonlab::field {
 struct MonitorData {
   std::string name;
   MonitorKind kind = MonitorKind::point;
-  std::string unit;            // "V/m" bzw. "A/m" (Punkt), "W/m" (Fluss je Meter Bauteilhöhe)
+  std::string unit;            // "V/m" bzw. "A/m" (Punkt, Mode), "W/m" (Fluss je Meter Bauteilhöhe)
+  double mode_index = 0.0;     // Modenmonitor: effektiver Index der beobachteten Mode
   double start_time = 0.0;     // Zeit der ersten Probe [s]
   double sample_interval = 0;  // Abstand der Proben [s] (= Zeitschritt)
   std::vector<double> values;
@@ -71,6 +72,11 @@ class Fdtd {
     int fixed = 0;         // i (senkrecht) bzw. j (waagerecht)
     int from = 0, to = 0;  // Bereich der laufenden Koordinate, einschließlich
   };
+  struct ModeProbe {
+    std::size_t monitor;
+    std::vector<std::size_t> cells;
+    std::vector<double> weights;  // Profil * Gewicht / Norm: Summe(Feld * weights) = Modenamplitude
+  };
   struct PointProbe {
     std::size_t monitor;
     std::size_t index;
@@ -103,6 +109,7 @@ class Fdtd {
   std::vector<MonitorData> monitors_;
   std::vector<PointProbe> probes_;
   std::vector<FluxLine> flux_lines_;
+  std::vector<ModeProbe> mode_probes_;
 };
 
 }  // namespace photonlab::field

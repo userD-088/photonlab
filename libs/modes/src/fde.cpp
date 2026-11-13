@@ -1,11 +1,10 @@
 #include "photonlab/modes/fde.hpp"
 
+#include <Eigen/Dense>
+#include <Eigen/Sparse>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
 
 #include "photonlab/core/units.hpp"
 #include "photonlab/modes/profile.hpp"
@@ -24,7 +23,8 @@ std::vector<FdeMode> solve_modes(const FdeGrid& grid, const FdeSettings& setting
 
   const double k0 = 2.0 * constants::pi / settings.wavelength;
   auto eps = [&](int i, int j) {
-    const double n = grid.index[static_cast<std::size_t>(i) + static_cast<std::size_t>(nx) * static_cast<std::size_t>(j)];
+    const double n =
+        grid.index[static_cast<std::size_t>(i) + static_cast<std::size_t>(nx) * static_cast<std::size_t>(j)];
     return n * n;
   };
 
@@ -97,18 +97,21 @@ std::vector<FdeMode> solve_modes(const FdeGrid& grid, const FdeSettings& setting
   auto factorize = [&](double sigma) {
     const Eigen::SparseMatrix<double> shifted = matrix - sigma * identity;
     lu.compute(shifted);
-    if (lu.info() != Eigen::Success) throw ModeError("Die Zerlegung des Eigenwertproblems ist fehlgeschlagen");
+    if (lu.info() != Eigen::Success)
+      throw ModeError("Die Zerlegung des Eigenwertproblems ist fehlgeschlagen");
   };
 
   // Grenze der Führung. Oben und unten: die größte Brechzahl am Rand. Seitlich: der effektive Index der
   // Schichtmode der Randspalte (bei einer Rippe reicht die Kernschicht bis zum Rand und führt selbst Licht;
-  // eine Mode der Rippe ist nur geführt, wenn ihr n_eff darüber liegt), sonst die größte Brechzahl der Spalte.
+  // eine Mode der Rippe ist nur geführt, wenn ihr n_eff darüber liegt), sonst die größte Brechzahl der
+  // Spalte.
   double n_edge = 0.0;
   for (int i = 0; i < nx; ++i) n_edge = std::max({n_edge, std::sqrt(eps(i, 0)), std::sqrt(eps(i, ny - 1))});
   for (int column : {0, nx - 1}) {
     std::vector<double> profile(static_cast<std::size_t>(ny));
     for (int j = 0; j < ny; ++j) profile[static_cast<std::size_t>(j)] = std::sqrt(eps(column, j));
-    const auto slab = profile_modes(profile, grid.dy, settings.wavelength, te ? SlabPolarization::te : SlabPolarization::tm, 1);
+    const auto slab = profile_modes(profile, grid.dy, settings.wavelength,
+                                    te ? SlabPolarization::te : SlabPolarization::tm, 1);
     n_edge = std::max(n_edge, slab.empty() ? std::max(profile.front(), profile.back()) : slab.front().n_eff);
   }
 
@@ -133,7 +136,8 @@ std::vector<FdeMode> solve_modes(const FdeGrid& grid, const FdeSettings& setting
     // Rayleigh-Ritz: Eigenwerte der kleinen Matrix Q^T A Q
     const Eigen::MatrixXd projected = basis.transpose() * (matrix * basis);
     Eigen::EigenSolver<Eigen::MatrixXd> small(projected);
-    if (small.info() != Eigen::Success) throw ModeError("Das projizierte Eigenwertproblem ist nicht konvergiert");
+    if (small.info() != Eigen::Success)
+      throw ModeError("Das projizierte Eigenwertproblem ist nicht konvergiert");
     std::vector<int> order(static_cast<std::size_t>(block));
     for (int c = 0; c < block; ++c) order[static_cast<std::size_t>(c)] = c;
     std::sort(order.begin(), order.end(),
@@ -146,7 +150,8 @@ std::vector<FdeMode> solve_modes(const FdeGrid& grid, const FdeSettings& setting
     basis = basis * rotation;
     for (int c = 0; c < block; ++c) {
       basis.col(c).normalize();
-      residuals(c) = (matrix * basis.col(c) - ritz_values(c) * basis.col(c)).norm() / std::abs(ritz_values(c));
+      residuals(c) =
+          (matrix * basis.col(c) - ritz_values(c) * basis.col(c)).norm() / std::abs(ritz_values(c));
     }
 
     if (!shift_moved) {

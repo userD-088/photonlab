@@ -5,6 +5,8 @@
 #include <cstdio>
 
 #include "photonlab/core/units.hpp"
+#include "photonlab/materials/material.hpp"
+#include "photonlab/modes/slab.hpp"
 
 namespace photonlab::field {
 
@@ -77,19 +79,26 @@ void validate(const FieldScene& scene) {
   for (const auto& source : scene.sources) {
     const std::string who = "Quelle '" + source.name + "': ";
     if (!(source.wavelength > 0.0)) throw FieldError(who + "die Wellenlänge muss positiv sein");
-    if (!inside(source.x1, source.y1) || (source.kind == SourceKind::line && !inside(source.x2, source.y2)))
+    if (!inside(source.x1, source.y1) || (source.kind != SourceKind::point && !inside(source.x2, source.y2)))
       throw FieldError(who + "liegt außerhalb des Rechengebiets");
     if (source.signal == SignalKind::pulse && !(source.pulse_duration > 0.0))
       throw FieldError(who + "die Pulsdauer muss positiv sein");
+    if (source.kind == SourceKind::mode) {
+      const bool vertical = std::abs(source.x2 - source.x1) < 0.5 * scene.cell_size;
+      const bool horizontal = std::abs(source.y2 - source.y1) < 0.5 * scene.cell_size;
+      if (vertical == horizontal)
+        throw FieldError(who + "die Linie einer Modenquelle muss waagerecht oder senkrecht liegen");
+      if (source.mode_order < 0) throw FieldError(who + "die Modenordnung darf nicht negativ sein");
+    }
     if (!(source.ramp_periods >= 0.0) || !(source.beam_width >= 0.0))
       throw FieldError(who + "ungültige Einstellung");
   }
   for (const auto& monitor : scene.monitors) {
     const std::string who = "Monitor '" + monitor.name + "': ";
     if (!inside(monitor.x1, monitor.y1) ||
-        (monitor.kind == MonitorKind::flux && !inside(monitor.x2, monitor.y2)))
+        (monitor.kind != MonitorKind::point && !inside(monitor.x2, monitor.y2)))
       throw FieldError(who + "liegt außerhalb des Rechengebiets");
-    if (monitor.kind == MonitorKind::flux) {
+    if (monitor.kind != MonitorKind::point) {
       const bool vertical = std::abs(monitor.x2 - monitor.x1) < 0.5 * scene.cell_size;
       const bool horizontal = std::abs(monitor.y2 - monitor.y1) < 0.5 * scene.cell_size;
       if (vertical == horizontal)
@@ -160,9 +169,13 @@ std::string_view to_string(Boundary b) { return b == Boundary::pml ? "pml" : "pe
 std::string_view to_string(ShapeKind k) {
   return k == ShapeKind::rectangle ? "rectangle" : k == ShapeKind::circle ? "circle" : "ring";
 }
-std::string_view to_string(SourceKind k) { return k == SourceKind::point ? "point" : "line"; }
+std::string_view to_string(SourceKind k) {
+  return k == SourceKind::point ? "point" : k == SourceKind::line ? "line" : "mode";
+}
 std::string_view to_string(SignalKind k) { return k == SignalKind::continuous ? "continuous" : "pulse"; }
-std::string_view to_string(MonitorKind k) { return k == MonitorKind::point ? "point" : "flux"; }
+std::string_view to_string(MonitorKind k) {
+  return k == MonitorKind::point ? "point" : k == MonitorKind::flux ? "flux" : "mode";
+}
 
 Polarization polarization_from_string(std::string_view text) {
   static const Polarization values[] = {Polarization::ez, Polarization::hz};
@@ -177,7 +190,7 @@ ShapeKind shape_kind_from_string(std::string_view text) {
   return from_string(text, values, "die Form");
 }
 SourceKind source_kind_from_string(std::string_view text) {
-  static const SourceKind values[] = {SourceKind::point, SourceKind::line};
+  static const SourceKind values[] = {SourceKind::point, SourceKind::line, SourceKind::mode};
   return from_string(text, values, "die Quelle");
 }
 SignalKind signal_kind_from_string(std::string_view text) {
@@ -185,26 +198,26 @@ SignalKind signal_kind_from_string(std::string_view text) {
   return from_string(text, values, "das Signal");
 }
 MonitorKind monitor_kind_from_string(std::string_view text) {
-  static const MonitorKind values[] = {MonitorKind::point, MonitorKind::flux};
+  static const MonitorKind values[] = {MonitorKind::point, MonitorKind::flux, MonitorKind::mode};
   return from_string(text, values, "den Monitor");
 }
 
-const std::vector<MaterialPreset>& material_presets() {
-  // Brechzahlen bei 1550 nm, Raumtemperatur.
-  static const std::vector<MaterialPreset> presets = {
-      {"Luft", 1.0, "Vakuumwert, Abweichung < 3e-4"},
-      // I. H. Malitson, J. Opt. Soc. Am. 55, 1205 (1965): Quarzglas, Sellmeier-Gleichung bei 1550 nm
-      {"SiO2", 1.444, "Malitson 1965"},
-      // K. Luke et al., Opt. Lett. 40, 4823 (2015): stöchiometrisches LPCVD-Si3N4 bei 1550 nm
-      {"Si3N4", 1.996, "Luke et al. 2015"},
-      // H. H. Li, J. Phys. Chem. Ref. Data 9, 561 (1980): kristallines Silizium bei 1550 nm, 293 K
-      {"Si", 3.476, "Li 1980"},
-      // Effektiver Index der TE0-Mode einer 220 nm dicken Si-Schicht in SiO2 bei 1550 nm, zur Draufsicht
-      // auf einen Chip in 2D (Effektiv-Index-Methode). L. Chrostowski, M. Hochberg, "Silicon Photonics
-      // Design" (2015), Kap. 3: etwa 2,85.
-      {"Si-Schicht 220 nm (n_eff, TE)", 2.85, "Chrostowski/Hochberg 2015, ca."},
-  };
-  return presets;
+double material_index(const FieldScene& scene, std::string_view material) {
+  const double wavelength = scene.sources.empty() ? 1550e-9 : scene.sources.front().wavelength;
+  const materials::Material* m = materials::find(material);
+  if (!m) throw FieldError("Unbekanntes Material '" + std::string(material) + "'");
+  return m->index(wavelength);
+}
+
+double layer_effective_index(const FieldScene& scene, std::string_view core, std::string_view cladding,
+                             double thickness) {
+  const double wavelength = scene.sources.empty() ? 1550e-9 : scene.sources.front().wavelength;
+  const double n_core = material_index(scene, core), n_clad = material_index(scene, cladding);
+  // Hz-Polarisation der Szene: E liegt in der Chip-Ebene, also parallel zur Schicht: TE der Schicht
+  const auto polarization =
+      scene.polarization == Polarization::hz ? modes::SlabPolarization::te : modes::SlabPolarization::tm;
+  const auto found = modes::slab_modes(n_core, n_clad, n_clad, thickness, wavelength, polarization);
+  return found.empty() ? n_clad : found.front().n_eff;
 }
 
 }  // namespace photonlab::field

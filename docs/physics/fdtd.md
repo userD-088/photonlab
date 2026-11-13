@@ -75,6 +75,10 @@ für eine abgestrahlte Welle mit der **E-Feld-Amplitude A** (H-Amplitude `A·n/�
 achsenparallele Linien; bei schrägen Linien und bei Punktquellen ist A nur ein relatives Maß.
 Jede Linienquelle strahlt nach beiden Seiten.
 
+Eine **Modenquelle** trägt statt eines gleichmäßigen oder Gauß-Profils das Profil einer geführten
+Mode des Brechzahlprofils unter der Linie und regt diese Mode fast rein an; Herleitung und
+Kalibrierung in [`modes.md`](modes.md).
+
 Zeitsignale: Dauerstrich `sin(ωt + φ)` mit sin²-Rampe über 4 Perioden; Gauß-Puls
 `e^{−((t−t₀)/τ)²}·sin(ω(t−t₀) + φ)` mit `t₀ = 4τ`.
 
@@ -93,8 +97,8 @@ Zeitsignale: Dauerstrich `sin(ωt + φ)` mit sin²-Rampe über 4 Perioden; Gauß
 - Brechzahlen reell und ohne Dispersion; keine Absorption, keine Nichtlinearität (kommt in Phase 8).
 - Treppenstufen an schrägen und runden Kanten: Resonanzen von Ringen liegen nicht dort, wo ein
   gefertigtes Bauteil sie hätte.
-- Quellen sind Stromschichten, keine Modenquellen (Phase 5): ein Gauß-Strahl regt neben der geführten
-  Mode auch Strahlung an, und jede Quelle strahlt in beide Richtungen.
+- Jede Quelle strahlt in beide Richtungen (auch die Modenquelle). Ein Gauß-Strahl regt neben der
+  geführten Mode auch Strahlung an; die Modenquelle vermeidet das.
 
 ## Validierung
 

@@ -67,8 +67,22 @@ Offen aus Phase 4 (Folge-Issues):
 - [ ] #45 Mehrere Threads für große Gitter (Phase 12)
 
 ## Phase 5 – Modenlöser + Materialien
-- [ ] #46 `libs/materials`: Sellmeier-Gleichungen für Si, SiO2, Si3N4 mit Quellen
-- [ ] #47 Analytischer Slab-Wellenleiter (Eigenwertgleichung) als Referenz und für die Effektiv-Index-Methode
-- [ ] #48 FDE-Modenlöser (finite Differenzen, semi-vektoriell); Abnahme: Si-Streifen 500 x 220 nm, n_eff TE0 ca. 2,4
-- [ ] #49 Modenquelle und Modenüberlapp-Monitor im FDTD
-- [ ] #50 Bauteil-Labor: Querschnitt-Ansicht mit Modenprofilen
+- [x] #46 `libs/materials`: Sellmeier-Gleichungen für Si, SiO2, Si3N4 mit Quellen, Gruppenindex, dn/dT
+- [x] #47 Analytischer Schichtwellenleiter (Eigenwertgleichung) als Referenz und für die Effektiv-Index-Methode
+- [x] #48 FDE-Modenlöser (finite Differenzen, semi-vektoriell); Abnahme: Si-Streifen 500 x 220 nm, n_eff TE0 = 2,49 (Literatur ca. 2,44)
+- [x] #49 Modenquelle und Modenüberlapp-Monitor im FDTD
+- [x] #50 Bauteil-Labor: Querschnitt-Ansicht mit Modenprofilen, Übergabe von n_eff und n_g an den Chip-Designer
+
+Offen aus Phase 5 (Folge-Issues):
+- [ ] #51 Vollvektorieller Modenlöser (Ex und Ey gekoppelt), damit stark führende Si-Drähte genauer werden
+- [ ] #52 Vergleich mit Meep/MPB als Validierungsbericht (Bauplan, Abnahme Phase 5)
+- [ ] #53 Dispersionskurve n_eff(lambda) und Breiten-Sweep als Plot; Zuordnung der Moden über Feldüberlapp
+- [ ] #54 Einseitig strahlende Modenquelle (Gesamtfeld/Streufeld) und richtungsgetrennter Modenmonitor
+- [ ] #55 Materialdispersion im FDTD (Lorentz-Pole per ADE, Bauplan 4.4)
+
+## Phase 6 – Brücke 1: vom Bauteil zum Chip
+- [ ] #56 S-Parameter-Extraktion: Breitband-Puls, Modenmonitore mit laufender DFT, normiert auf das Quellspektrum
+- [ ] #57 Dateiformat `.sparam.json` (Geometrie, Gitter, S(lambda), Metadaten) und Bauteilbibliothek im Chip-Designer
+- [ ] #58 Bauteil "S-Parameter-Datei" in der Component-Registry (Interpolation über die Wellenlänge)
+- [ ] #59 Parametrisierte Bauteile: Geometrie-Sweep als Tabelle; Cache über Hash der Eingabedatei
+- [ ] #60 Konsistenztest: extrahierter Richtkoppler in der Schaltung = FDTD des Gesamtaufbaus innerhalb 1 %

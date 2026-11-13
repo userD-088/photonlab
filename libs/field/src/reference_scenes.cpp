@@ -1,16 +1,23 @@
 #include "photonlab/field/reference_scenes.hpp"
 
 #include "photonlab/core/units.hpp"
+#include "photonlab/materials/material.hpp"
+#include "photonlab/modes/slab.hpp"
 
 namespace photonlab::field {
 namespace {
 
 using units::um;
-const double index_cladding = 1.444;  // SiO2, siehe material_presets()
-const double index_core = 2.85;       // Si-Schicht 220 nm als effektiver Index, siehe material_presets()
+// Mantel: SiO2 bei 1550 nm (Malitson 1965, siehe libs/materials).
+const double index_cladding = materials::get("SiO2").index(1550e-9);
+// Kern in der Draufsicht: effektiver Index der TE0-Mode einer 220 nm dicken Si-Schicht in SiO2 bei 1550 nm
+// (Effektiv-Index-Methode, aus der Eigenwertgleichung der Schicht): etwa 2,85.
+const double index_core = modes::slab_modes(materials::get("Si").index(1550e-9), index_cladding,
+                                            index_cladding, 220e-9, 1550e-9, modes::SlabPolarization::te)
+                              .front()
+                              .n_eff;
 
-// Design 1: gerader Wellenleiter. Ein Gauß-Strahl trifft auf den Kern; was nicht zur Mode passt, strahlt
-// in den Mantel ab und verschwindet in der Randschicht.
+// Design 1: gerader Wellenleiter mit Modenquelle: die Grundmode läuft ohne Abstrahlung nach beiden Seiten.
 FieldScene waveguide() {
   FieldScene s;
   s.name = "Gerader Wellenleiter";
@@ -22,14 +29,15 @@ FieldScene waveguide() {
   s.shapes = {
       {"Kern", ShapeKind::rectangle, 7 * um, 2.5 * um, 14 * um, 0.45 * um, 0.0, 1e-6, 0.5e-6, index_core}};
   Source source;
-  source.name = "Einkopplung";
+  source.name = "Modenquelle";
+  source.kind = SourceKind::mode;
   source.x1 = source.x2 = 1.5 * um;
-  source.y1 = 1.5 * um, source.y2 = 3.5 * um;
-  source.beam_width = 0.3 * um;
+  source.y1 = 1.0 * um, source.y2 = 4.0 * um;
   s.sources = {source};
   s.monitors = {{"Fluss vorn", MonitorKind::flux, 3 * um, 1.2 * um, 3 * um, 3.8 * um},
                 {"Fluss hinten", MonitorKind::flux, 12 * um, 1.2 * um, 12 * um, 3.8 * um},
-                {"Feld im Kern", MonitorKind::point, 12 * um, 2.5 * um, 0, 0}};
+                {"Feld im Kern", MonitorKind::point, 12 * um, 2.5 * um, 0, 0},
+                {"Grundmode", MonitorKind::mode, 10 * um, 1.0 * um, 10 * um, 4.0 * um}};
   return s;
 }
 

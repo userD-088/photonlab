@@ -41,7 +41,11 @@ struct Shape {
   bool operator==(const Shape&) const = default;
 };
 
-enum class SourceKind { point, line };
+enum class SourceKind {
+  point,  // Stromfaden an einem Punkt
+  line,   // Stromschicht entlang einer Linie, gleichmäßig oder mit Gauß-Profil
+  mode,   // Stromschicht mit dem Profil einer geführten Mode des Brechzahlprofils unter der Linie
+};
 enum class SignalKind { continuous, pulse };
 
 struct Source {
@@ -56,12 +60,14 @@ struct Source {
   double phase = 0.0;              // Phase des Trägers [rad]
   double pulse_duration = 15e-15;  // Puls: 1/e-Halbbreite der Feld-Einhüllenden [s]
   double ramp_periods = 4.0;       // Dauerstrich: sanftes Einschalten über so viele Perioden
+  int mode_order = 0;              // Modenquelle: Ordnung der Mode (0 = Grundmode); Linie achsenparallel
   bool operator==(const Source&) const = default;
 };
 
 enum class MonitorKind {
   point,  // Zeitverlauf des Feldes an einem Punkt
   flux,   // Leistungsfluss durch eine achsenparallele Linie (Poynting-Vektor)
+  mode,   // Amplitude einer geführten Mode: Überlapp des Feldes mit dem Modenprofil unter der Linie
 };
 
 struct Monitor {
@@ -69,6 +75,8 @@ struct Monitor {
   MonitorKind kind = MonitorKind::point;
   double x1 = 0.0, y1 = 0.0;  // Punkt bzw. Anfang der Linie [m]
   double x2 = 0.0, y2 = 0.0;  // Ende der Linie [m]; muss waagerecht oder senkrecht liegen
+  int mode_order = 0;         // Modenmonitor: Ordnung der Mode
+  double wavelength = 0.0;    // Modenmonitor: Wellenlänge des Profils [m]; 0 = die der ersten Quelle
   bool operator==(const Monitor&) const = default;
 };
 
@@ -115,6 +123,16 @@ std::vector<Warning> check(const FieldScene& scene);
 // Zellen pro Wellenlänge im optisch dichtesten Material (kürzeste Quellwellenlänge); 0 ohne Quellen.
 double cells_per_wavelength(const FieldScene& scene);
 
+// Brechzahl eines Bibliotheksmaterials bei der Wellenlänge der ersten Quelle (sonst 1550 nm), als
+// Vorgabe für Formen. Die Rechnung selbst bleibt dispersionsfrei.
+double material_index(const FieldScene& scene, std::string_view material);
+
+// Effektiver Index der Grundmode einer Schicht (Kern zwischen zwei gleichen Mänteln) für die Draufsicht
+// auf einen Chip (Effektiv-Index-Methode); passend zur Polarisation der Szene: hz -> TE, ez -> TM.
+// Liefert die Brechzahl des Mantels, wenn die Schicht keine Mode führt.
+double layer_effective_index(const FieldScene& scene, std::string_view core, std::string_view cladding,
+                             double thickness);
+
 std::string_view to_string(Polarization p);
 std::string_view to_string(Boundary b);
 std::string_view to_string(ShapeKind k);
@@ -127,13 +145,5 @@ ShapeKind shape_kind_from_string(std::string_view text);
 SourceKind source_kind_from_string(std::string_view text);
 SignalKind signal_kind_from_string(std::string_view text);
 MonitorKind monitor_kind_from_string(std::string_view text);
-
-// Brechzahlen für Schnellwahl in der Oberfläche, bei 1550 nm und Raumtemperatur, ohne Dispersion.
-struct MaterialPreset {
-  const char* name;
-  double index;
-  const char* source;
-};
-const std::vector<MaterialPreset>& material_presets();
 
 }  // namespace photonlab::field

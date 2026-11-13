@@ -30,7 +30,7 @@
     "width": 1.4e-05,
     "height": 4.9999999999999996e-06,
     "cell_size": 2.5e-08,
-    "background_index": 1.444,
+    "background_index": 1.444023621703261,
     "polarization": "hz",
     "boundary_x": "pml",
     "boundary_y": "pml",
@@ -48,24 +48,25 @@
         "rotation": 0.0,
         "radius": 1e-06,
         "inner_radius": 5e-07,
-        "index": 2.85
+        "index": 2.8494894674291027
       }
     ],
     "sources": [
       {
-        "name": "Einkopplung",
-        "kind": "line",
+        "name": "Modenquelle",
+        "kind": "mode",
         "x1": 1.5e-06,
-        "y1": 1.5e-06,
+        "y1": 1e-06,
         "x2": 1.5e-06,
-        "y2": 3.5e-06,
-        "beam_width": 3e-07,
+        "y2": 4e-06,
+        "beam_width": 0.0,
         "signal": "continuous",
         "wavelength": 1.55e-06,
         "amplitude": 1.0,
         "phase": 0.0,
         "pulse_duration": 1.5e-14,
-        "ramp_periods": 4.0
+        "ramp_periods": 4.0,
+        "mode_order": 0
       }
     ],
     "monitors": [
@@ -75,7 +76,9 @@
         "x1": 3e-06,
         "y1": 1.2e-06,
         "x2": 3e-06,
-        "y2": 3.7999999999999996e-06
+        "y2": 3.7999999999999996e-06,
+        "mode_order": 0,
+        "wavelength": 0.0
       },
       {
         "name": "Fluss hinten",
@@ -83,7 +86,9 @@
         "x1": 1.2e-05,
         "y1": 1.2e-06,
         "x2": 1.2e-05,
-        "y2": 3.7999999999999996e-06
+        "y2": 3.7999999999999996e-06,
+        "mode_order": 0,
+        "wavelength": 0.0
       },
       {
         "name": "Feld im Kern",
@@ -91,8 +96,34 @@
         "x1": 1.2e-05,
         "y1": 2.4999999999999998e-06,
         "x2": 0.0,
-        "y2": 0.0
+        "y2": 0.0,
+        "mode_order": 0,
+        "wavelength": 0.0
+      },
+      {
+        "name": "Grundmode",
+        "kind": "mode",
+        "x1": 9.999999999999999e-06,
+        "y1": 1e-06,
+        "x2": 9.999999999999999e-06,
+        "y2": 4e-06,
+        "mode_order": 0,
+        "wavelength": 0.0
       }
     ]
+  },
+  "cross_section": {
+    "core": "Si",
+    "lower": "SiO2",
+    "upper": "SiO2",
+    "width": 5e-07,
+    "height": 2.2e-07,
+    "slab_height": 0.0,
+    "margin_x": 1e-06,
+    "margin_y": 8e-07,
+    "cell_size": 2e-08,
+    "wavelength": 1.55e-06,
+    "polarization": "quasi_te",
+    "modes": 4
   }
 }

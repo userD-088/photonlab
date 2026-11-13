@@ -79,14 +79,17 @@ ordered_json scene_to_json(const field::FieldScene& scene) {
                        {"amplitude", q.amplitude},
                        {"phase", q.phase},
                        {"pulse_duration", q.pulse_duration},
-                       {"ramp_periods", q.ramp_periods}});
+                       {"ramp_periods", q.ramp_periods},
+                       {"mode_order", q.mode_order}});
   for (const auto& m : scene.monitors)
     monitors.push_back({{"name", m.name},
                         {"kind", std::string(field::to_string(m.kind))},
                         {"x1", m.x1},
                         {"y1", m.y1},
                         {"x2", m.x2},
-                        {"y2", m.y2}});
+                        {"y2", m.y2},
+                        {"mode_order", m.mode_order},
+                        {"wavelength", m.wavelength}});
   return {{"name", scene.name},
           {"width", scene.width},
           {"height", scene.height},
@@ -148,6 +151,7 @@ field::FieldScene scene_from_json(const ordered_json& json) {
       q.phase = j.value("phase", 0.0);
       q.pulse_duration = j.value("pulse_duration", q.pulse_duration);
       q.ramp_periods = j.value("ramp_periods", q.ramp_periods);
+      q.mode_order = j.value("mode_order", 0);
       scene.sources.push_back(std::move(q));
     }
   if (json.contains("monitors"))
@@ -159,9 +163,47 @@ field::FieldScene scene_from_json(const ordered_json& json) {
       m.y1 = j.at("y1").get<double>();
       m.x2 = j.value("x2", m.x1);
       m.y2 = j.value("y2", m.y1);
+      m.mode_order = j.value("mode_order", 0);
+      m.wavelength = j.value("wavelength", 0.0);
       scene.monitors.push_back(std::move(m));
     }
   return scene;
+}
+
+ordered_json cross_section_to_json(const modes::CrossSection& c) {
+  return {{"core", c.core},
+          {"lower", c.lower},
+          {"upper", c.upper},
+          {"width", c.width},
+          {"height", c.height},
+          {"slab_height", c.slab_height},
+          {"margin_x", c.margin_x},
+          {"margin_y", c.margin_y},
+          {"cell_size", c.cell_size},
+          {"wavelength", c.wavelength},
+          {"polarization", c.polarization == modes::FdePolarization::quasi_te ? "quasi_te" : "quasi_tm"},
+          {"modes", c.modes}};
+}
+
+modes::CrossSection cross_section_from_json(const ordered_json& j) {
+  modes::CrossSection c;
+  c.core = j.value("core", c.core);
+  c.lower = j.value("lower", c.lower);
+  c.upper = j.value("upper", c.upper);
+  c.width = j.value("width", c.width);
+  c.height = j.value("height", c.height);
+  c.slab_height = j.value("slab_height", c.slab_height);
+  c.margin_x = j.value("margin_x", c.margin_x);
+  c.margin_y = j.value("margin_y", c.margin_y);
+  c.cell_size = j.value("cell_size", c.cell_size);
+  c.wavelength = j.value("wavelength", c.wavelength);
+  const std::string polarization = j.value("polarization", "quasi_te");
+  if (polarization != "quasi_te" && polarization != "quasi_tm")
+    throw IoError("Unbekannte Polarisation des Querschnitts: '" + polarization + "'");
+  c.polarization =
+      polarization == "quasi_te" ? modes::FdePolarization::quasi_te : modes::FdePolarization::quasi_tm;
+  c.modes = j.value("modes", c.modes);
+  return c;
 }
 
 // JSON kennt weder unendlich noch NaN: null steht für "nicht messbar bzw. unendlich"
@@ -212,7 +254,8 @@ std::string project_to_json(const Project& project) {
                                  {"seed", project.monte_carlo.seed},
                                  {"variations", std::move(variations)}}}}},
                              {"logic", logic_json},
-                             {"field", scene_to_json(project.field)}};
+                             {"field", scene_to_json(project.field)},
+                             {"cross_section", cross_section_to_json(project.cross_section)}};
   return root.dump(2) + "\n";
 }
 
@@ -266,6 +309,8 @@ Project project_from_json(std::string_view text) {
     }
     if (root.contains("logic")) project.gate = gate_from_json(root.at("logic"));
     if (root.contains("field")) project.field = scene_from_json(root.at("field"));
+    if (root.contains("cross_section"))
+      project.cross_section = cross_section_from_json(root.at("cross_section"));
     return project;
   } catch (const nlohmann::json::exception& e) {
     throw IoError(std::string("Projektdatei fehlerhaft: ") + e.what());

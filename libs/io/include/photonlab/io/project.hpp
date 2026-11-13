@@ -13,6 +13,7 @@
 #include "photonlab/field/scene.hpp"
 #include "photonlab/logic/gate.hpp"
 #include "photonlab/logic/report.hpp"
+#include "photonlab/modes/cross_section.hpp"
 
 namespace photonlab::io {
 
@@ -25,7 +26,8 @@ struct Project {
   double wavelength = 1550e-9;  // Arbeitswellenlänge für Einzelrechnungen [m]
   circuit::SweepSettings sweep;
   circuit::MonteCarloSettings monte_carlo;
-  field::FieldScene field;     // Szene des Bauteil-Labors (2D-FDTD); leer, wenn das Projekt keine hat
+  field::FieldScene field;            // Szene des Bauteil-Labors (2D-FDTD); leer, wenn das Projekt keine hat
+  modes::CrossSection cross_section;  // Wellenleiter-Querschnitt für den Modenlöser (immer vorhanden)
   logic::GateDefinition gate;  // Gatter-Definition des Logik-Labors; leer, wenn die Schaltung kein Gatter ist
 };
 

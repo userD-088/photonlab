@@ -1,9 +1,8 @@
 #include "photonlab/modes/profile.hpp"
 
+#include <Eigen/Dense>
 #include <algorithm>
 #include <cmath>
-
-#include <Eigen/Dense>
 
 #include "photonlab/core/units.hpp"
 
@@ -17,7 +16,8 @@ std::vector<ProfileMode> profile_modes(const std::vector<double>& index, double 
                                        SlabPolarization polarization, int max_modes) {
   const auto n = static_cast<Eigen::Index>(index.size());
   if (n < 3) throw ModeError("Das Brechzahlprofil braucht mindestens 3 Punkte");
-  if (!(spacing > 0.0) || !(wavelength > 0.0)) throw ModeError("Punktabstand und Wellenlänge müssen positiv sein");
+  if (!(spacing > 0.0) || !(wavelength > 0.0))
+    throw ModeError("Punktabstand und Wellenlänge müssen positiv sein");
   const double k0 = 2.0 * constants::pi / wavelength;
   const double inv_h2 = 1.0 / (spacing * spacing);
   const bool tm = polarization == SlabPolarization::tm;

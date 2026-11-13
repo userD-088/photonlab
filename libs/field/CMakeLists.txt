@@ -5,5 +5,5 @@ add_library(photonlab_field
   src/spectrum.cpp)
 add_library(photonlab::field ALIAS photonlab_field)
 target_include_directories(photonlab_field PUBLIC include)
-target_link_libraries(photonlab_field PUBLIC photonlab::core)
+target_link_libraries(photonlab_field PUBLIC photonlab::core photonlab::materials photonlab::modes)
 photonlab_warnings(photonlab_field)

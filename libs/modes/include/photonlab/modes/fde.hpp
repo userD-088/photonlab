@@ -20,22 +20,22 @@ enum class EdgeCondition {
 
 struct FdeGrid {
   int nx = 0, ny = 0;
-  double dx = 0.0, dy = 0.0;      // Zellgrößen [m]
-  std::vector<double> index;      // Brechzahl je Zelle, Zeile für Zeile (i + nx*j)
+  double dx = 0.0, dy = 0.0;  // Zellgrößen [m]
+  std::vector<double> index;  // Brechzahl je Zelle, Zeile für Zeile (i + nx*j)
 };
 
 struct FdeSettings {
   double wavelength = 1550e-9;
   FdePolarization polarization = FdePolarization::quasi_te;
-  int modes = 4;                  // Anzahl der gesuchten Moden (größte n_eff zuerst)
+  int modes = 4;  // Anzahl der gesuchten Moden (größte n_eff zuerst)
   EdgeCondition x_edges = EdgeCondition::zero;
   EdgeCondition y_edges = EdgeCondition::zero;
 };
 
 struct FdeMode {
   double n_eff = 0.0;
-  bool guided = false;            // n_eff größer als jede Brechzahl am Rand des Gitters
-  std::vector<double> field;      // dominante E-Komponente je Zelle, Maximum des Betrags = 1
+  bool guided = false;        // n_eff größer als jede Brechzahl am Rand des Gitters
+  std::vector<double> field;  // dominante E-Komponente je Zelle, Maximum des Betrags = 1
 };
 
 // Löst das Eigenwertproblem; Moden nach fallendem n_eff. Gemeldet werden nur Moden, deren Residuum

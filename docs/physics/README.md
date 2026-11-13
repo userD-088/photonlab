@@ -15,6 +15,7 @@ Das hilft Menschen und Claude gleichermaßen, den Code nachzuvollziehen.
 - [`monte_carlo.md`](monte_carlo.md) – Monte-Carlo über Parameterstreuung (Phase 2)
 - [`logic.md`](logic.md) – Logik-Labor: Wahrheitstabelle, Kontrast, Gatter-Zeugnis und seine Messvorschriften (Phase 3)
 - [`fdtd.md`](fdtd.md) – 2D-FDTD nach Yee: Gitter, Courant, Dispersion, CPML, Quellen, Monitore (Phase 4)
+- [`materials.md`](materials.md) – Sellmeier-Gleichungen, Gruppenindex, Quellen und Grenzen (Phase 5)
+- [`modes.md`](modes.md) – Schichtwellenleiter, Modenlöser für Querschnitte, Modenquelle im FDTD (Phase 5)
 
 ## Geplante Notizen
-- `modesolver.md` – FDE-Eigenwertproblem (Phase 5)

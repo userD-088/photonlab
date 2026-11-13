@@ -9,14 +9,17 @@ namespace photonlab::modes {
 namespace {
 
 // Länge der Überdeckung der Intervalle [a0, a1] und [b0, b1]
-double overlap(double a0, double a1, double b0, double b1) { return std::max(0.0, std::min(a1, b1) - std::max(a0, b0)); }
+double overlap(double a0, double a1, double b0, double b1) {
+  return std::max(0.0, std::min(a1, b1) - std::max(a0, b0));
+}
 
 }  // namespace
 
 void validate(const CrossSection& section) {
   for (const std::string* name : {&section.core, &section.lower, &section.upper})
     if (!materials::find(*name)) throw ModeError("Unbekanntes Material '" + *name + "'");
-  if (!(section.width > 0.0) || !(section.height > 0.0)) throw ModeError("Breite und Höhe des Kerns müssen positiv sein");
+  if (!(section.width > 0.0) || !(section.height > 0.0))
+    throw ModeError("Breite und Höhe des Kerns müssen positiv sein");
   if (!(section.slab_height >= 0.0) || section.slab_height >= section.height)
     throw ModeError("Die Rippenschicht muss dünner sein als der Kern");
   if (!(section.cell_size > 0.0) || !(section.margin_x > 0.0) || !(section.margin_y > 0.0))
@@ -25,7 +28,8 @@ void validate(const CrossSection& section) {
   if (section.modes < 1 || section.modes > 20) throw ModeError("Zwischen 1 und 20 Moden sind möglich");
   const double cells = (section.width + 2 * section.margin_x) / section.cell_size *
                        ((section.height + 2 * section.margin_y) / section.cell_size);
-  if (cells > 400000.0) throw ModeError("Das Gitter hätte mehr als 400.000 Zellen: Zellgröße oder Mantel anpassen");
+  if (cells > 400000.0)
+    throw ModeError("Das Gitter hätte mehr als 400.000 Zellen: Zellgröße oder Mantel anpassen");
   if (section.width / section.cell_size < 4 || section.height / section.cell_size < 4)
     throw ModeError("Der Kern braucht mindestens 4 Zellen in Breite und Höhe");
 }
@@ -62,7 +66,8 @@ FdeGrid build_grid(const CrossSection& section, double wavelength, std::vector<d
       const double below = h * overlap(y0, y1, core_y1, total_y);
       const double core_part = (strip + slab) / (h * h), lower_part = below / (h * h);
       const double upper_part = std::max(0.0, 1.0 - core_part - lower_part);
-      const std::size_t k = static_cast<std::size_t>(i) + static_cast<std::size_t>(grid.nx) * static_cast<std::size_t>(j);
+      const std::size_t k =
+          static_cast<std::size_t>(i) + static_cast<std::size_t>(grid.nx) * static_cast<std::size_t>(j);
       grid.index[k] = std::sqrt(core_part * eps_core + lower_part * eps_lower + upper_part * eps_upper);
       if (core_fraction) (*core_fraction)[k] = core_part;
     }

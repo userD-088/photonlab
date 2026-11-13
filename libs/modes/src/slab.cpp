@@ -44,10 +44,12 @@ std::vector<SlabMode> slab_modes(double n_core, double n_lower, double n_upper, 
   const double n_cladding = std::max(n_lower, n_upper);
   if (!(n_core > n_cladding)) return modes;  // keine Führung ohne Indexsprung
 
-  // Das Residuum fällt monoton mit n_eff: von kappa_max*d - ... bei n_eff = n_cladding bis -pi - m*pi bei n_core.
+  // Das Residuum fällt monoton mit n_eff: von kappa_max*d - ... bei n_eff = n_cladding bis -pi - m*pi bei
+  // n_core.
   for (int order = 0; order < 1000; ++order) {
     auto residual = [&](double n) {
-      return slab_dispersion_residual(n, order, n_core, n_lower, n_upper, thickness, wavelength, polarization);
+      return slab_dispersion_residual(n, order, n_core, n_lower, n_upper, thickness, wavelength,
+                                      polarization);
     };
     double low = n_cladding, high = n_core;
     if (residual(low) < 0.0) break;  // unterhalb der Grenzfrequenz dieser und aller höheren Ordnungen
@@ -83,7 +85,8 @@ double effective_index_method(double n_core, double n_lower, double n_upper, dou
                               double height, double wavelength, SlabPolarization polarization) {
   const auto vertical = slab_modes(n_core, n_lower, n_upper, height, wavelength, polarization);
   if (vertical.empty()) throw ModeError("Effektiv-Index-Methode: die Schicht führt keine Mode");
-  const SlabPolarization other = polarization == SlabPolarization::te ? SlabPolarization::tm : SlabPolarization::te;
+  const SlabPolarization other =
+      polarization == SlabPolarization::te ? SlabPolarization::tm : SlabPolarization::te;
   const auto horizontal = slab_modes(vertical.front().n_eff, n_side, n_side, width, wavelength, other);
   if (horizontal.empty()) throw ModeError("Effektiv-Index-Methode: der Streifen führt keine Mode");
   return horizontal.front().n_eff;

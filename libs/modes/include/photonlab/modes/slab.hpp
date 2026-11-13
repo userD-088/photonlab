@@ -17,8 +17,8 @@ enum class SlabPolarization {
 };
 
 struct SlabMode {
-  int order = 0;          // Zahl der Knoten des Feldes
-  double n_eff = 0.0;     // effektiver Index beta / k0
+  int order = 0;       // Zahl der Knoten des Feldes
+  double n_eff = 0.0;  // effektiver Index beta / k0
 };
 
 // Geführte Moden einer Schicht der Dicke thickness [m] mit Brechzahl n_core zwischen den Halbräumen

@@ -46,7 +46,7 @@ class ChipDesigner {
   io::Project& project() { return project_; }
   std::uint64_t project_generation() const {
     return generation_;
-  }                                                     // zählt bei jedem neu geladenen Projekt hoch
+  }  // zählt bei jedem neu geladenen Projekt hoch
   std::uint64_t revision() const { return revision_; }  // zählt bei jeder physikalischen Änderung hoch
   void mark_dirty() { dirty_ = true; }                  // Einstellungen geändert, Physik gleich
   void touch_circuit() { touch(); }                     // Schaltung physikalisch geändert

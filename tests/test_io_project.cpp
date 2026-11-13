@@ -15,6 +15,10 @@ TEST_CASE("Projekt: Speichern und Laden ist verlustfrei") {
   project.circuit.find_instance("arm_oben")->params["length"] = 123.456789012345e-6;
   project.wavelength = 1551.23e-9;
   project.sweep = {1.52e-6, 1.58e-6, 777};
+  project.cross_section.core = "Si3N4";
+  project.cross_section.width = 1.2e-6, project.cross_section.height = 400e-9,
+  project.cross_section.slab_height = 50e-9;
+  project.cross_section.polarization = modes::FdePolarization::quasi_tm;
   project.monte_carlo = {123, 18446744073709551615ull, {{"waveguide", "n_eff", 1e-4, false, true}}};
 
   const std::string text = io::project_to_json(project);
@@ -25,6 +29,7 @@ TEST_CASE("Projekt: Speichern und Laden ist verlustfrei") {
   CHECK(loaded.monte_carlo.samples == 123);
   CHECK(loaded.monte_carlo.seed == 18446744073709551615ull);
   CHECK(loaded.monte_carlo.variations == project.monte_carlo.variations);
+  CHECK(loaded.cross_section == project.cross_section);
   CHECK(loaded.circuit.find_instance("arm_oben")->params.at("length") == 123.456789012345e-6);
   CHECK(loaded.circuit.find_instance("det_cross")->grid_y == 5);
 

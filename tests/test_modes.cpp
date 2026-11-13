@@ -23,26 +23,29 @@ TEST_CASE("Sellmeier: Brechzahlen bei 1550 nm entsprechen den Literaturwerten") 
   // Werte der jeweiligen Originalarbeit bzw. ihrer Sellmeier-Gleichung bei 1,55 µm
   CHECK(materials::get("SiO2").index(lambda0) == doctest::Approx(1.4440).epsilon(1e-4));   // Malitson 1965
   CHECK(materials::get("Si3N4").index(lambda0) == doctest::Approx(1.9963).epsilon(1e-4));  // Luke 2015
-  CHECK(materials::get("Si").index(lambda0) == doctest::Approx(3.4777).epsilon(1e-4));     // Salzberg/Villa 1957
+  CHECK(materials::get("Si").index(lambda0) == doctest::Approx(3.4777).epsilon(1e-4));  // Salzberg/Villa 1957
   CHECK(materials::get("Luft").index(lambda0) == 1.0);
   // weitere Stützstellen: Quarzglas bei der Natrium-D-Linie (n_D = 1,4584) und bei 1,3 µm
   CHECK(materials::get("SiO2").index(589.3 * units::nm) == doctest::Approx(1.4584).epsilon(1e-4));
   CHECK(materials::get("SiO2").index(1300 * units::nm) == doctest::Approx(1.4469).epsilon(1e-4));
   CHECK_THROWS_AS(materials::get("Unobtainium"), materials::MaterialError);
   CHECK(materials::get("Si").in_valid_range(lambda0));
-  CHECK_FALSE(materials::get("Si").in_valid_range(800 * units::nm));  // unter der Bandkante: Gleichung ungültig
+  CHECK_FALSE(
+      materials::get("Si").in_valid_range(800 * units::nm));  // unter der Bandkante: Gleichung ungültig
 }
 
 TEST_CASE("Gruppenindex: analytische Ableitung stimmt mit der numerischen, Quarzglas 1,4626 bei 1550 nm") {
   for (const auto& material : materials::library()) {
     const double h = 1e-11;
-    const double numeric = material.index(lambda0) - lambda0 * (material.index(lambda0 + h) - material.index(lambda0 - h)) / (2 * h);
+    const double numeric = material.index(lambda0) -
+                           lambda0 * (material.index(lambda0 + h) - material.index(lambda0 - h)) / (2 * h);
     CHECK(material.group_index(lambda0) == doctest::Approx(numeric).epsilon(1e-7));
   }
   CHECK(materials::get("SiO2").group_index(lambda0) == doctest::Approx(1.4626).epsilon(2e-4));
   CHECK(materials::get("Si").group_index(lambda0) == doctest::Approx(3.60).epsilon(0.01));
   // thermische Drift in linearer Näherung
-  CHECK(materials::get("Si").index(lambda0, 10.0) - materials::get("Si").index(lambda0) == doctest::Approx(1.8e-3));
+  CHECK(materials::get("Si").index(lambda0, 10.0) - materials::get("Si").index(lambda0) ==
+        doctest::Approx(1.8e-3));
 }
 
 TEST_CASE("Schichtwellenleiter: Moden erfüllen die Eigenwertgleichung, Zahl der Moden nach V-Parameter") {
@@ -55,7 +58,8 @@ TEST_CASE("Schichtwellenleiter: Moden erfüllen die Eigenwertgleichung, Zahl der
     for (const auto& mode : modes) {
       CHECK(mode.n_eff > n_clad);
       CHECK(mode.n_eff < n_core);
-      CHECK(std::abs(slab_dispersion_residual(mode.n_eff, mode.order, n_core, n_clad, n_clad, thickness, lambda0, polarization)) < 1e-9);
+      CHECK(std::abs(slab_dispersion_residual(mode.n_eff, mode.order, n_core, n_clad, n_clad, thickness,
+                                              lambda0, polarization)) < 1e-9);
     }
   }
   // Literaturwert: TE0 der 220-nm-Siliziumschicht in SiO2 bei 1550 nm liegt bei etwa 2,85
@@ -73,7 +77,9 @@ TEST_CASE("Schichtwellenleiter: Feld ist stetig, klingt außen ab und hat so vie
   const auto modes = slab_modes(n_core, n_lower, n_upper, thickness, lambda0, SlabPolarization::te);
   REQUIRE(modes.size() >= 2);
   for (const auto& mode : modes) {
-    auto f = [&](double y) { return slab_field(mode, y, n_core, n_lower, n_upper, thickness, lambda0, SlabPolarization::te); };
+    auto f = [&](double y) {
+      return slab_field(mode, y, n_core, n_lower, n_upper, thickness, lambda0, SlabPolarization::te);
+    };
     CHECK(f(-1e-12) == doctest::Approx(f(1e-12)).epsilon(1e-4));
     CHECK(f(thickness - 1e-12) == doctest::Approx(f(thickness + 1e-12)).epsilon(1e-4));
     CHECK(std::abs(f(-3e-6)) < 1e-3);
@@ -108,7 +114,8 @@ TEST_CASE("Profil-Löser (finite Differenzen) trifft die analytischen Schichtmod
     // Feldprofil der Grundmode gegen die analytische Form
     double worst = 0.0;
     for (int i = 0; i < points; i += 4) {
-      const double expected = slab_field(exact[0], i * spacing - start, n_core, n_clad, n_clad, thickness, lambda0, polarization);
+      const double expected =
+          slab_field(exact[0], i * spacing - start, n_core, n_clad, n_clad, thickness, lambda0, polarization);
       worst = std::max(worst, std::abs(numeric[0].field[static_cast<std::size_t>(i)] - expected));
     }
     CHECK(worst < 0.03);
@@ -117,7 +124,8 @@ TEST_CASE("Profil-Löser (finite Differenzen) trifft die analytischen Schichtmod
       double cross = 0.0, norm0 = 0.0, norm1 = 0.0;
       for (int i = 0; i < points; ++i) {
         const double w = overlap_weight(index[static_cast<std::size_t>(i)], polarization);
-        cross += w * numeric[0].field[static_cast<std::size_t>(i)] * numeric[1].field[static_cast<std::size_t>(i)];
+        cross +=
+            w * numeric[0].field[static_cast<std::size_t>(i)] * numeric[1].field[static_cast<std::size_t>(i)];
         norm0 += w * std::pow(numeric[0].field[static_cast<std::size_t>(i)], 2);
         norm1 += w * std::pow(numeric[1].field[static_cast<std::size_t>(i)], 2);
       }
@@ -140,10 +148,12 @@ TEST_CASE("Modenlöser im Grenzfall der Schicht: quasi-TE und quasi-TM treffen d
   settings.modes = 1;
   // quasi-TE (E waagerecht, parallel zur Schicht) = TE der Schicht; quasi-TM (E senkrecht) = TM der Schicht
   settings.polarization = FdePolarization::quasi_te;
-  const double te = slab_modes(n_core, n_clad, n_clad, thickness, lambda0, SlabPolarization::te).front().n_eff;
+  const double te =
+      slab_modes(n_core, n_clad, n_clad, thickness, lambda0, SlabPolarization::te).front().n_eff;
   CHECK(solve_modes(grid, settings).front().n_eff == doctest::Approx(te).epsilon(2e-3));
   settings.polarization = FdePolarization::quasi_tm;
-  const double tm = slab_modes(n_core, n_clad, n_clad, thickness, lambda0, SlabPolarization::tm).front().n_eff;
+  const double tm =
+      slab_modes(n_core, n_clad, n_clad, thickness, lambda0, SlabPolarization::tm).front().n_eff;
   CHECK(solve_modes(grid, settings).front().n_eff == doctest::Approx(tm).epsilon(2e-3));
 }
 
@@ -187,7 +197,8 @@ TEST_CASE("Modenlöser konvergiert mit dem Gitter; Effektiv-Index-Methode liegt 
   CHECK(std::abs(n_coarse - n_fine) < 0.03);
   // Effektiv-Index-Methode: grobe Näherung, für diesen stark führenden Streifen einige Prozent daneben
   const double n_si = materials::get("Si").index(lambda0), n_ox = materials::get("SiO2").index(lambda0);
-  const double eim = effective_index_method(n_si, n_ox, n_ox, n_ox, 500e-9, 220e-9, lambda0, SlabPolarization::te);
+  const double eim =
+      effective_index_method(n_si, n_ox, n_ox, n_ox, 500e-9, 220e-9, lambda0, SlabPolarization::te);
   CHECK(eim == doctest::Approx(n_fine).epsilon(0.05));
 }
 

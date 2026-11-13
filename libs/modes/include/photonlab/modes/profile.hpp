@@ -1,6 +1,7 @@
 #pragma once
 // Moden eines beliebigen eindimensionalen Brechzahlprofils (finite Differenzen). Liefert das Querprofil
-// für Modenquellen und Modenmonitore im 2D-FDTD, wo jeder Wellenleiter ein Schichtwellenleiter in der Ebene ist.
+// für Modenquellen und Modenmonitore im 2D-FDTD, wo jeder Wellenleiter ein Schichtwellenleiter in der Ebene
+// ist.
 #include <vector>
 
 #include "photonlab/modes/slab.hpp"

@@ -5,6 +5,7 @@
 #include <map>
 
 #include "photonlab/core/units.hpp"
+#include "photonlab/modes/profile.hpp"
 
 namespace photonlab::field {
 namespace {
@@ -124,10 +125,53 @@ Fdtd::Fdtd(const FieldScene& scene) : polarization_(scene.polarization) {
     const double base = 2.0 * constants::c0 * dt_ / dx_ * amplitude;
     return ez ? base / std::sqrt(eps_f_[k]) : base / eta0;
   };
+  // Zellen des Skalarfeldes entlang einer achsenparallelen Linie, in Laufrichtung geordnet
+  auto line_cells = [&](double x1, double y1, double x2, double y2) {
+    int i1 = 0, j1 = 0, i2 = 0, j2 = 0;
+    cell_of(x1, y1, &i1, &j1);
+    cell_of(x2, y2, &i2, &j2);
+    std::vector<std::size_t> cells;
+    if (std::abs(x2 - x1) < 0.5 * dx_)
+      for (int j = std::min(j1, j2); j <= std::max(j1, j2); ++j) cells.push_back(at(i1, j));
+    else
+      for (int i = std::min(i1, i2); i <= std::max(i1, i2); ++i) cells.push_back(at(i, j1));
+    return cells;
+  };
+  // Geführte Mode des Brechzahlprofils unter einer Linie. Im 2D-FDTD ist jeder Wellenleiter eine Schicht
+  // in der Ebene: Ez-Polarisation entspricht deren TE-Moden (E parallel zu den Grenzflächen), Hz den
+  // TM-Moden.
+  const auto slab_polarization = ez ? modes::SlabPolarization::te : modes::SlabPolarization::tm;
+  auto mode_under = [&](const std::vector<std::size_t>& cells, double wavelength, int order,
+                        const std::string& who) {
+    std::vector<double> profile(cells.size());
+    for (std::size_t k = 0; k < cells.size(); ++k) profile[k] = std::sqrt(eps_f_[cells[k]]);
+    std::vector<modes::ProfileMode> found;
+    try {
+      found = modes::profile_modes(profile, dx_, wavelength, slab_polarization, order + 1);
+    } catch (const modes::ModeError& e) {
+      throw FieldError(who + e.what());
+    }
+    if (static_cast<int>(found.size()) <= order)
+      throw FieldError(who + "unter der Linie wird keine Mode der Ordnung " + std::to_string(order) +
+                       " geführt (Linie über den Wellenleiter legen und in den Mantel reichen lassen)");
+    return found[static_cast<std::size_t>(order)];
+  };
+
   for (const auto& source : scene.sources) {
     ActiveSource active{source, {}};
     int i = 0, j = 0;
-    if (source.kind == SourceKind::point) {
+    if (source.kind == SourceKind::mode) {
+      // Stromschicht mit Modenprofil f: Zuwachs 2*n_eff*c*dt/(n²*dx) * A * f, für Hz zusätzlich 1/eta0.
+      // A ist der Spitzenwert des E-Feldes (Ez) bzw. von eta0*Hz der abgestrahlten Mode.
+      const auto cells = line_cells(source.x1, source.y1, source.x2, source.y2);
+      const modes::ProfileMode mode =
+          mode_under(cells, source.wavelength, source.mode_order, "Quelle '" + source.name + "': ");
+      for (std::size_t k = 0; k < cells.size(); ++k) {
+        const double base =
+            2.0 * mode.n_eff * constants::c0 * dt_ / (eps_f_[cells[k]] * dx_) * source.amplitude;
+        active.cells.push_back({cells[k], (ez ? base : base / eta0) * mode.field[k]});
+      }
+    } else if (source.kind == SourceKind::point) {
       cell_of(source.x1, source.y1, &i, &j);
       active.cells.push_back({at(i, j), weight_at(at(i, j), source.amplitude)});
     } else {
@@ -163,6 +207,31 @@ Fdtd::Fdtd(const FieldScene& scene) : polarization_(scene.polarization) {
       data.unit = ez ? "V/m" : "A/m";
       data.start_time = dt_;
       probes_.push_back({index, at(i, j)});
+    } else if (monitor.kind == MonitorKind::mode) {
+      // Modenamplitude a = <Feld, Mode> / <Mode, Mode> mit dem Gewicht, unter dem die Moden orthogonal sind
+      double wavelength = monitor.wavelength;
+      if (!(wavelength > 0.0)) {
+        if (scene.sources.empty())
+          throw FieldError("Monitor '" + monitor.name + "': ohne Quelle fehlt die Wellenlänge");
+        wavelength = scene.sources.front().wavelength;
+      }
+      ModeProbe probe;
+      probe.monitor = index;
+      probe.cells = line_cells(monitor.x1, monitor.y1, monitor.x2, monitor.y2);
+      const modes::ProfileMode mode =
+          mode_under(probe.cells, wavelength, monitor.mode_order, "Monitor '" + monitor.name + "': ");
+      double norm = 0.0;
+      probe.weights.resize(probe.cells.size());
+      for (std::size_t k = 0; k < probe.cells.size(); ++k) {
+        const double w = modes::overlap_weight(std::sqrt(eps_f_[probe.cells[k]]), slab_polarization);
+        probe.weights[k] = w * mode.field[k];
+        norm += w * mode.field[k] * mode.field[k];
+      }
+      for (double& w : probe.weights) w /= norm;
+      data.unit = ez ? "V/m" : "A/m";
+      data.start_time = dt_;
+      data.mode_index = mode.n_eff;
+      mode_probes_.push_back(std::move(probe));
     } else {
       FluxLine line;
       line.monitor = index;
@@ -331,6 +400,11 @@ void Fdtd::step_hz() {
 
 void Fdtd::record() {
   for (const auto& probe : probes_) monitors_[probe.monitor].values.push_back(f_[probe.index]);
+  for (const auto& probe : mode_probes_) {
+    double amplitude = 0.0;
+    for (std::size_t k = 0; k < probe.cells.size(); ++k) amplitude += f_[probe.cells[k]] * probe.weights[k];
+    monitors_[probe.monitor].values.push_back(amplitude);
+  }
 
   // Poynting-Fluss S = E x H zur halben Zeit: Skalarfeld zeitlich gemittelt, Feld in der Ebene räumlich
   const bool ez = polarization_ == Polarization::ez;

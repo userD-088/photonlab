@@ -105,5 +105,19 @@
     "shapes": [],
     "sources": [],
     "monitors": []
+  },
+  "cross_section": {
+    "core": "Si",
+    "lower": "SiO2",
+    "upper": "SiO2",
+    "width": 5e-07,
+    "height": 2.2e-07,
+    "slab_height": 0.0,
+    "margin_x": 1e-06,
+    "margin_y": 8e-07,
+    "cell_size": 2e-08,
+    "wavelength": 1.55e-06,
+    "polarization": "quasi_te",
+    "modes": 4
   }
 }

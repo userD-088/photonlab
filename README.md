@@ -12,10 +12,10 @@ Realistischer Photonik-Simulator in C++20 mit SDL3: vom elektromagnetischen Feld
 Der vollständige Bauplan steht in [`docs/PhotonLab_Bauplan_v2.pdf`](docs/PhotonLab_Bauplan_v2.pdf).
 Einen interaktiven Vorgeschmack gibt [`docs/prototypes/photonische_gatter.html`](docs/prototypes/photonische_gatter.html) (im Browser öffnen).
 
-**Status:** Phase 4 – Feld-Ebene mit 2D-FDTD. Drei der vier Arbeitsbereiche sind nutzbar: das Bauteil-Labor
-rechnet Licht als Feld und zeigt es live, der Chip-Designer rechnet Schaltungen aus Kompaktmodellen, das
-Logik-Labor prüft sie als Logikgatter. Die Brücke vom Feld zur Schaltung (S-Parameter aus dem FDTD) und der
-Quanten-Modus fehlen noch.
+**Status:** Phase 5 – Materialien und Modenlöser. Das Bauteil-Labor rechnet Licht als Feld (2D-FDTD) und
+berechnet die Moden von Wellenleiter-Querschnitten, der Chip-Designer rechnet Schaltungen aus Kompaktmodellen,
+das Logik-Labor prüft sie als Logikgatter. Die Brücke vom Feld zur Schaltung (S-Parameter aus dem FDTD) und
+der Quanten-Modus fehlen noch.
 
 ## Voraussetzungen (Windows)
 
@@ -76,6 +76,16 @@ Jede Änderung an der Szene startet die Rechnung neu. Unter „Hinweise“ steht
 oder eine Quelle in der Randschicht liegt. Gerechnet wird in zwei Dimensionen: Abstrahlung nach oben und
 unten fehlt, und Brechzahlen haben keine Dispersion.
 
+### Querschnitt und Moden
+
+Im Bauteil-Labor den Reiter „Querschnitt (Moden)“ wählen. Kern- und Mantelmaterial, Breite, Höhe und
+Wellenlänge einstellen und „Moden berechnen“ drücken. Die Tabelle zeigt effektiven Index, Gruppenindex,
+Einschluss und Modenfläche; das Bild zeigt das Feld der gewählten Mode. Der Knopf „n_eff und n_g in den
+Chip-Designer übernehmen“ schreibt die Werte in alle Wellenleiter und Ringe der Schaltung.
+
+Der Löser ist semi-vektoriell: bei stark führenden Silizium-Drähten liegt der effektive Index etwa 2 % über
+vollvektoriellen Literaturwerten.
+
 ## Logik-Labor bedienen
 
 Datei → Beispiele → „Interferenz-XOR/XNOR“ laden und den Reiter „Logik-Labor“ öffnen.
@@ -102,6 +112,8 @@ photonlab_cli run examples/03b_ring_adddrop.plab.json --resonances    # FSR, Gü
 photonlab_cli run examples/03_ring_allpass.plab.json --monte-carlo    # Streuung und Statistik
 photonlab_cli run examples/05_interferenz_xor.plab.json --logic       # Wahrheitstabelle und Zeugnis
 photonlab_cli run examples/01_wellenleiter_fdtd.plab.json --field     # 2D-FDTD über die Laufzeit der Szene
+photonlab_cli run examples/02_mach_zehnder.plab.json --modes          # Moden des Querschnitts der Datei
+photonlab_cli materials 1310                              # Brechzahlen der Materialbibliothek bei 1310 nm
 photonlab_cli validate --out docs/validation              # Validierung gegen analytische Lösungen
 ```
 

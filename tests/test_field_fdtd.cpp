@@ -9,6 +9,8 @@
 #include "photonlab/field/fdtd.hpp"
 #include "photonlab/field/reference_scenes.hpp"
 #include "photonlab/field/spectrum.hpp"
+#include "photonlab/modes/profile.hpp"
+#include "photonlab/modes/slab.hpp"
 
 using namespace photonlab;
 using namespace photonlab::field;
@@ -272,6 +274,80 @@ TEST_CASE("Referenz-Szenen sind gültig und laufen stabil") {
     CHECK(std::isfinite(sim.energy()));
     CHECK(max_abs(sim.field()) < 1e3);  // keine Instabilität
   }
+}
+
+TEST_CASE("Modenquelle regt die Grundmode mit der eingestellten Amplitude und der analytischen Leistung an") {
+  // Schichtwellenleiter in der Ebene; Vergleich mit den analytischen Schichtmoden (Ez: TE, Hz: TM)
+  const double n_core = 2.85, n_clad = 1.444, thickness = 0.45e-6, amplitude = 2.0;
+  for (Polarization polarization : {Polarization::ez, Polarization::hz}) {
+    FieldScene s;
+    s.width = 12e-6, s.height = 4e-6, s.cell_size = 25e-9;
+    s.background_index = n_clad;
+    s.polarization = polarization;
+    s.shapes = {{"Kern", ShapeKind::rectangle, 6e-6, 2e-6, 12e-6, thickness, 0.0, 1e-6, 0.5e-6, n_core}};
+    Source source;
+    source.kind = SourceKind::mode;
+    source.x1 = source.x2 = 2e-6, source.y1 = 0.7e-6, source.y2 = 3.3e-6;
+    source.amplitude = amplitude;
+    s.sources = {source};
+    s.monitors = {{"Mode", MonitorKind::mode, 8e-6, 0.7e-6, 8e-6, 3.3e-6},
+                  {"Mode 1", MonitorKind::mode, 8e-6, 0.7e-6, 8e-6, 3.3e-6, 1},
+                  {"Fluss nah", MonitorKind::flux, 5e-6, 0.7e-6, 5e-6, 3.3e-6},
+                  {"Fluss fern", MonitorKind::flux, 9e-6, 0.7e-6, 9e-6, 3.3e-6}};
+    Fdtd sim(s);
+    const double period = source.wavelength / c0;
+    sim.run(static_cast<std::size_t>(200e-15 / sim.time_step()));
+    const std::size_t tail = static_cast<std::size_t>(3 * period / sim.time_step());
+
+    const auto slab_polarization =
+        polarization == Polarization::ez ? modes::SlabPolarization::te : modes::SlabPolarization::tm;
+    const auto exact =
+        modes::slab_modes(n_core, n_clad, n_clad, thickness, source.wavelength, slab_polarization);
+    REQUIRE(exact.size() >= 2);  // der Wellenleiter führt zwei Moden; angeregt werden soll nur die erste
+    CHECK(sim.monitors()[0].mode_index == doctest::Approx(exact[0].n_eff).epsilon(0.01));
+
+    // Amplitude der Grundmode: A für Ez, A/eta0 für Hz
+    const double expected = polarization == Polarization::ez ? amplitude : amplitude / eta0;
+    const auto& mode0 = sim.monitors()[0].values;
+    const auto& mode1 = sim.monitors()[1].values;
+    CHECK(max_abs(mode0, mode0.size() - tail) == doctest::Approx(expected).epsilon(0.03));
+    CHECK(max_abs(mode1, mode1.size() - tail) < 0.02 * expected);  // Modenreinheit
+
+    // Leistung der Mode: P = n_eff*A²/(2*eta0) * Integral(f² * w) mit w = 1 (TE) bzw. 1/n² (TM)
+    double integral = 0.0;
+    const double step = 1e-9;
+    for (double y = -1.5e-6; y < thickness + 1.5e-6; y += step) {
+      const double f = modes::slab_field(exact[0], y, n_core, n_clad, n_clad, thickness, source.wavelength,
+                                         slab_polarization);
+      const double n = y >= 0.0 && y <= thickness ? n_core : n_clad;
+      integral += f * f * modes::overlap_weight(n, slab_polarization) * step;
+    }
+    const double power = exact[0].n_eff * amplitude * amplitude / (2.0 * eta0) * integral;
+    const auto& near = sim.monitors()[2];
+    const auto& far = sim.monitors()[3];
+    const double p_near = average_over_periods(near.values, near.sample_interval, period, 6);
+    const double p_far = average_over_periods(far.values, far.sample_interval, period, 6);
+    CHECK(p_near == doctest::Approx(power).epsilon(0.04));
+    CHECK(p_far == doctest::Approx(p_near).epsilon(0.01));  // verlustfrei geführt
+  }
+}
+
+TEST_CASE("Modenquelle und Modenmonitor melden fehlende Führung im Klartext") {
+  FieldScene s;
+  s.width = 6e-6, s.height = 4e-6, s.cell_size = 40e-9;
+  Source source;
+  source.kind = SourceKind::mode;
+  source.x1 = source.x2 = 2e-6, source.y1 = 1e-6, source.y2 = 3e-6;
+  s.sources = {source};
+  CHECK_THROWS_AS(Fdtd{s}, FieldError);  // kein Wellenleiter unter der Linie
+  s.sources[0].y2 = 1e-6, s.sources[0].x2 = 3e-6;
+  s.sources[0].y1 = 1.3e-6;  // schräge Linie
+  CHECK_THROWS_AS(Fdtd{s}, FieldError);
+  CHECK(layer_effective_index(s, "Si", "SiO2", 220e-9) > 1.5);  // TM0 der Schicht (Szene mit Ez)
+  s.polarization = Polarization::hz;
+  CHECK(layer_effective_index(s, "Si", "SiO2", 220e-9) == doctest::Approx(2.85).epsilon(0.01));  // TE0
+  CHECK(material_index(s, "SiO2") == doctest::Approx(1.444).epsilon(1e-3));
+  CHECK_THROWS_AS(material_index(s, "Unobtainium"), FieldError);
 }
 
 TEST_CASE("Wellenleiter führt Licht: hinter 9 µm kommt der Großteil der eingekoppelten Leistung an") {
