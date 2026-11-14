@@ -11,6 +11,7 @@ add_executable(photonlab_tests
   test_circuit_sweep.cpp
   test_field_fdtd.cpp
   test_io_project.cpp
+  test_kerr_cavity.cpp
   test_logic.cpp
   test_modes.cpp
   test_photonic_crystal.cpp

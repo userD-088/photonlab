@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "photonlab/circuit/analysis.hpp"
+#include "photonlab/circuit/kerr_cavity.hpp"
 #include "photonlab/circuit/monte_carlo.hpp"
 #include "photonlab/circuit/reference_designs.hpp"
 #include "photonlab/circuit/registry.hpp"
@@ -75,6 +76,11 @@ void print_usage() {
       "                                               FDTD-Rechnungen; ohne Namen: Liste (phc_or_and, "
       "phc_xor, phc_not,\n"
       "                                               phc_halfadder)\n"
+      "  photonlab_cli bistability [--q 2e5] [--detuning 2] [--no-tpa] [--no-carriers] [--csv <aus.csv>]\n"
+      "                                               Si-Ring mit Kerr/TPA/Ladungstraegern: Klappleistungen, "
+      "Hysterese\n"
+      "                                               (--detuning in halben Linienbreiten; Bistabilitaet ab "
+      "1,73)\n"
       "  photonlab_cli materials [wellenlaenge_nm]    Brechzahl und Gruppenindex der Materialbibliothek\n"
       "  photonlab_cli validate [--out <ordner>]      Validierung gegen analytische Lösungen\n");
 }
@@ -679,6 +685,73 @@ bool validate_phc_bend() {
   return transmission > 0.9 && transmission < 1.05;
 }
 
+// Bistabilität eines Silizium-Rings: stationäre Zustände über der Leistung, Klappleistungen,
+// Hysterese-Schleife.
+int cmd_bistability(const std::string& q_text, const std::string& detuning_text, bool tpa, bool carriers,
+                    const std::string& csv_path) {
+  const double q = q_text.empty() ? 2e5 : std::atof(q_text.c_str());
+  const double detuning = detuning_text.empty() ? 2.0 : std::atof(detuning_text.c_str());
+  const double volume = 0.1e-12 * 2.0 * constants::pi * 10e-6;  // A_eff 0,1 µm², Ring mit 10 µm Radius
+  circuit::KerrCavity c = circuit::silicon_cavity(1550e-9, q, q, 4.2, volume, 1e-9, carriers);
+  if (!tpa) c.tpa = 0.0, c.carrier_gen = 0.0;
+  const double gamma = c.rate_cold();
+  const double omega_l = c.omega0 - detuning * 0.5 * gamma;
+  std::printf(
+      "Si-Ring: Q_i = Q_c = %.3g, Linienbreite gamma = %.3g 1/s, Verstimmung %.2f halbe Linienbreiten\n", q,
+      gamma, detuning);
+  std::printf("Kerr %.3g rad/(s J), TPA %s, freie Ladungstraeger %s\n", c.kerr, tpa ? "an" : "aus",
+              carriers ? "an" : "aus");
+  std::printf(
+      "Schwelle der Bistabilitaet (nur Kerr): Verstimmung %.3f halbe Linienbreiten, kritische Leistung %.3g "
+      "W\n",
+      std::sqrt(3.0), circuit::kerr_critical_power(c));
+
+  // Klappleistungen: lokale Extrema der Kennlinie P(U)
+  const double u_max = 6.0 * std::abs(c.omega0 - omega_l) / c.kerr + 1e-30;
+  const int n = 20000;
+  double p_up = 0.0, p_down = 0.0;
+  bool have_up = false, have_down = false;
+  double prev = 0.0, prev_slope = 1.0;
+  for (int i = 1; i <= n; ++i) {
+    const double u = u_max * i / n, p = circuit::steady_power(c, omega_l, u);
+    const double slope = p - prev;
+    if (i > 1 && prev_slope > 0.0 && slope < 0.0 && !have_up) p_up = prev, have_up = true;
+    if (i > 1 && prev_slope < 0.0 && slope > 0.0 && !have_down) p_down = prev, have_down = true;
+    prev = p, prev_slope = slope;
+  }
+  if (have_up && have_down) {
+    std::printf("Bistabil: Zustand klappt aufwaerts bei %.3g W und abwaerts bei %.3g W\n", p_up, p_down);
+    ThreadPool pool;
+    const double ramp = 4000.0 / gamma * (carriers ? 1.0 : 1.0);
+    const circuit::HysteresisLoop loop = circuit::hysteresis_sweep(c, omega_l, 1.5 * p_up, ramp, 400);
+    double jump_up = 0.0, jump_down = 0.0, best = 0.0;
+    for (std::size_t i = 1; i < loop.up.energy.size(); ++i)
+      if (std::abs(loop.up.energy[i] - loop.up.energy[i - 1]) > best)
+        best = std::abs(loop.up.energy[i] - loop.up.energy[i - 1]), jump_up = loop.up.power[i];
+    best = 0.0;
+    for (std::size_t i = 1; i < loop.down.energy.size(); ++i)
+      if (std::abs(loop.down.energy[i] - loop.down.energy[i - 1]) > best)
+        best = std::abs(loop.down.energy[i] - loop.down.energy[i - 1]), jump_down = loop.down.power[i];
+    std::printf("Zeitrechnung (langsame Rampe %.3g s): Sprung hinauf bei %.3g W, hinunter bei %.3g W\n", ramp,
+                jump_up, jump_down);
+    if (!csv_path.empty()) {
+      std::ofstream csv(csv_path);
+      csv << "richtung,leistung_W,energie_J,durchgang\n";
+      csv.precision(8);
+      for (std::size_t i = 0; i < loop.up.power.size(); ++i)
+        csv << "hinauf," << loop.up.power[i] << ',' << loop.up.energy[i] << ',' << loop.up.transmission[i]
+            << '\n';
+      for (std::size_t i = 0; i < loop.down.power.size(); ++i)
+        csv << "hinunter," << loop.down.power[i] << ',' << loop.down.energy[i] << ','
+            << loop.down.transmission[i] << '\n';
+      std::printf("Hysterese nach %s geschrieben\n", csv_path.c_str());
+    }
+  } else {
+    std::printf("Keine Bistabilitaet bei dieser Verstimmung (Kennlinie P(U) ist monoton).\n");
+  }
+  return 0;
+}
+
 bool validate_modes(const std::string& out_dir) {
   const modes::CrossSection section;
   const modes::CrossSectionResult result = modes::analyze(section, true);
@@ -928,6 +1001,9 @@ int main(int argc, char** argv) {
     if (command == "run" && args.size() >= 2) return cmd_run(args[1], flag("--sweep"), option("--csv"));
     if (command == "field-gate")
       return cmd_field_gate(args.size() >= 2 && args[1].rfind("--", 0) != 0 ? args[1] : "", option("--csv"));
+    if (command == "bistability")
+      return cmd_bistability(option("--q"), option("--detuning"), !flag("--no-tpa"), !flag("--no-carriers"),
+                             option("--csv"));
     if (command == "bands")
       return cmd_bands(option("--lattice"), option("--radius"), option("--eps"), option("--hole-eps"),
                        option("--pol"), option("--cutoff"), option("--a-nm"), option("--csv"));

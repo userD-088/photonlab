@@ -105,3 +105,11 @@ Offen aus Phase 6 (Folge-Issues):
 - [ ] #73 Oberfläche: Y-Verzweigung, T-Verzweigung und Punktdefekt-Kavität im Generator; Liste der Löcher im Objektbaum gruppieren
 - [ ] #74 PWE-Ergebnisse gegen MPB mit identischen Parametern vergleichen (Literaturzahlen der Tests stammen aus dem Gedächtnis; siehe #52)
 - [ ] #75 Platten-Kristall: 3D-Effekte (Lichtkegel, Abstrahlungsverlust) abschätzen, z. B. über die Effektiv-Index-Methode mit Verlustabschätzung
+
+## Phase 8 – Nichtlineare Optik
+- [x] #76 Kompaktmodell Kerr/TPA/freie Ladungsträger (Coupled-Mode), stationäre Zustände, Bistabilität, Hysterese (`kerr_cavity`)
+- [ ] #77 Kerr-Effekt im FDTD (instantan, ε hängt von |E|² ab) mit Test gegen die analytische Phasenverschiebung
+- [ ] #78 TPA und freie Ladungsträger im FDTD (Ratengleichung je Zelle)
+- [ ] #79 Nichtlinearer Ring als Bauteil der Schaltung (Selbstkonsistenz/Kontinuation im Löser, `ring_kerr`)
+- [ ] #80 Abnahme: FDTD und Kompaktmodell stimmen bei der Resonanzverschiebung überein; Hysterese im Feld reproduziert
+- [ ] #81 Thermischer Effekt als langsame Zusatzgleichung; SOA-Modell

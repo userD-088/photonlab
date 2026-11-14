@@ -1,6 +1,7 @@
 add_library(photonlab_circuit
   src/analysis.cpp
   src/builtin_components.cpp
+  src/kerr_cavity.cpp
   src/monte_carlo.cpp
   src/netlist.cpp
   src/reference_designs.cpp
