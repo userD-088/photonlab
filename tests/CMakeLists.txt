@@ -18,6 +18,7 @@ add_executable(photonlab_tests
   test_logic.cpp
   test_modes.cpp
   test_nonlinear_field.cpp
+  test_pcm.cpp
   test_photonic_crystal.cpp
   test_phc_field.cpp
   test_pwe.cpp

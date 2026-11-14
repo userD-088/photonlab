@@ -3,9 +3,11 @@
 // Gleichungen und Annahmen: docs/physics/circuit_solver.md und docs/physics/resonators.md
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <vector>
 
 #include "photonlab/circuit/active_devices.hpp"
+#include "photonlab/circuit/pcm.hpp"
 #include "photonlab/circuit/registry.hpp"
 #include "photonlab/core/units.hpp"
 #include "photonlab/materials/material.hpp"
@@ -599,6 +601,54 @@ class Photodiode final : public Component {
   double responsivity_, dark_, bandwidth_, load_, temperature_;
 };
 
+// PCM-Speicherzelle: GST-Fleck auf dem Wellenleiter; der kristalline Anteil ist ein Parameter (Speicherinhalt) und
+// wird über die Handlungen "Schreiben", "Löschen" und "Kristallisieren" geändert (Pulsmodell in pcm.cpp).
+PcmCell pcm_cell(const ParamMap& p) {
+  PcmCell c;
+  c.length = p.at("length");
+  c.confinement = p.at("confinement");
+  c.fraction = p.at("crystalline_fraction");
+  c.thermal_resistance = p.at("thermal_resistance");
+  c.thermal_time = p.at("thermal_time");
+  c.crystallization_time = p.at("crystallization_time");
+  return c;
+}
+
+class PcmCellComponent final : public Component {
+ public:
+  explicit PcmCellComponent(const ParamMap& p) : cell_(pcm_cell(p)) {}
+  int port_count() const override { return 2; }
+  CMatrix s_matrix(double wavelength) const override { return two_port(pcm_field_transmission(cell_, wavelength)); }
+  std::vector<Measurement> measure(const CVector& /*a*/, const CVector& /*b*/) const override {
+    return {{"Kristalliner Anteil", cell_.fraction, ""},
+            {"Transmission", pcm_transmission(cell_, 1550e-9), ""}};
+  }
+
+ private:
+  PcmCell cell_;
+};
+
+// Programmieren und Meldung schreiben
+std::string program_action(ParamMap& params, double wavelength, double target) {
+  PcmCell cell = pcm_cell(params);
+  const double before = cell.fraction;
+  const ProgramResult r = program_pcm(cell, target, wavelength, params.at("reset_power"), params.at("reset_duration"));
+  params["crystalline_fraction"] = cell.fraction;
+  double energy = 0.0, t_max = 0.0;
+  bool melted = false;
+  for (const auto& p : r.pulses) {
+    t_max = std::max(t_max, p.peak_temperature);
+    melted = melted || p.melted;
+  }
+  (void)energy;
+  char text[240];
+  std::snprintf(text, sizeof text,
+                "PCM: kristalliner Anteil %.2f -> %.2f mit %zu Pulsen (höchste Temperatur %.0f K%s), Transmission %.3f%s",
+                before, cell.fraction, r.pulses.size(), t_max, melted ? ", geschmolzen" : "",
+                pcm_transmission(cell, wavelength), r.reached ? "" : " - Ziel nicht erreicht");
+  return text;
+}
+
 }  // namespace
 
 // Anzeigetexte bleiben im Latin-1-Zeichenvorrat (kein Griechisch), damit jede Schrift der Oberfläche sie
@@ -770,6 +820,34 @@ void register_builtin_components(ComponentRegistry& registry) {
         {"load_resistance", "Lastwiderstand", 50.0, 1.0, 1e9, "Ohm", 1.0},
         {"temperature", "Temperatur", 300.0, 1.0, 1000.0, "K", 1.0}},
        make<Photodiode>});
+
+  {
+    // PCM-Zelle mit GST-225 (Materialdaten in libs/materials/phase_change); Fleckgröße, Modenanteil und thermische
+    // Parameter sind Annahmen in der Größenordnung von Ríos u. a., Nature Photonics 9, 725 (2015).
+    ComponentType type{"pcm_cell",
+                       "PCM-Speicherzelle (GST)",
+                       "GST-Fleck auf dem Wellenleiter: Transmission hängt vom kristallinen Anteil ab (nichtflüchtig). "
+                       "Schreiben mit optischen Pulsen (Programmieren mit Nachlesen), Löschen durch Schmelzen.",
+                       {"in", "out"},
+                       {{"crystalline_fraction", "Kristalliner Anteil", 0.0, 0.0, 1.0, "", 1.0},
+                        {"write_target", "Schreibziel", 1.0, 0.0, 1.0, "", 1.0},
+                        {"length", "Länge des Flecks", 2e-6, 0.1e-6, 100e-6, "µm", 1e-6},
+                        {"confinement", "Anteil der Mode im GST", 0.03, 0.0, 1.0, "", 1.0},
+                        {"thermal_resistance", "Wärmewiderstand", 1e5, 1.0, 1e9, "K/mW", 1e3},
+                        {"thermal_time", "Thermische Zeitkonstante", 5e-9, 1e-12, 1e-3, "ns", 1e-9},
+                        {"crystallization_time", "Kristallisationszeit", 50e-9, 1e-12, 1e-3, "ns", 1e-9},
+                        {"reset_power", "Löschpuls: Leistung", 50e-3, 0.0, 10.0, "mW", 1e-3},
+                        {"reset_duration", "Löschpuls: Dauer", 20e-9, 1e-12, 1e-3, "ns", 1e-9}},
+                       make<PcmCellComponent>};
+    type.actions = {
+        {"Schreiben (Schreibziel)", "Programmieren mit Nachlesen auf den eingestellten kristallinen Anteil.",
+         [](ParamMap& p, double w) { return program_action(p, w, p.at("write_target")); }},
+        {"Löschen (amorph)", "Ein kurzer, starker Puls schmilzt den Fleck; er erstarrt amorph.",
+         [](ParamMap& p, double w) { return program_action(p, w, 0.0); }},
+        {"Kristallisieren", "Programmieren mit Nachlesen bis vollständig kristallin.",
+         [](ParamMap& p, double w) { return program_action(p, w, 1.0); }}};
+    registry.add(std::move(type));
+  }
 
   // --- Phase 8: nichtlineare Bauteile ---
   {

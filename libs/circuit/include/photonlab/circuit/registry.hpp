@@ -16,6 +16,14 @@ struct CircuitError : std::runtime_error {
   using std::runtime_error::runtime_error;
 };
 
+// Handlung an einem Bauteil, die seinen gespeicherten Zustand ändert (z. B. Schreiben einer PCM-Zelle). Die
+// Oberfläche zeigt dafür einen Knopf; apply ändert die Parameter der Instanz und liefert eine Meldung.
+struct ComponentAction {
+  std::string label;        // Knopftext
+  std::string description;  // Erklärung (Tooltip)
+  std::function<std::string(ParamMap& params, double wavelength)> apply;
+};
+
 struct ComponentType {
   std::string name;                     // eindeutiger Schlüssel, z. B. "waveguide"
   std::string label;                    // deutscher Anzeigename
@@ -26,6 +34,7 @@ struct ComponentType {
   // Schaltplan-Darstellung: so viele der ersten Ports liegen links, die übrigen rechts.
   // -1 = Namenskonvention (Ports, deren Name mit "in" beginnt, liegen links).
   int left_port_count = -1;
+  std::vector<ComponentAction> actions = {};  // optionale Handlungen (Schreiben, Löschen ...)
 
   bool is_left_port(int port) const;
 
