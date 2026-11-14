@@ -29,6 +29,7 @@
 #include "photonlab/logic/report.hpp"
 #include "photonlab/materials/material.hpp"
 #include "photonlab/modes/cross_section.hpp"
+#include "photonlab/pwe/pwe.hpp"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -61,6 +62,9 @@ void print_usage() {
       "  photonlab_cli run <datei> --modes            Moden des Wellenleiter-Querschnitts der Datei\n"
       "  photonlab_cli run <datei> --sparam [--out <aus.sparam.json>] [--name <name>]\n"
       "                                               S-Parameter der Feld-Szene an ihren Ports extrahieren\n"
+      "  photonlab_cli bands [--lattice triangular|square] [--radius 0.48] [--eps 13] [--hole-eps 1]\n"
+      "                    [--pol ez|hz|both] [--cutoff 7] [--a-nm <nm>] [--csv <aus.csv>]\n"
+      "                                               Bandstruktur eines photonischen Kristalls (PWE)\n"
       "  photonlab_cli materials [wellenlaenge_nm]    Brechzahl und Gruppenindex der Materialbibliothek\n"
       "  photonlab_cli validate [--out <ordner>]      Validierung gegen analytische Lösungen\n");
 }
@@ -478,6 +482,105 @@ int cmd_modes(const std::string& file) {
 }
 
 // Abnahme Phase 5: Si-Streifen 500 x 220 nm in SiO2, n_eff der TE0-Mode im Bereich der Literatur (ca. 2,44).
+// Bandstruktur eines 2D-Kristalls mit einem Loch (oder Stab) je Elementarzelle.
+int cmd_bands(const std::string& lattice, const std::string& radius, const std::string& eps,
+              const std::string& hole_eps, const std::string& pol, const std::string& cutoff,
+              const std::string& a_nm, const std::string& csv_path) {
+  const bool square = lattice == "square";
+  if (!lattice.empty() && lattice != "square" && lattice != "triangular")
+    throw std::runtime_error("--lattice: triangular oder square erwartet");
+  const double r = radius.empty() ? 0.48 : std::atof(radius.c_str());
+  const double e_bg = eps.empty() ? 13.0 : std::atof(eps.c_str());
+  const double e_in = hole_eps.empty() ? 1.0 : std::atof(hole_eps.c_str());
+  const pwe::UnitCell cell = square ? pwe::square_cell(r, e_bg, e_in) : pwe::triangular_cell(r, e_bg, e_in);
+  pwe::BandSettings settings;
+  settings.cutoff = cutoff.empty() ? 7.0 : std::atof(cutoff.c_str());
+  settings.bands = 8;
+  const double a = a_nm.empty() ? 0.0 : std::atof(a_nm.c_str()) * units::nm;
+  const pwe::BandPath path =
+      pwe::standard_path(cell, square ? pwe::PathKind::square : pwe::PathKind::triangular, 16);
+  ThreadPool pool;
+
+  std::ofstream csv;
+  if (!csv_path.empty()) {
+    csv.open(csv_path);
+    csv << "polarization,distance,kx,ky";
+    for (int b = 1; b <= settings.bands; ++b) csv << ",band" << b;
+    csv << "\n";
+    csv.precision(10);
+  }
+  std::printf("%s-Gitter, %s %.3f a, Hintergrund eps %.3f, Einschluss eps %.3f\n",
+              square ? "Quadrat" : "Dreiecks", e_in < e_bg ? "Loecher mit r =" : "Staebe mit r =", r, e_bg,
+              e_in);
+  for (const pwe::Polarization p : {pwe::Polarization::ez, pwe::Polarization::hz}) {
+    if (pol == "ez" && p != pwe::Polarization::ez) continue;
+    if (pol == "hz" && p != pwe::Polarization::hz) continue;
+    settings.polarization = p;
+    const pwe::BandResult result = pwe::solve_bands(cell, settings, path, &pool);
+    const char* name =
+        p == pwe::Polarization::ez ? "ez (E senkrecht zur Ebene, TM)" : "hz (H senkrecht zur Ebene, TE)";
+    std::printf("\nPolarisation %s, %d ebene Wellen\n", name, result.plane_waves);
+    if (result.gaps.empty()) std::printf("  keine vollstaendige Luecke unter den berechneten Baendern\n");
+    for (const pwe::Gap& g : result.gaps) {
+      std::printf("  Luecke Band %d/%d: a/lambda %.4f ... %.4f  (Mitte %.4f, %.1f %% relativ)", g.band,
+                  g.band + 1, g.lower, g.upper, g.midgap(), 100.0 * g.ratio());
+      if (a > 0.0)
+        std::printf("  -> lambda %.0f ... %.0f nm", a / g.upper / units::nm, a / g.lower / units::nm);
+      std::printf("\n");
+    }
+    if (!result.gaps.empty() && a <= 0.0) {
+      const pwe::Gap& g = result.gaps.front();
+      std::printf("  Tipp: fuer lambda = 1550 nm in der Mitte der ersten Luecke a = %.0f nm waehlen\n",
+                  1550.0 * g.midgap());
+    }
+    if (csv.is_open())
+      for (std::size_t i = 0; i < path.points.size(); ++i) {
+        csv << (p == pwe::Polarization::ez ? "ez" : "hz") << ',' << path.distance[i] << ','
+            << path.points[i].kx << ',' << path.points[i].ky;
+        for (const double f : result.frequency[i]) csv << ',' << f;
+        csv << '\n';
+      }
+  }
+  if (csv.is_open()) std::printf("\nBandstruktur nach %s geschrieben\n", csv_path.c_str());
+  return 0;
+}
+
+// Bandstruktur (PWE): leeres Gitter exakt, vollständige Lücke des Dreiecksgitters gegen Joannopoulos.
+bool validate_pwe() {
+  // 1) leeres Gitter: tiefste Frequenzen bei Gamma sind 0 und |G1|/sqrt(eps) = 1/(sin 60 deg * n)
+  const pwe::UnitCell empty = pwe::triangular_cell(0.3, 4.0, 4.0);
+  pwe::BandSettings settings;
+  settings.bands = 3;
+  const std::vector<double> f = pwe::solve_k(empty, settings, {0.0, 0.0});
+  const double expected = 1.0 / (std::sin(constants::pi / 3.0) * 2.0);
+  const double empty_error = std::abs(f[1] - expected);
+
+  // 2) Dreiecksgitter aus Luftlöchern r = 0,48a in eps = 13: vollständige Lücke (TE und TM überlappen)
+  const pwe::UnitCell cell = pwe::triangular_cell(0.48, 13.0, 1.0);
+  settings.cutoff = 7.0;
+  settings.bands = 6;
+  const pwe::BandPath path = pwe::standard_path(cell, pwe::PathKind::triangular, 12);
+  settings.polarization = pwe::Polarization::ez;
+  const pwe::BandResult tm = pwe::solve_bands(cell, settings, path);
+  settings.polarization = pwe::Polarization::hz;
+  const pwe::BandResult te = pwe::solve_bands(cell, settings, path);
+  double lower = 0.0, upper = 0.0;
+  for (const pwe::Gap& a : tm.gaps)
+    for (const pwe::Gap& b : te.gaps) {
+      const double lo = std::max(a.lower, b.lower), hi = std::min(a.upper, b.upper);
+      if (hi - lo > upper - lower) lower = lo, upper = hi;
+    }
+  const bool gap_ok =
+      upper > lower && std::abs(lower / 0.43 - 1.0) < 0.03 && std::abs(upper / 0.52 - 1.0) < 0.03;
+  std::printf("PWE leeres Gitter: |f - exakt| = %.1e (Toleranz 1e-9)\n", empty_error);
+  std::printf(
+      "PWE Dreiecksgitter r = 0,48a, eps 13: vollstaendige Luecke a/lambda %.4f ... %.4f (Joannopoulos ca. "
+      "0,43 ... 0,52, "
+      "Toleranz 3 %%)\n",
+      lower, upper);
+  return empty_error < 1e-9 && gap_ok;
+}
+
 bool validate_modes(const std::string& out_dir) {
   const modes::CrossSection section;
   const modes::CrossSectionResult result = modes::analyze(section, true);
@@ -677,6 +780,7 @@ int cmd_validate(const std::string& out_dir) {
   ok = validate_xor() && ok;
   ok = validate_fdtd() && ok;
   ok = validate_modes(out_dir) && ok;
+  ok = validate_pwe() && ok;
   ok = validate_sparameters(out_dir) && ok;
   std::printf("%s\n", ok ? "BESTANDEN" : "NICHT BESTANDEN");
   return ok ? 0 : 1;
@@ -690,7 +794,7 @@ int main(int argc, char** argv) {
 #endif
   const std::vector<std::string> args(argv + 1, argv + argc);
   if (args.empty()) {
-    std::printf("PhotonLab CLI 0.7.0 (Phase 6)\n");
+    std::printf("PhotonLab CLI 0.8.0 (Phase 7)\n");
     print_usage();
     return 0;
   }
@@ -723,6 +827,9 @@ int main(int argc, char** argv) {
     if (command == "run" && args.size() >= 2 && flag("--monte-carlo"))
       return cmd_monte_carlo(args[1], option("--csv"));
     if (command == "run" && args.size() >= 2) return cmd_run(args[1], flag("--sweep"), option("--csv"));
+    if (command == "bands")
+      return cmd_bands(option("--lattice"), option("--radius"), option("--eps"), option("--hole-eps"),
+                       option("--pol"), option("--cutoff"), option("--a-nm"), option("--csv"));
     if (command == "validate") return cmd_validate(option("--out"));
     print_usage();
     return 2;
