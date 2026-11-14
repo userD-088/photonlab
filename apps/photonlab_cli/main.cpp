@@ -7,6 +7,7 @@
 #include <exception>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -25,6 +26,7 @@
 #include "photonlab/field/sparameters.hpp"
 #include "photonlab/field/spectrum.hpp"
 #include "photonlab/io/project.hpp"
+#include "photonlab/logic/field_gate.hpp"
 #include "photonlab/logic/reference_gates.hpp"
 #include "photonlab/logic/report.hpp"
 #include "photonlab/materials/material.hpp"
@@ -51,7 +53,9 @@ void print_usage() {
       "                                               ring_allpass, ring_adddrop, xor_interference,\n"
       "                                               and_interference, xor_directed, field_waveguide,\n"
       "                                               field_interface, field_interference, field_ring,\n"
-      "                                               field_gap, field_gap_pair, field_coupler)\n"
+      "                                               field_gap, field_gap_pair, field_coupler, "
+      "field_phc_w1,\n"
+      "                                               field_phc_bend, field_phc_y, field_phc_y_xor)\n"
       "  photonlab_cli run <datei.plab.json>          Schaltung bei der Arbeitswellenlänge rechnen\n"
       "  photonlab_cli run <datei> --sweep [--csv <aus.csv>]   Wellenlängen-Sweep aus der Datei\n"
       "  photonlab_cli run <datei> --resonances       Sweep auswerten: Resonanzen, FSR, Güte, Extinktion\n"
@@ -65,6 +69,12 @@ void print_usage() {
       "  photonlab_cli bands [--lattice triangular|square] [--radius 0.48] [--eps 13] [--hole-eps 1]\n"
       "                    [--pol ez|hz|both] [--cutoff 7] [--a-nm <nm>] [--csv <aus.csv>]\n"
       "                                               Bandstruktur eines photonischen Kristalls (PWE)\n"
+      "  photonlab_cli field-gate [<name>] [--csv <aus.csv>]\n"
+      "                                               Gatter auf Feld-Ebene (Kristall-Gatter): "
+      "Wahrheitstabelle aus\n"
+      "                                               FDTD-Rechnungen; ohne Namen: Liste (phc_or_and, "
+      "phc_xor, phc_not,\n"
+      "                                               phc_halfadder)\n"
       "  photonlab_cli materials [wellenlaenge_nm]    Brechzahl und Gruppenindex der Materialbibliothek\n"
       "  photonlab_cli validate [--out <ordner>]      Validierung gegen analytische Lösungen\n");
 }
@@ -581,6 +591,94 @@ bool validate_pwe() {
   return empty_error < 1e-9 && gap_ok;
 }
 
+// Gatter auf Feld-Ebene: je Eingangskombination eine FDTD-Rechnung, dann Pegel, Kontrast und Ampeln.
+int cmd_field_gate(const std::string& name, const std::string& csv_path) {
+  if (name.empty()) {
+    std::printf("Feld-Gatter:\n");
+    for (const std::string& n : logic::field_gate_names()) {
+      const logic::FieldGate g = logic::field_gate(n);
+      std::printf("  %-14s %s\n", n.c_str(), g.description.c_str());
+    }
+    return 0;
+  }
+  const logic::FieldGate gate = logic::field_gate(name);
+  std::printf("%s\n%s\n", gate.name.c_str(), gate.description.c_str());
+  std::printf("Rechne %zu Zeilen x %zu Szene(n), je etwa eine halbe Minute ...\n", gate.row_count(),
+              gate.scenes.size());
+  ThreadPool pool;
+  JobControl control;
+  const logic::FieldGateReport report = logic::characterize_field_gate(gate, &pool, &control);
+
+  std::printf("\nWahrheitstabelle (Leistung relativ zum groessten Pegel des Ausgangs)\n  ");
+  for (const auto& in : gate.inputs) std::printf("%-3s", in.name.c_str());
+  for (const auto& out : gate.outputs) std::printf("| %-10s soll ", out.name.c_str());
+  std::printf("\n");
+  for (std::size_t r = 0; r < report.table.rows.size(); ++r) {
+    std::printf("  ");
+    for (const int b : report.table.rows[r].bits) std::printf("%-3d", b);
+    for (std::size_t k = 0; k < gate.outputs.size(); ++k) {
+      const double rel = report.table.rows[r].power[k] / report.outputs[k].p_max;
+      std::printf("| %-10.4f %-4d ", rel,
+                  gate.outputs[k].expected.empty() ? -1 : gate.outputs[k].expected[r]);
+    }
+    std::printf("\n");
+  }
+  std::printf("\n");
+  for (std::size_t k = 0; k < gate.outputs.size(); ++k) {
+    const auto& a = report.outputs[k];
+    std::printf("%s: Funktion %s, schlechteste 1 / schlechteste 0 = Kontrast %s, Schwelle %.3g W/m\n",
+                gate.outputs[k].name.c_str(), a.separable ? "korrekt" : "FALSCH",
+                logic::format_db(a.contrast_db).c_str(), a.threshold);
+  }
+  std::printf("\nZeugnis (Wellenlaenge %.0f nm):\n", report.wavelength / units::nm);
+  for (const auto& c : report.criteria)
+    std::printf("  %-26s %-14s %s%s%s\n", c.name.c_str(), std::string(logic::to_string(c.rating)).c_str(),
+                c.value.c_str(), c.remark.empty() ? "" : "  - ", c.remark.c_str());
+  if (!csv_path.empty()) {
+    std::ofstream csv(csv_path);
+    csv.precision(8);
+    for (const auto& in : gate.inputs) csv << in.name << ',';
+    for (std::size_t k = 0; k < gate.outputs.size(); ++k)
+      csv << gate.outputs[k].name << "_W_per_m,erwartet" << (k + 1 < gate.outputs.size() ? "," : "");
+    csv << '\n';
+    for (std::size_t r = 0; r < report.table.rows.size(); ++r) {
+      for (const int b : report.table.rows[r].bits) csv << b << ',';
+      for (std::size_t k = 0; k < gate.outputs.size(); ++k)
+        csv << report.table.rows[r].power[k] << ','
+            << (gate.outputs[k].expected.empty() ? -1 : gate.outputs[k].expected[r])
+            << (k + 1 < gate.outputs.size() ? "," : "");
+      csv << '\n';
+    }
+    std::printf("Tabelle nach %s geschrieben\n", csv_path.c_str());
+  }
+  return report.function_correct ? 0 : 1;
+}
+
+// Kristall-Wellenleiter: ein 60°-Knick im W1-Liniendefekt überträgt bei 1580 nm fast alles (gegen den geraden
+// Aufbau).
+bool validate_phc_bend() {
+  ThreadPool pool;
+  double flux[2] = {0.0, 0.0};
+  std::vector<std::future<void>> jobs;
+  const char* names[2] = {"field_phc_w1", "field_phc_bend"};
+  for (int i = 0; i < 2; ++i)
+    jobs.push_back(pool.submit([&, i] {
+      const field::FieldScene scene = field::reference_scene(names[i]);
+      field::Fdtd sim(scene);
+      sim.run(static_cast<std::size_t>(scene.duration / sim.time_step()));
+      const double period = scene.sources.front().wavelength / constants::c0;
+      for (const auto& m : sim.monitors())
+        if (m.name == "Fluss Ausgang")
+          flux[i] = std::abs(field::average_over_periods(m.values, m.sample_interval, period, 4));
+    }));
+  for (auto& j : jobs) j.get();
+  const double transmission = flux[1] / flux[0];
+  std::printf(
+      "PhC-W1 mit 60°-Knick bei 1580 nm: Transmission gegen geraden W1 %.3f (erwartet 0,9 ... 1,05)\n",
+      transmission);
+  return transmission > 0.9 && transmission < 1.05;
+}
+
 bool validate_modes(const std::string& out_dir) {
   const modes::CrossSection section;
   const modes::CrossSectionResult result = modes::analyze(section, true);
@@ -781,6 +879,7 @@ int cmd_validate(const std::string& out_dir) {
   ok = validate_fdtd() && ok;
   ok = validate_modes(out_dir) && ok;
   ok = validate_pwe() && ok;
+  ok = validate_phc_bend() && ok;
   ok = validate_sparameters(out_dir) && ok;
   std::printf("%s\n", ok ? "BESTANDEN" : "NICHT BESTANDEN");
   return ok ? 0 : 1;
@@ -827,6 +926,8 @@ int main(int argc, char** argv) {
     if (command == "run" && args.size() >= 2 && flag("--monte-carlo"))
       return cmd_monte_carlo(args[1], option("--csv"));
     if (command == "run" && args.size() >= 2) return cmd_run(args[1], flag("--sweep"), option("--csv"));
+    if (command == "field-gate")
+      return cmd_field_gate(args.size() >= 2 && args[1].rfind("--", 0) != 0 ? args[1] : "", option("--csv"));
     if (command == "bands")
       return cmd_bands(option("--lattice"), option("--radius"), option("--eps"), option("--hole-eps"),
                        option("--pol"), option("--cutoff"), option("--a-nm"), option("--csv"));

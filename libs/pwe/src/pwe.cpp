@@ -168,6 +168,26 @@ UnitCell square_cell(double radius, double epsilon_background, double epsilon_in
   return c;
 }
 
+UnitCell triangular_line_defect_cell(double radius, double epsilon_background, double epsilon_inclusion,
+                                     int rows) {
+  if (rows < 2 || rows % 2 != 0)
+    throw PweError("Die Zahl der Lochreihen der Superzelle muss gerade und >= 2 sein.");
+  const double row_pitch = std::sqrt(3.0) / 2.0;
+  UnitCell c;
+  c.a1x = 1.0;
+  c.a1y = 0.0;
+  c.a2x = 0.0;
+  c.a2y = rows * row_pitch;
+  c.epsilon_background = epsilon_background;
+  // Reihen j = -rows/2 + 1 ... rows/2; j = 0 ist die Defektreihe (fehlt). Ungerade Reihen um a/2 versetzt.
+  for (int j = -rows / 2 + 1; j <= rows / 2; ++j) {
+    if (j == 0) continue;
+    const double x = (j % 2 != 0) ? 0.5 : 0.0;
+    c.circles.push_back({x, j * row_pitch, radius, epsilon_inclusion});
+  }
+  return c;
+}
+
 BandPath standard_path(const UnitCell& cell, PathKind kind, int segment_points) {
   const Reciprocal b = reciprocal(cell);
   const KPoint gamma{0.0, 0.0};

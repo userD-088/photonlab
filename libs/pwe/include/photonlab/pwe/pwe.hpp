@@ -51,6 +51,12 @@ struct UnitCell {
 UnitCell triangular_cell(double radius, double epsilon_background, double epsilon_inclusion);
 UnitCell square_cell(double radius, double epsilon_background, double epsilon_inclusion);
 
+// Superzelle für einen geraden Liniendefekt (W1) in einem Dreiecksgitter: `rows` Lochreihen (gerade Zahl)
+// übereinander, die mittlere Reihe fehlt. Die Zelle ist in x eine Gitterkonstante lang (Ausbreitungsrichtung)
+// und in y rows*sqrt(3)/2 hoch; Wellenvektoren laufen entlang x (ky = 0). Die Defektreihe liegt bei y = 0.
+UnitCell triangular_line_defect_cell(double radius, double epsilon_background, double epsilon_inclusion,
+                                     int rows = 10);
+
 struct KPoint {
   double kx = 0.0, ky = 0.0;  // [2*pi/a]
 };

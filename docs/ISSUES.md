@@ -97,6 +97,6 @@ Offen aus Phase 6 (Folge-Issues):
 ## Phase 7 – Photonische Kristalle
 - [x] #66 PWE-Löser (Plane Wave Expansion) für 2D-Kristalle, Bandstruktur entlang Gamma-M-K-Gamma
 - [x] #67 Abnahme: Bandlücke des Dreiecksgitters stimmt mit der Literatur (Joannopoulos; Zahlen aus dem Gedächtnis, MPB-Vergleich offen, #52)
-- [ ] #68 Geometrie-Generatoren: Dreiecks- und Quadratgitter, Liniendefekte (gerade, 60°-Knick, Y), Punktdefekte
-- [ ] #69 PhC-Gatter (NOT, AND, OR, XOR) und Halbaddierer im FDTD; Wahrheitstabelle automatisch auf Feld-Ebene
+- [x] #68 Geometrie-Generatoren: Dreiecks- und Quadratgitter, Liniendefekte (gerade, 60°-Knick, Y), Punktdefekte (Bedienung in der Oberfläche fehlt noch: Gitter per Eingabe statt per Hand)
+- [x] #69 PhC-Gatter (NOT, AND, OR, XOR) und Halbaddierer im FDTD; Wahrheitstabelle automatisch auf Feld-Ebene
 - [ ] #70 Bandstruktur-Ansicht im Bauteil-Labor

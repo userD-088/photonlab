@@ -1,4 +1,5 @@
 add_library(photonlab_logic
+  src/field_gate.cpp
   src/gate.cpp
   src/optimize.cpp
   src/reference_gates.cpp
@@ -6,5 +7,5 @@ add_library(photonlab_logic
   src/truth_table.cpp)
 add_library(photonlab::logic ALIAS photonlab_logic)
 target_include_directories(photonlab_logic PUBLIC include)
-target_link_libraries(photonlab_logic PUBLIC photonlab::circuit)
+target_link_libraries(photonlab_logic PUBLIC photonlab::circuit photonlab::field)
 photonlab_warnings(photonlab_logic)

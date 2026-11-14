@@ -1,5 +1,6 @@
 add_library(photonlab_field
   src/fdtd.cpp
+  src/photonic_crystal.cpp
   src/reference_scenes.cpp
   src/scene.cpp
   src/sparameters.cpp
