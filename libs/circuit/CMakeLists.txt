@@ -1,4 +1,5 @@
 add_library(photonlab_circuit
+  src/active_devices.cpp
   src/analysis.cpp
   src/builtin_components.cpp
   src/kerr_cavity.cpp

@@ -1,5 +1,6 @@
 add_library(photonlab_materials
-  src/material.cpp)
+  src/material.cpp
+  src/silicon_carriers.cpp)
 add_library(photonlab::materials ALIAS photonlab_materials)
 target_include_directories(photonlab_materials PUBLIC include)
 target_link_libraries(photonlab_materials PUBLIC photonlab::core)

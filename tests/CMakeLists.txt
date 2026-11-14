@@ -1,6 +1,7 @@
 add_executable(photonlab_tests
   main.cpp
   test_units.cpp
+  test_active.cpp
   test_thread_pool.cpp
   test_interference.cpp
   test_circuit_components.cpp
