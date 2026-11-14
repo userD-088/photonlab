@@ -35,10 +35,10 @@ double index_at(const FieldScene& scene, double x, double y) {
   return scene.background_index;
 }
 
-double kerr_n2_at(const FieldScene& scene, double x, double y) {
+NonlinearParams nonlinear_at(const FieldScene& scene, double x, double y) {
   for (auto it = scene.shapes.rbegin(); it != scene.shapes.rend(); ++it)
-    if (contains(*it, x, y)) return it->n2;
-  return 0.0;
+    if (contains(*it, x, y)) return {it->n2, it->beta_tpa, it->carrier_lifetime};
+  return {};
 }
 
 int grid_nx(const FieldScene& scene) { return static_cast<int>(std::lround(scene.width / scene.cell_size)); }

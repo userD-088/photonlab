@@ -34,6 +34,15 @@ void pml_coefficient(double u, int count, int pml_cells, double dx, double dt, d
 
 }  // namespace
 
+double Fdtd::carrier_density_at(double x, double y) const {
+  const int i = static_cast<int>(std::lround(x / dx_)), j = static_cast<int>(std::lround(y / dx_));
+  if (i < 0 || j < 0 || i >= nx_ || j >= ny_) return 0.0;
+  const std::size_t k = at(i, j);
+  for (const KerrCell& cell : kerr_cells_)
+    if (cell.index == k) return cell.n;
+  return 0.0;
+}
+
 double Fdtd::signal(const Source& source, double time) {
   const double omega = omega_from_wavelength(source.wavelength);
   if (source.signal == SignalKind::pulse) {
@@ -58,6 +67,8 @@ Fdtd::Fdtd(const FieldScene& scene) : polarization_(scene.polarization) {
   ny_ = grid_ny(scene);
   dx_ = scene.cell_size;
   dt_ = field::time_step(scene);
+  if (!scene.sources.empty())
+    hbar_omega_ = constants::h * constants::c0 / scene.sources.front().wavelength;  // hbar*omega = h*c/lambda
   periodic_x_ = scene.boundary_x == Boundary::periodic;
   periodic_y_ = scene.boundary_y == Boundary::periodic;
   pml_x_ = !periodic_x_ && scene.pml_cells > 0;
@@ -87,11 +98,24 @@ Fdtd::Fdtd(const FieldScene& scene) : polarization_(scene.polarization) {
       eps_f_[k] = index * index;
       if (ez) {
         cf_[k] = dt_ / (constants::eps0 * eps_f_[k]);
-        const double n2 = kerr_n2_at(scene, i * dx_, j * dx_);
-        // Kerr: n2 = 3 chi3 / (4 n0^2 eps0 c) (docs/physics/nonlinear.md)
-        if (n2 != 0.0)
-          kerr_cells_.push_back(
-              {k, eps_f_[k], 4.0 * eps_f_[k] * constants::eps0 * constants::c0 * n2 / 3.0, 0.0});
+        const NonlinearParams nl = nonlinear_at(scene, i * dx_, j * dx_);
+        if (nl.any()) {
+          // Kerr: n2 = 3 chi3 / (4 n0^2 eps0 c); TPA: <sigma2 E^4> = beta I^2  =>  sigma2 = 2/3 beta n0^2 c^2
+          // eps0^2; Ladungsträger (Silizium, Soref-Bennett linearisiert): dn/dN = -3,6e-27 m^3, Absorption
+          // 1,45e-21 m^2 (docs/physics/nonlinear.md)
+          KerrCell cell;
+          cell.index = k;
+          cell.eps = eps_f_[k];
+          cell.chi3 = 4.0 * eps_f_[k] * constants::eps0 * constants::c0 * nl.n2 / 3.0;
+          cell.sigma2 = 2.0 / 3.0 * nl.beta_tpa * eps_f_[k] * constants::c0 * constants::c0 *
+                        constants::eps0 * constants::eps0;
+          cell.tau = nl.carrier_lifetime;
+          cell.sigma_fc = 1.45e-21 * index * constants::c0 * constants::eps0;
+          cell.eps_fc = 2.0 * index * -3.6e-27;
+          cell.d = 0.0;
+          cell.n = 0.0;
+          kerr_cells_.push_back(cell);
+        }
       } else {
         const double nx_index = index_at(scene, (i + 0.5) * dx_, j * dx_);  // Ex bei (i + 1/2, j)
         const double ny_index = index_at(scene, i * dx_, (j + 0.5) * dx_);  // Ey bei (i, j + 1/2)
@@ -275,7 +299,7 @@ void Fdtd::step() {
   // Quellen wirken zur halben Zeit des Schritts (zwischen altem und neuem Skalarfeld)
   const double source_time = (static_cast<double>(steps_) + 0.5) * dt_;
   for (const auto& source : sources_) {
-    const double s = signal(source.source, source_time);
+    const double s = source_scale_ * signal(source.source, source_time);
     for (const auto& cell : source.cells) f_[cell.index] += cell.weight * s;
   }
   ++steps_;
@@ -347,11 +371,19 @@ void Fdtd::step_ez() {
   // eps*E + chi3*E^3 = D/eps0 lösen (monotone Kubik, Newton ab dem alten Wert)
   for (KerrCell& cell : kerr_cells_) {
     const double e_old = f_prev_[cell.index];
-    cell.d += cell.eps * (f_[cell.index] - e_old);
+    // TPA und Absorption an Ladungsträgern als Leitfähigkeit: D/eps0 sinkt um dt/eps0 * sigma * E
+    const double sigma = cell.sigma2 * e_old * e_old + cell.sigma_fc * cell.n;
+    cell.d += cell.eps * (f_[cell.index] - e_old) - dt_ / constants::eps0 * sigma * e_old;
+    if (cell.tau >
+        0.0) {  // Paare je absorbierter Photonenpaar-Leistung: dN/dt = sigma2 E^4 /(2 hbar w) - N/tau
+      cell.n += dt_ * (cell.sigma2 * e_old * e_old * e_old * e_old / (2.0 * hbar_omega_) - cell.n / cell.tau);
+      cell.n = std::max(cell.n, 0.0);
+    }
+    const double eps = cell.eps + cell.eps_fc * cell.n;
     double e = e_old;
     for (int iteration = 0; iteration < 8; ++iteration) {
-      const double residual = cell.eps * e + cell.chi3 * e * e * e - cell.d;
-      const double step = residual / (cell.eps + 3.0 * cell.chi3 * e * e);
+      const double residual = eps * e + cell.chi3 * e * e * e - cell.d;
+      const double step = residual / (eps + 3.0 * cell.chi3 * e * e);
       e -= step;
       if (std::abs(step) <= 1e-12 * (std::abs(e) + 1e-30)) break;
     }

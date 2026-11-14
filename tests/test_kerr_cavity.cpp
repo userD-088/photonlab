@@ -26,14 +26,16 @@ TEST_CASE("Kerr-Resonator: linear stimmt mit der Lorentz-Kurve und dem kritisch 
   for (const double delta : {0.0, 0.3 * g, 1.7 * g}) {
     const auto s = steady_states(c, c.omega0 - delta, p);
     REQUIRE(s.size() == 1);
-    CHECK(s[0].energy == doctest::Approx(c.kappa_in * p / (delta * delta + 0.25 * g * g)).epsilon(1e-9));
+    CHECK(s[0].energy ==
+          doctest::Approx(c.kappa_in * p / (delta * delta + 0.25 * g * g)).epsilon(1e-9).scale(0.0));
   }
   // kritische Kopplung: bei Resonanz kein Durchgang
-  CHECK(steady_states(c, c.omega0, p)[0].transmission == doctest::Approx(0.0).epsilon(1e-9).scale(1.0));
+  CHECK(steady_states(c, c.omega0, p)[0].transmission ==
+        doctest::Approx(0.0).epsilon(1e-9).scale(0.0).scale(1.0));
   // unterkoppelt: T = ((k0 - kin)/(k0 + kin))^2
   c.kappa_in = 0.25e10;
   const double expect = std::pow((c.kappa_0 - c.kappa_in) / (c.kappa_0 + c.kappa_in), 2);
-  CHECK(steady_states(c, c.omega0, p)[0].transmission == doctest::Approx(expect).epsilon(1e-9));
+  CHECK(steady_states(c, c.omega0, p)[0].transmission == doctest::Approx(expect).epsilon(1e-9).scale(0.0));
 }
 
 TEST_CASE(
@@ -61,7 +63,7 @@ TEST_CASE(
   // genau an der Schwelle liegt der Wendepunkt bei P_c: Steigung dP/dU = 0 bei U_c = 2 delta / (3 kerr)
   const double delta_c = std::sqrt(3.0) * 0.5 * g;
   const double u_c = 2.0 * delta_c / (3.0 * c.kerr);
-  CHECK(steady_power(c, c.omega0 - delta_c, u_c) == doctest::Approx(p_c).epsilon(1e-9));
+  CHECK(steady_power(c, c.omega0 - delta_c, u_c) == doctest::Approx(p_c).epsilon(1e-9).scale(0.0));
 }
 
 TEST_CASE("Kerr-Resonator: Klapp-Leistungen bei delta = 2 g/2 folgen aus der Kubik") {
@@ -93,7 +95,7 @@ TEST_CASE("Kerr-Resonator: Zeitverlauf läuft in den stationären Zustand und ze
   const auto s = steady_states(c, omega_l, p);
   REQUIRE(s.size() == 1);
   const Trace t = simulate(c, omega_l, [&](double) { return p; }, 40.0 / g, 0.02 / g);
-  CHECK(t.energy.back() == doctest::Approx(s[0].energy).epsilon(1e-4));
+  CHECK(t.energy.back() == doctest::Approx(s[0].energy).epsilon(1e-4).scale(0.0));
   // langsame Rampe: hinauf klappt der Zustand bei der oberen Klapp-Leistung, hinunter bei der unteren
   const double half = 0.5 * g, root = std::sqrt(delta * delta - 3.0 * half * half);
   auto f = [&](double x) { return x * ((delta - x) * (delta - x) + half * half) / (c.kerr * c.kappa_in); };
@@ -109,8 +111,8 @@ TEST_CASE("Kerr-Resonator: Zeitverlauf läuft in den stationären Zustand und ze
     (void)upward;
     return at;
   };
-  CHECK(jump_power(loop.up, true) == doctest::Approx(p_up).epsilon(0.05));
-  CHECK(jump_power(loop.down, false) == doctest::Approx(p_down).epsilon(0.08));
+  CHECK(jump_power(loop.up, true) == doctest::Approx(p_up).epsilon(0.05).scale(0.0));
+  CHECK(jump_power(loop.down, false) == doctest::Approx(p_down).epsilon(0.08).scale(0.0));
   // Hysterese: bei P zwischen p_down und p_up ist der Durchgang auf dem Hin- und Rückweg verschieden
   const double probe = 0.5 * (p_up + p_down);
   auto at_power = [&](const Trace& tr) {
@@ -128,7 +130,8 @@ TEST_CASE(
   // Ring 10 um Radius: V_eff = A_eff * L, A_eff = 0,1 um^2, L = 62,8 um -> V = 6,3 um^3
   const double wavelength = 1550e-9, volume = 0.1e-12 * 2.0 * std::numbers::pi * 10e-6;
   const KerrCavity c = silicon_cavity(wavelength, 2e5, 2e5, 4.2, volume);
-  CHECK(c.kerr == doctest::Approx(c.omega0 * 4.5e-18 * 299792458.0 / (4.2 * 4.2 * volume)).epsilon(1e-12));
+  CHECK(c.kerr ==
+        doctest::Approx(c.omega0 * 4.5e-18 * 299792458.0 / (4.2 * 4.2 * volume)).epsilon(1e-12).scale(0.0));
   CHECK(c.tpa > 0.0);
   CHECK(c.carrier_gen > 0.0);
   // Mit TPA ist die Energie bei hoher Leistung kleiner als ohne
@@ -141,6 +144,7 @@ TEST_CASE(
   CHECK(with.back().energy < without.back().energy);
   // Ladungsträger im Gleichgewicht: N = gen U^2 tau, Verschiebung nach Blau
   const auto s = with.back();
-  CHECK(s.carriers == doctest::Approx(c.carrier_gen * s.energy * s.energy * c.carrier_tau).epsilon(1e-9));
+  CHECK(s.carriers ==
+        doctest::Approx(c.carrier_gen * s.energy * s.energy * c.carrier_tau).epsilon(1e-9).scale(0.0));
   CHECK(c.frequency(s.energy, s.carriers) > c.frequency(s.energy, 0.0));
 }

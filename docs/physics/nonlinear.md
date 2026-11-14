@@ -65,3 +65,46 @@ Verstimmung und hoher Leistung wieder zulässt.
   dagegen der Ratengleichung.
 * Die Zahlen sind für **Streifenwellenleiter-Ringe** gedacht; V_eff ist eine Eingabe (A_eff·L), keine
   aus dem Modenlöser gerechnete Größe (Kopplung an die Feld-Ebene: Issue #64).
+
+## Nichtlinearität im FDTD (Ez-Polarisation)
+
+Eingeschaltet über Formen mit `n2` [m²/W], `beta_tpa` [m/W] und `carrier_lifetime` [s] (Szene, `.plab.json`; nur
+wenn ≠ 0 gespeichert). Hz-Polarisation lehnt die Szene mit Klartext ab (E in der Ebene braucht |E|² aus zwei Komponenten;
+offen). In den Zellen dieser Formen wird nicht E, sondern D/ε0 =: d fortgeschrieben:
+
+    d  ←  d + ε ΔE_lin  −  (Δt/ε0) σ E          (ΔE_lin: normaler Yee-Schritt inkl. CPML-Terme)
+    ε_eff(N) E + χ3 E³ = d                        (monotone Kubik, Newton ab dem alten E, ≤ 8 Schritte)
+
+* **Kerr**: P_NL = ε0 χ3 E³, n2 = 3 χ3 /(4 n0² ε0 c) ⇒ χ3 = 4 n0² ε0 c n2/3. Eine ebene Welle der Amplitude E0 sieht
+  Δε = (3/4) χ3 E0² (Dritte-Harmonische-Terme entstehen im Löser mit, werden aber hier nicht ausgewertet).
+* **TPA** als nichtlineare Leitfähigkeit σ = σ2 E²: Zyklusmittel ⟨σ2 E⁴⟩ = (3/8) σ2 E0⁴ = β I², I = n0 c ε0 E0²/2
+  ⇒ σ2 = (2/3) β n0² c² ε0².
+* **Ladungsträger**: dN/dt = σ2 E⁴/(2ħω) − N/τ (ein Paar je zwei Photonen, ħω der ersten Quelle); ε_eff = ε + 2 n0 (dn/dN) N,
+  Absorption σ_FC = α_FC n0 c ε0 · N, mit den linearisierten Silizium-Konstanten von oben.
+* Quellen innerhalb nichtlinearer Zellen werden nicht in d eingerechnet (die Quelle würde zurückgenommen): Quelle in den
+  linearen Bereich setzen. `Fdtd::set_source_scale` skaliert alle Quellen (langsame Leistungsrampen).
+
+### Prüfungen im FDTD
+
+| Prüfung | Ergebnis |
+|---|---|
+| Phase einer ebenen Welle im Kerr-Streifen gegen φ = (2π/λ) n2 I L | Abweichung unter 2 % (Test mit 0,5 % bestanden) |
+| TPA-Transmission gegen 1/(1 + β I0 L) | 4 % Toleranz bestanden |
+| Ladungsträgerdichte gegen β I² τ /(2ħω) | 10 % Toleranz bestanden |
+| freie Ladungsträger senken die Phase (Blauverschiebung) | ja |
+| **Abnahme Resonanzverschiebung**: Bragg-Resonator (Q ≈ 390) mit Kerr-Spacer, Verstimmung 0,5 γ, Verschiebung ≈ 0,55 γ | Energie im FDTD 0,01555, Vorhersage aus verschobener gemessener Linienform 0,01596 (2,6 %), Kompaktmodell mit Lorentz-Linie 0,01651 (6 %); kalt 0,00842 |
+| **Abnahme Hysterese**: langsame Rampe hinauf/hinunter bei Verstimmung 1,5 γ | Hysterese im Feld sichtbar; Sprung hinunter bei 2,50e10 W/m² (Kompaktmodell mit derselben Rampe: 2,48e10), Sprung hinauf 1,56e11 (Modell 1,44e11) |
+
+Die Kerr-Konstante des Kompaktmodells folgt aus dem **linearen** Modenprofil des FDTD (Störungsrechnung):
+Δω = −ω0 (3/8) χ3 ∫|E|⁴ dx / ∫ ε|E|² dx, β' = Δω/U' mit U' = ½ ε0 ∫ ε|E|² dx (alles je Fläche, damit gleiche Normierung
+wie die Einfallsleistung). Die Linienform wird nicht als Lorentz angenommen, sondern gemessen (U/P der linearen
+Struktur); das Lorentz-Modell trifft trotzdem auf wenige Prozent.
+
+**Wichtig – statisch ≠ dynamisch:** Die statischen Klappleistungen (Extrema von P(U)) 1,07e11 W/m² hinauf und 6,3e10 hinunter
+liegen weit von den Sprungstellen der Rampe entfernt (1,5e11 und 2,5e10): in der Nähe der Klappstelle wird die
+Antwort langsam (kritische Verlangsamung), die Schleife der endlichen Rampe ist breiter als die statische. Eine
+Messung "Hysteresebreite" gilt immer für eine bestimmte Rampengeschwindigkeit; Kompaktmodell und FDTD stimmen bei
+**gleicher** Rampe überein.
+
+Hinweis zu den Tests: doctest-`Approx` rechnet mit `scale = 1` (Toleranz ε·(1 + |x|)); für kleine Zahlen ist das praktisch
+eine absolute Toleranz. Die neuen Tests nutzen deshalb `.scale(0.0)`.

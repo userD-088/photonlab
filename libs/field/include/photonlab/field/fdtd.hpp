@@ -27,6 +27,9 @@ class Fdtd {
   explicit Fdtd(const FieldScene& scene);
 
   void step();
+  // Faktor auf die Signale aller Quellen (Standard 1): erlaubt langsame Leistungsrampen, z. B. für Hysterese
+  void set_source_scale(double scale) { source_scale_ = scale; }
+  double source_scale() const { return source_scale_; }
   // Rechnet steps Zeitschritte; bricht ab, wenn control->cancel_requested gesetzt wird.
   void run(std::size_t steps, JobControl* control = nullptr);
 
@@ -47,6 +50,8 @@ class Fdtd {
   const std::vector<double>& in_plane_y() const { return gy_; }
   // Relative Permittivität an den Orten des Skalarfeldes (für Darstellung und Energie).
   const std::vector<double>& permittivity() const { return eps_f_; }
+  // Ladungsträgerdichte [m^-3] am Knoten nahe (x, y); 0 ohne Ladungsträgermodell (Ez, Kerr-Zellen)
+  double carrier_density_at(double x, double y) const;
 
   // Feldenergie je Meter Bauteilhöhe [J/m] in der Form, die das Leapfrog-Verfahren exakt erhält
   // (Skalarfeld als Produkt aufeinanderfolgender Zeitschritte).
@@ -96,16 +101,23 @@ class Fdtd {
   std::size_t steps_ = 0;
 
   std::vector<double> f_, f_prev_, gx_, gy_;
-  std::vector<double> zero_row_;   // Nachbarzeile jenseits einer ideal leitenden Wand
-  std::vector<double> eps_f_;      // relative Permittivität am Skalarfeld
+  std::vector<double> zero_row_;  // Nachbarzeile jenseits einer ideal leitenden Wand
+  std::vector<double> eps_f_;     // relative Permittivität am Skalarfeld
   // Kerr-Zellen (nur Ez): D/eps0 wird mitgeführt, E aus eps*E + chi3*E^3 = D/eps0 per Newton-Verfahren
   struct KerrCell {
     std::size_t index;
-    double eps;   // lineare relative Permittivität
-    double chi3;  // [m^2/V^2]
-    double d;     // D/eps0 [V/m]
+    double eps;       // lineare relative Permittivität
+    double chi3;      // [m^2/V^2]
+    double sigma2;    // TPA als nichtlineare Leitfähigkeit sigma = sigma2 E^2 [S m/V^2 ... S/m je (V/m)^2]
+    double tau;       // Lebensdauer der Ladungsträger [s]; 0 = keine
+    double sigma_fc;  // Leitfähigkeit je Ladungsträger [S/m pro m^-3]
+    double eps_fc;    // d(eps)/dN [m^3]
+    double d;         // D/eps0 [V/m]
+    double n;         // Ladungsträgerdichte [m^-3]
   };
   std::vector<KerrCell> kerr_cells_;
+  double source_scale_ = 1.0;
+  double hbar_omega_ = 1.28e-19;   // Photonenenergie der ersten Quelle [J] (für die Paarerzeugung)
   std::vector<double> cf_;         // Update-Koeffizient des Skalarfeldes (Ez: dt/(eps0*eps_r), Hz: dt/mu0)
   std::vector<double> cgx_, cgy_;  // Update-Koeffizienten der Felder in der Ebene
   // CPML: Koeffizienten je Achse an ganzen (e) und halben (h) Gitterplätzen, Hilfsfelder psi

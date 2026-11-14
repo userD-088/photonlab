@@ -36,7 +36,7 @@ TEST_CASE("PWE: leeres Gitter liefert exakt |k+G|/sqrt(eps) (beide Polarisatione
       for (const KPoint k : {KPoint{0.0, 0.0}, KPoint{0.31, 0.12}, KPoint{0.5, 0.2}}) {
         const std::vector<double> got = solve_k(base, s, k);
         const std::vector<double> want = empty_lattice_frequencies(base, k, 2.25);
-        for (int i = 0; i < 8; ++i) CHECK(got[i] == doctest::Approx(want[i]).epsilon(1e-9).scale(1.0));
+        for (int i = 0; i < 8; ++i) CHECK(got[i] == doctest::Approx(want[i]).epsilon(1e-9).scale(0.0).scale(1.0));
       }
     }
 }
@@ -83,8 +83,8 @@ TEST_CASE("PWE: Bandlücke Quadratgitter aus Stäben (Joannopoulos, Kap. 5)") {
   const BandResult r = solve_bands(cell, s, standard_path(cell, PathKind::square, 10));
   REQUIRE(!r.gaps.empty());
   CHECK(r.gaps.front().band == 1);
-  CHECK(r.gaps.front().lower == doctest::Approx(0.32).epsilon(0.04));
-  CHECK(r.gaps.front().upper == doctest::Approx(0.44).epsilon(0.04));
+  CHECK(r.gaps.front().lower == doctest::Approx(0.32).epsilon(0.04).scale(0.0));
+  CHECK(r.gaps.front().upper == doctest::Approx(0.44).epsilon(0.04).scale(0.0));
   // Es gibt keine TE-Lücke zwischen Band 1 und 2 (Stäbe: nur TM)
   s.polarization = Polarization::hz;
   const BandResult te = solve_bands(cell, s, standard_path(cell, PathKind::square, 10));
@@ -109,8 +109,8 @@ TEST_CASE("PWE: Dreiecksgitter aus Luftlöchern hat eine vollständige Lücke (J
   const Gap& g_te = *std::find_if(te.gaps.begin(), te.gaps.end(), [](const Gap& g) { return g.band == 1; });
   const double lower = std::max(g_tm.lower, g_te.lower), upper = std::min(g_tm.upper, g_te.upper);
   REQUIRE(upper > lower);
-  CHECK(lower == doctest::Approx(0.43).epsilon(0.03));
-  CHECK(upper == doctest::Approx(0.52).epsilon(0.03));
+  CHECK(lower == doctest::Approx(0.43).epsilon(0.03).scale(0.0));
+  CHECK(upper == doctest::Approx(0.52).epsilon(0.03).scale(0.0));
 }
 
 TEST_CASE("PWE: Ergebnis konvergiert mit der Zahl der ebenen Wellen") {
@@ -125,8 +125,8 @@ TEST_CASE("PWE: Ergebnis konvergiert mit der Zahl der ebenen Wellen") {
   const BandResult b = solve_bands(cell, s, path);
   REQUIRE(!a.gaps.empty());
   REQUIRE(!b.gaps.empty());
-  CHECK(a.gaps.front().lower == doctest::Approx(b.gaps.front().lower).epsilon(0.005));
-  CHECK(a.gaps.front().upper == doctest::Approx(b.gaps.front().upper).epsilon(0.01));
+  CHECK(a.gaps.front().lower == doctest::Approx(b.gaps.front().lower).epsilon(0.005).scale(0.0));
+  CHECK(a.gaps.front().upper == doctest::Approx(b.gaps.front().upper).epsilon(0.01).scale(0.0));
 }
 
 TEST_CASE("PWE: Pfad Gamma-M-K-Gamma hat die bekannten Eckpunkte") {
@@ -135,8 +135,8 @@ TEST_CASE("PWE: Pfad Gamma-M-K-Gamma hat die bekannten Eckpunkte") {
   REQUIRE(path.marks.size() == 4);
   const KPoint m = path.points[static_cast<std::size_t>(path.marks[1].first)];
   const KPoint k = path.points[static_cast<std::size_t>(path.marks[2].first)];
-  CHECK(std::hypot(m.kx, m.ky) == doctest::Approx(1.0 / std::sqrt(3.0)).epsilon(1e-12));  // |M| = 1/(sqrt3 a)
-  CHECK(std::hypot(k.kx, k.ky) == doctest::Approx(2.0 / 3.0).epsilon(1e-12));             // |K| = 2/(3a)
+  CHECK(std::hypot(m.kx, m.ky) == doctest::Approx(1.0 / std::sqrt(3.0)).epsilon(1e-12).scale(0.0));  // |M| = 1/(sqrt3 a)
+  CHECK(std::hypot(k.kx, k.ky) == doctest::Approx(2.0 / 3.0).epsilon(1e-12).scale(0.0));             // |K| = 2/(3a)
 }
 
 TEST_CASE("PWE: Eingaben werden geprüft") {

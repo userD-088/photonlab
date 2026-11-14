@@ -110,13 +110,13 @@ TEST_CASE("Feld-Gatter: Y-Kombinierer liefert ODER/UND/XOR mit den erwarteten Pe
   const auto& t = and_or.table.rows;
   // keine Eingabe: kein Licht; A allein = B allein (Symmetrie); beide gleichphasig: |a+b|^2 = 4 |a|^2
   CHECK(t[0].power[0] == 0.0);
-  CHECK(t[1].power[0] == doctest::Approx(t[2].power[0]).epsilon(0.03));
-  CHECK(t[3].power[0] / t[1].power[0] == doctest::Approx(4.0).epsilon(0.08));
+  CHECK(t[1].power[0] == doctest::Approx(t[2].power[0]).epsilon(0.03).scale(0.0));
+  CHECK(t[3].power[0] / t[1].power[0] == doctest::Approx(4.0).epsilon(0.08).scale(0.0));
   MESSAGE("Y: A " << t[1].power[0] << " B " << t[2].power[0] << " AB " << t[3].power[0] << " UND-CR "
                   << and_or.outputs[1].contrast_db << " dB");
   CHECK(and_or.function_correct);
   CHECK(and_or.outputs[0].contrast_db > 40.0);                                // ODER: 0 ist wirklich dunkel
-  CHECK(and_or.outputs[1].contrast_db == doctest::Approx(6.0).epsilon(0.1));  // UND: begrenzt auf 6 dB
+  CHECK(and_or.outputs[1].contrast_db == doctest::Approx(6.0).epsilon(0.1).scale(0.0));  // UND: begrenzt auf 6 dB
   // XOR: gegenphasig, A = B = 1 löscht aus
   REQUIRE(xor_gate.table.rows.size() == 4);
   MESSAGE("XOR-CR " << xor_gate.outputs[0].contrast_db << " dB");

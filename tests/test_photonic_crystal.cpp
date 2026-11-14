@@ -24,8 +24,8 @@ TEST_CASE("Kristallgenerator: Lochdichte entspricht der Elementarzelle") {
     const double cell_area = kind == LatticeKind::triangular ? l.a * l.a * std::sqrt(3.0) / 2.0 : l.a * l.a;
     const double expected = (l.x_max - l.x_min) * (l.y_max - l.y_min) / cell_area;
     const double count = static_cast<double>(holes(l).size());
-    CHECK(count ==
-          doctest::Approx(expected).epsilon(0.07));  // Randeffekt: Löcher müssen ganz ins Gebiet passen
+    CHECK(count == doctest::Approx(expected).epsilon(0.07).scale(
+                       0.0));  // Randeffekt: Löcher müssen ganz ins Gebiet passen
   }
 }
 
@@ -82,8 +82,10 @@ TEST_CASE("Kristallgenerator: 60°-Knick folgt zwei Gitterrichtungen") {
   CHECK(end == Site{5, 5});
   CHECK(l.removed.size() == 11);
   const auto [x, y] = site_position(l, end);
-  CHECK(x == doctest::Approx(1e-6 + 5 * 400e-9 + 5 * 200e-9).epsilon(1e-9));
-  CHECK(y == doctest::Approx(4e-6 - 5 * 0.5 * std::sqrt(3.0) * 400e-9).epsilon(1e-9));
+  CHECK(x == doctest::Approx(1e-6 + 5 * 400e-9 + 5 * 200e-9).epsilon(1e-9).scale(0.0));
+  CHECK(y == doctest::Approx(4e-6 - 5 * 0.5 * std::sqrt(3.0) * 400e-9)
+                 .epsilon(1e-6)
+                 .scale(0.0));  // Pikometer-Rundung
 }
 
 TEST_CASE("Kristallgenerator: ungültige Eingaben") {

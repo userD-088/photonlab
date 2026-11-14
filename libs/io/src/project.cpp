@@ -68,7 +68,10 @@ ordered_json scene_to_json(const field::FieldScene& scene) {
                           {"radius", sh.radius},
                           {"inner_radius", sh.inner_radius},
                           {"index", sh.index}};
-    if (sh.n2 != 0.0) shape["n2"] = sh.n2;  // nur wenn nichtlinear: bestehende Dateien bleiben gleich
+    // nur wenn nichtlinear: bestehende Dateien bleiben gleich
+    if (sh.n2 != 0.0) shape["n2"] = sh.n2;
+    if (sh.beta_tpa != 0.0) shape["beta_tpa"] = sh.beta_tpa;
+    if (sh.carrier_lifetime != 0.0) shape["carrier_lifetime"] = sh.carrier_lifetime;
     shapes.push_back(std::move(shape));
   }
   for (const auto& q : scene.sources)
@@ -156,6 +159,8 @@ field::FieldScene scene_from_json(const ordered_json& json) {
       sh.inner_radius = j.value("inner_radius", sh.inner_radius);
       sh.index = j.value("index", sh.index);
       sh.n2 = j.value("n2", 0.0);
+      sh.beta_tpa = j.value("beta_tpa", 0.0);
+      sh.carrier_lifetime = j.value("carrier_lifetime", 0.0);
       scene.shapes.push_back(std::move(sh));
     }
   if (json.contains("sources"))

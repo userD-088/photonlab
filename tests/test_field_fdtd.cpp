@@ -403,6 +403,55 @@ TEST_CASE("Kerr-Effekt im FDTD: Phasenverschiebung entspricht n2*I*L") {
   const double intensity = n0 * c0 * constants::eps0 * e0 * e0 / 2.0;
   const double expected = 2.0 * pi / wavelength * n2 * intensity * length;
   INFO("Phase gemessen " << measured << ", erwartet " << expected);
-  CHECK(measured == doctest::Approx(expected).epsilon(0.02));
-  CHECK(std::abs(kerr) == doctest::Approx(std::abs(linear)).epsilon(0.03));  // keine Verluste
+  CHECK(measured == doctest::Approx(expected).epsilon(0.02).scale(0.0));
+  CHECK(std::abs(kerr) == doctest::Approx(std::abs(linear)).epsilon(0.03).scale(0.0));  // keine Verluste
+}
+
+// Zwei-Photonen-Absorption: dI/dz = -beta I^2  =>  I(L) = I0 / (1 + beta I0 L); Leistungs-Transmission = 1/(1
+// + beta I0 L).
+TEST_CASE("TPA im FDTD: Transmission folgt 1/(1 + beta*I0*L), Ladungsträger folgen beta*I^2*tau/(2 hbar w)") {
+  const double n0 = 1.5, e0 = 1e8, length = 20e-6, wavelength = 1550e-9;
+  const double intensity = n0 * c0 * constants::eps0 * e0 * e0 / 2.0;
+  const double beta = 0.5 / (intensity * length);  // künstlich groß: beta*I0*L = 0,5
+  auto run = [&](double beta_tpa, double lifetime, double* carriers, double* phase) {
+    FieldScene s;
+    s.width = 40e-6, s.height = 0.4e-6, s.cell_size = 50e-9;
+    s.background_index = n0;
+    s.polarization = Polarization::ez;
+    s.boundary_y = Boundary::periodic;
+    Shape slab{"Platte", ShapeKind::rectangle, 25e-6, 0.2e-6, length, 1e-6, 0.0, 1e-6, 0.5e-6, n0};
+    slab.beta_tpa = beta_tpa, slab.carrier_lifetime = lifetime;
+    s.shapes = {slab};
+    Source q;
+    q.kind = SourceKind::line;
+    q.x1 = q.x2 = 5e-6, q.y1 = 0.0, q.y2 = s.height;
+    q.amplitude = e0;
+    q.wavelength = wavelength;
+    s.sources = {q};
+    s.monitors = {{"hinten", MonitorKind::point, 37e-6, 0.2e-6, 0.0, 0.0}};
+    Fdtd sim(s);
+    sim.run(static_cast<std::size_t>(400e-15 / sim.time_step()));
+    if (carriers) *carriers = sim.carrier_density_at(15.1e-6, 0.2e-6);  // am Eingang des Streifens
+    const MonitorData& m = sim.monitors().front();
+    const double omega = 2.0 * pi * c0 / wavelength;
+    const std::size_t count = static_cast<std::size_t>(8.0 * wavelength / c0 / m.sample_interval);
+    std::complex<double> z = 0.0;
+    for (std::size_t k = m.values.size() - count; k < m.values.size(); ++k)
+      z += m.values[k] * std::exp(std::complex<double>(
+                             0.0, -omega * (m.start_time + static_cast<double>(k) * m.sample_interval)));
+    if (phase) *phase = -std::arg(z);
+    return std::abs(z);
+  };
+  const double linear = run(0.0, 0.0, nullptr, nullptr);
+  const double tpa = run(beta, 0.0, nullptr, nullptr);
+  CHECK(tpa * tpa / (linear * linear) == doctest::Approx(1.0 / (1.0 + 0.5)).epsilon(0.04).scale(0.0));
+  // Ladungsträger am Eingang des Streifens: N = beta I^2 tau /(2 hbar w) mit der dort noch vollen Intensität
+  const double tau = 40e-15;  // kurz, damit N in den 400 fs der Rechnung sättigt
+  double n_carriers = 0.0, phase_fc = 0.0, phase_tpa = 0.0;
+  run(beta, tau, &n_carriers, &phase_fc);
+  run(beta, 0.0, nullptr, &phase_tpa);
+  const double hbar_omega = constants::h * c0 / wavelength;
+  const double expected = beta * intensity * intensity * tau / (2.0 * hbar_omega);
+  CHECK(n_carriers == doctest::Approx(expected).epsilon(0.1).scale(0.0));
+  CHECK(phase_fc < phase_tpa);  // freie Ladungsträger senken die Brechzahl (Blauverschiebung): weniger Phase
 }
