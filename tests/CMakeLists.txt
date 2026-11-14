@@ -16,6 +16,7 @@ add_executable(photonlab_tests
   test_kerr_cavity.cpp
   test_link.cpp
   test_logic.cpp
+  test_logic_sim.cpp
   test_modes.cpp
   test_nonlinear_field.cpp
   test_pcm.cpp

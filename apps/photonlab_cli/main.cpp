@@ -29,6 +29,7 @@
 #include "photonlab/field/spectrum.hpp"
 #include "photonlab/io/project.hpp"
 #include "photonlab/logic/field_gate.hpp"
+#include "photonlab/logic/logic_sim.hpp"
 #include "photonlab/logic/reference_gates.hpp"
 #include "photonlab/logic/report.hpp"
 #include "photonlab/materials/material.hpp"
@@ -87,6 +88,10 @@ void print_usage() {
       "  photonlab_cli run <datei> --eye [--csv <aus.csv>]  Augendiagramm der Übertragungsstrecke der Datei\n"
       "  photonlab_cli pcm                            PCM-Speicherzelle: Schreiben, Lesen, Löschen, "
       "Zwischenstufen\n"
+      "  photonlab_cli logic-sim <design> [--family ideal|regeneriert|passiv]\n"
+      "                                               Logik-Ebene: half_adder, full_adder, adder4, sr_latch "
+      "mit allen\n"
+      "                                               Eingangsvektoren (Flip-Flop: Setz-/Rücksetzfolge)\n"
       "  photonlab_cli materials [wellenlaenge_nm]    Brechzahl und Gruppenindex der Materialbibliothek\n"
       "  photonlab_cli validate [--out <ordner>]      Validierung gegen analytische Lösungen\n");
 }
@@ -879,6 +884,54 @@ bool validate_active() {
   return ok;
 }
 
+// Folge für das Flip-Flop: setzen, halten, rücksetzen, halten, zweimal
+std::vector<std::vector<int>> latch_sequence() {
+  return {{0, 0}, {1, 0}, {0, 0}, {0, 0}, {0, 1}, {0, 0}, {1, 0}, {0, 0}, {0, 1}, {0, 0}};
+}
+
+// Logik-Ebene: Design mit einer Gatter-Familie durchrechnen, Prüfung und Ergebnis ausgeben
+int cmd_logic_sim(const std::string& name, const std::string& family_text) {
+  const logic::Family family = logic::family_from_string(family_text.empty() ? "ideal" : family_text);
+  const logic::LogicCircuit c = logic::design(name);
+  const auto vectors = name == "sr_latch" ? latch_sequence() : logic::all_vectors(c.inputs.size());
+  logic::SimSettings settings;
+  settings.keep_traces = false;
+  settings.check_idle_only = name == "sr_latch";
+  const logic::SimResult r = logic::simulate(c, family, vectors, settings);
+  std::printf("%s mit Gattern \"%s\": %d Blöcke, %zu Eingangsvektoren\n", c.name.c_str(),
+              std::string(logic::label(family)).c_str(), r.block_count, vectors.size());
+  int errors = 0, warnings = 0;
+  for (const auto& i : r.static_issues) {
+    if (i.severity == logic::Issue::Severity::error) ++errors;
+    if (i.severity == logic::Issue::Severity::warning) ++warnings;
+  }
+  std::printf("Statische Prüfung: %d Fehler, %d Warnungen\n", errors, warnings);
+  int shown = 0;
+  for (const auto& i : r.static_issues) {
+    if (i.severity == logic::Issue::Severity::info || shown >= 12) continue;
+    std::printf("  %s %s: %s\n", i.severity == logic::Issue::Severity::error ? "FEHLER " : "Warnung",
+                i.where.c_str(), i.text.c_str());
+    ++shown;
+  }
+  if (errors + warnings > shown) std::printf("  ... (%d weitere)\n", errors + warnings - shown);
+  std::printf(
+      "Ergebnis: %d von %d bewerteten Vektoren richtig; Laufzeit (längster Pfad) %.0f ps; Energie je Vektor "
+      "%.3g pJ\n",
+      r.correct, r.checked, r.latency / 1e-12, r.energy_per_vector / 1e-12);
+  int listed = 0;
+  for (const auto& v : r.vectors) {
+    if (v.correct || listed >= 5) continue;
+    std::string in, exp, got;
+    for (const int x : v.inputs) in += static_cast<char>('0' + x);
+    for (const int x : v.expected) exp += static_cast<char>('0' + x);
+    for (const int x : v.decoded) got += static_cast<char>('0' + x);
+    std::printf("  Eingang %s: erwartet %s, gelesen %s - erste Ursache: %s\n", in.c_str(), exp.c_str(),
+                got.c_str(), v.first_error.c_str());
+    ++listed;
+  }
+  return r.correct == r.checked ? 0 : 3;
+}
+
 bool validate_modes(const std::string& out_dir) {
   const modes::CrossSection section;
   const modes::CrossSectionResult result = modes::analyze(section, true);
@@ -1121,6 +1174,7 @@ int main(int argc, char** argv) {
     if (command == "run" && args.size() >= 2 && flag("--modes")) return cmd_modes(args[1]);
     if (command == "run" && args.size() >= 2 && flag("--eye")) return cmd_eye(args[1], option("--csv"));
     if (command == "pcm") return cmd_pcm();
+    if (command == "logic-sim" && args.size() >= 2) return cmd_logic_sim(args[1], option("--family"));
     if (command == "run" && args.size() >= 2 && flag("--sparam"))
       return cmd_sparam(args[1], option("--out"), option("--name"));
     if (command == "run" && args.size() >= 2 && flag("--field")) return cmd_field(args[1], option("--csv"));

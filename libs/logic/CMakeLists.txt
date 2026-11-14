@@ -1,6 +1,7 @@
 add_library(photonlab_logic
   src/field_gate.cpp
   src/gate.cpp
+  src/logic_sim.cpp
   src/optimize.cpp
   src/reference_gates.cpp
   src/report.cpp
