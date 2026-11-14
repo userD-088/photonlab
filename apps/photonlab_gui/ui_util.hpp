@@ -26,6 +26,10 @@ inline std::string format_si(double value, const std::string& unit) {
   static const Prefix prefixes[] = {{1e9, "G"},  {1e6, "M"},         {1e3, "k"},  {1.0, ""},
                                     {1e-3, "m"}, {1e-6, "\xC2\xB5"}, {1e-9, "n"}, {1e-12, "p"}};
   char buffer[64];
+  if (unit.empty()) {  // dimensionslos: keine Vorsätze (sonst "953 m" für 0,953)
+    std::snprintf(buffer, sizeof buffer, "%.4g", value);
+    return buffer;
+  }
   const double magnitude = std::abs(value);
   if (magnitude < 1e-15) {
     std::snprintf(buffer, sizeof buffer, "0 %s", unit.c_str());

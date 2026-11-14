@@ -11,7 +11,7 @@ Ziel: physikalisch realistisch und ehrlich bewertet.
 Bauplan: `docs/PhotonLab_Bauplan_v2.pdf` (Roadmap = Abschnitt 15).
 Interaktiver Prototyp (JS, gleiche Physik): `docs/prototypes/photonische_gatter.html`.
 Offene Aufgaben: `docs/ISSUES.md`.
-**Aktuelle Phase: 9 (Aktive Photonik).** Umgesetzt: Phase 1 und 2 (Schaltung), Phase 3 (Logik-Labor, linear), Phase 4 (2D-FDTD), Phase 5 (Materialien, Modenlöser), Phase 6 (S-Parameter vom Feld zur Schaltung), Phase 7 (photonische Kristalle: PWE-Bandstruktur, Generatoren, Kristall-Gatter). Phase 8 (nichtlineare Optik: Kompaktmodell `kerr_cavity`, Kerr/TPA/Ladungsträger im FDTD, nichtlineare Bauteile `ring_kerr` und `soa` in der Schaltung mit Ast-Verfolgung).
+**Aktuelle Phase: 10 (Logik-Ebene).** Umgesetzt: Phase 1 und 2 (Schaltung), Phase 3 (Logik-Labor, linear), Phase 4 (2D-FDTD), Phase 5 (Materialien, Modenlöser), Phase 6 (S-Parameter vom Feld zur Schaltung), Phase 7 (photonische Kristalle: PWE-Bandstruktur, Generatoren, Kristall-Gatter). Phase 8 (nichtlineare Optik: Kompaktmodell `kerr_cavity`, Kerr/TPA/Ladungsträger im FDTD, nichtlineare Bauteile `ring_kerr` und `soa` in der Schaltung mit Ast-Verfolgung). Phase 9 (aktive Photonik: Heizer, PN-Phasenschieber, Ring-Modulator, Photodiode mit Rauschen, Zeitbereich/Augendiagramm in `libs/signal`, PCM-Zelle).
 
 ## Build
 ```
@@ -28,10 +28,11 @@ Ohne GUI (schneller, z. B. für reine Physik-Arbeit): `-DPHOTONLAB_BUILD_GUI=OFF
 - `libs/modes` – Schichtwellenleiter analytisch, 1D-Profil-Löser, semi-vektorieller Modenlöser für Querschnitte
 - `libs/field` – Feld-Szene (Formen, Quellen, Monitore, Ports), 2D-FDTD nach Yee mit CPML, Moden- und Linienquellen, Spektrum, S-Parameter-Extraktion, Kristall-Generatoren (`photonic_crystal.*`: Gitter, Liniendefekte, Punktdefekte)
 - `libs/pwe` – PWE-Bandstruktur photonischer Kristalle (2D, ez/hz), Lücken, Pfad Gamma-M-K bzw. Gamma-X-M
+- `libs/signal` – Zeitbereich einer Übertragungsstrecke (PRBS, Treiber, Ring/MZM-Modulator, Empfänger mit Rauschen, Augendiagramm, Q, BER)
 - `libs/logic` – Gatter-Definition, Wahrheitstabellen-Läufer, Schwellwert-Analyse, Gatter-Zeugnis, Optimierer, Gatter auf Feld-Ebene (`field_gate.*`: Eingänge = Quellen einer FDTD-Szene)
 - `libs/io` – Projektdatei `.plab.json` (mit Bauteilbibliothek), `.sparam.json`, `.gate.json` (alle Zahlen in SI); `make_registry(project)` liefert die Registry eines Projekts
-- `apps/photonlab_gui` – SDL3 + Dear ImGui (Docking) + ImPlot; Bauteil-Labor in `field_lab.cpp` (Feld), `mode_view.cpp` (Querschnitt) und `sparam_view.cpp` (S-Parameter), Bandstruktur in `band_view.cpp`, Chip-Designer in `chip_designer.cpp`, Logik-Labor in `logic_lab.cpp` (Feld-Gatter in `field_gate_view.cpp`)
-- `apps/photonlab_cli` – Kommandozeile: `components`, `example`, `materials`, `bands`, `field-gate`, `run [--sweep | --resonances | --monte-carlo | --logic | --field | --modes | --sparam] [--csv | --out]`, `validate`
+- `apps/photonlab_gui` – SDL3 + Dear ImGui (Docking) + ImPlot; Bauteil-Labor in `field_lab.cpp` (Feld), `mode_view.cpp` (Querschnitt) und `sparam_view.cpp` (S-Parameter), Bandstruktur in `band_view.cpp`, Chip-Designer in `chip_designer.cpp`, Logik-Labor in `logic_lab.cpp` (Feld-Gatter in `field_gate_view.cpp`), Augendiagramm in `eye_view.cpp`
+- `apps/photonlab_cli` – Kommandozeile: `components`, `example`, `materials`, `bands`, `field-gate`, `pcm`, `bistability`, `run [--sweep | --resonances | --monte-carlo | --logic | --field | --modes | --sparam | --eye] [--csv | --out]`, `validate`
 - `examples` – Referenz-Designs als `.plab.json` (erzeugt mit `photonlab_cli example <name>`)
 - `tests` – doctest; Physik-Validierung gegen analytische Lösungen
 - `cmake/Dependencies.cmake` – alle externen Abhängigkeiten, Versionen gepinnt
@@ -60,6 +61,7 @@ Ohne GUI (schneller, z. B. für reine Physik-Arbeit): `-DPHOTONLAB_BUILD_GUI=OFF
 - Tests: `doctest::Approx(x).epsilon(e)` rechnet mit `scale = 1` (Toleranz e*(1+|x|)) und ist für kleine Zahlen praktisch absolut: immer `.scale(0.0)` setzen, wenn relativ verglichen werden soll.
 - Nichtlinearität im FDTD (Ez und Hz): Quellen nicht in nichtlinearen Formen platzieren (siehe `docs/physics/nonlinear.md`).
 - Nichtlineare Bauteile: `state_size() > 0`, `s_matrix_at`, `settle_state`; der Löser iteriert. Für Hysterese Rampen (`wavelength_ramp`, `power_ramp`) mit weitergereichtem Zustand verwenden, nie parallel unabhängig.
+- Bauteile mit gespeichertem Zustand (PCM): Zustand als Parameter, Änderungen über `ComponentType::actions` (Knöpfe im Eigenschaften-Fenster), nie Sonderfälle in der Oberfläche.
 - Code-Stil: `.clang-format`; Funktionen/Variablen snake_case, Klassen PascalCase; Kommentare auf Deutsch.
 
 ## Physik-Referenzen

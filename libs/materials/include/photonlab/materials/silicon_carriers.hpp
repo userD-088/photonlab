@@ -5,8 +5,10 @@
 namespace photonlab::materials {
 
 // Soref und Bennett, IEEE J. Quantum Electron. 23, 123 (1987), empirische Anpassung bei 1550 nm:
-//   dn = -(8,8e-22 dN_e + 8,5e-18 dN_h^0,8),  d(alpha) = 8,5e-18 dN_e + 6,0e-18 dN_h   (N in cm^-3, alpha in 1/cm)
-// Rückgabe: Brechzahländerung (dimensionslos) bzw. Leistungs-Absorptionskoeffizient [1/m] für Dichten in m^-3.
+//   dn = -(8,8e-22 dN_e + 8,5e-18 dN_h^0,8),  d(alpha) = 8,5e-18 dN_e + 6,0e-18 dN_h   (N in cm^-3, alpha in
+//   1/cm)
+// Rückgabe: Brechzahländerung (dimensionslos) bzw. Leistungs-Absorptionskoeffizient [1/m] für Dichten in
+// m^-3.
 double plasma_index_change(double electrons, double holes);
 double plasma_absorption(double electrons, double holes);
 
@@ -21,7 +23,7 @@ struct PnJunction {
   double donors = 5e23;     // N_D (n-Seite)
   double temperature = 300.0;
 
-  double built_in_voltage() const;                     // V_bi = kT/q ln(N_A N_D / n_i^2)
+  double built_in_voltage() const;                       // V_bi = kT/q ln(N_A N_D / n_i^2)
   double depletion_width(double reverse_voltage) const;  // w = sqrt(2 eps (V_bi + V)(N_A + N_D)/(q N_A N_D))
   double width_n(double reverse_voltage) const;          // Anteil auf der n-Seite: w N_A/(N_A + N_D)
   double width_p(double reverse_voltage) const;          // Anteil auf der p-Seite: w N_D/(N_A + N_D)

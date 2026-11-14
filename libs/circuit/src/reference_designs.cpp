@@ -146,10 +146,59 @@ Circuit reference_ring_kerr() {
   return c;
 }
 
+// Phase 9: Ring-Modulator mit PN-Übergang, Ge-Photodiode mit Rauschen. Der Laser liegt 20 pm über der
+// Resonanz bei 0 V; eine Sperrspannung von 2 V schiebt die Resonanz um etwa 21 pm auf den Laser (Kennlinie:
+// Spannung).
+Circuit reference_ring_modulator() {
+  Circuit c;
+  c.name = "Ring-Modulator (PN, Verarmung)";
+  c.add("laser", "laser", {{"power", 1e-3}}, 1, 3);
+  c.add("ring", "ring_pn", {{"radius", 10e-6}, {"power_coupling", 0.02}, {"coverage", 0.8}}, 8, 3);
+  c.add("pd", "photodiode", {}, 15, 3);
+  c.connect("laser.out", "ring.in");
+  c.connect("ring.out", "pd.in");
+  return c;
+}
+
+// Phase 9: Mach-Zehnder mit Heizer im oberen Arm; Kennlinie über der Heizleistung zeigt P_pi = 24,8 mW.
+Circuit reference_mzi_heater() {
+  Circuit c;
+  c.name = "Mach-Zehnder mit Heizer";
+  c.add("laser", "laser", {{"power", 1e-3}}, 1, 3);
+  c.add("koppler1", "coupler", {}, 6, 3);
+  c.add("heizer", "heater", {}, 11, 2);
+  c.add("arm", "waveguide", {{"length", 61.6e-6}}, 11, 5);
+  c.add("koppler2", "coupler", {}, 16, 3);
+  c.add("det_bar", "detector", {}, 21, 2);
+  c.add("det_cross", "detector", {}, 21, 5);
+  c.connect("laser.out", "koppler1.in1");
+  c.connect("koppler1.out1", "heizer.in");
+  c.connect("koppler1.out2", "arm.in");
+  c.connect("heizer.out", "koppler2.in1");
+  c.connect("arm.out", "koppler2.in2");
+  c.connect("koppler2.out1", "det_bar.in");
+  c.connect("koppler2.out2", "det_cross.in");
+  return c;
+}
+
+// Phase 9: nichtflüchtige PCM-Speicherzelle; Lesen mit 0,1 mW, Schreiben/Löschen über die Handlungen des
+// Bauteils.
+Circuit reference_pcm_memory() {
+  Circuit c;
+  c.name = "PCM-Speicherzelle (GST)";
+  c.add("laser", "laser", {{"power", 0.1e-3}}, 1, 3);
+  c.add("pcm", "pcm_cell", {}, 8, 3);
+  c.add("pd", "photodiode", {}, 15, 3);
+  c.connect("laser.out", "pcm.in");
+  c.connect("pcm.out", "pd.in");
+  return c;
+}
+
 std::vector<std::string> reference_design_names() {
   return {"mzi",          "mzi_unbalanced",   "ring_allpass",
           "ring_adddrop", "xor_interference", "and_interference",
-          "xor_directed", "ring_kerr"};
+          "xor_directed", "ring_kerr",        "ring_modulator",
+          "mzi_heater",   "pcm_memory"};
 }
 
 Circuit reference_design(std::string_view name) {
@@ -161,6 +210,9 @@ Circuit reference_design(std::string_view name) {
   if (name == "and_interference") return reference_and_interference();
   if (name == "xor_directed") return reference_xor_directed();
   if (name == "ring_kerr") return reference_ring_kerr();
+  if (name == "ring_modulator") return reference_ring_modulator();
+  if (name == "mzi_heater") return reference_mzi_heater();
+  if (name == "pcm_memory") return reference_pcm_memory();
   throw CircuitError("Unbekanntes Referenz-Design '" + std::string(name) + "'");
 }
 
@@ -175,6 +227,10 @@ ReferenceSetup reference_setup(std::string_view name) {
   } else if (name == "xor_interference") {
     setup.monte_carlo.variations = {{"coupler", "power_coupling", 0.02, false, false},
                                     {"phase_shifter", "phase", 0.05, false, false}};
+  } else if (name == "mzi_heater") {
+    setup.monte_carlo.variations = {{"heater", "thermal_resistance", 0.05, true, false}};
+  } else if (name == "pcm_memory") {
+    setup.monte_carlo.variations = {{"pcm_cell", "confinement", 0.1, true, false}};
   } else if (name == "and_interference") {
     setup.monte_carlo.variations = {{"laser", "power", 0.05, true, false}};
   } else {
@@ -198,6 +254,20 @@ ReferenceSetup reference_setup(std::string_view name) {
     const double order = std::round(n_eff * length / lambda0);
     setup.wavelength = n_group * length / (order - length * (n_eff - n_group) / lambda0);
     setup.monte_carlo.variations = {{ring->type, "n_eff", 1e-4, false, false}};
+    if (ring->type == "ring_pn") {
+      // Resonanz mit dem Index bei 0 V Sperrspannung (der PN-Übergang verschiebt sie gegenüber n_eff etwas)
+      ParamMap params = type.default_params();
+      for (const auto& [key, v] : ring->params) params[key] = v;
+      const auto ring_model = type.create(params);
+      double best = 1e9, at = setup.wavelength;
+      for (double l = setup.wavelength - 0.5e-9; l < setup.wavelength + 0.5e-9; l += 0.1e-12) {
+        const double t = std::norm(ring_model->s_matrix(l)(1, 0));
+        if (t < best) best = t, at = l;
+      }
+      setup.wavelength = std::round((at + 20e-12) * 1e15) / 1e15;
+      setup.sweep = {std::round((at - 0.15e-9) * 1e15) / 1e15, std::round((at + 0.15e-9) * 1e15) / 1e15,
+                     1501};
+    }
     if (ring->type == "ring_kerr") {
       // Nichtlineare Sweeps laufen der Reihe nach (hin und zurück): schmaler Bereich um die Resonanz
       const double resonance = setup.wavelength;

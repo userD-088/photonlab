@@ -15,6 +15,7 @@
 #include "photonlab/circuit/analysis.hpp"
 #include "photonlab/circuit/kerr_cavity.hpp"
 #include "photonlab/circuit/monte_carlo.hpp"
+#include "photonlab/circuit/pcm.hpp"
 #include "photonlab/circuit/reference_designs.hpp"
 #include "photonlab/circuit/registry.hpp"
 #include "photonlab/circuit/solver.hpp"
@@ -33,6 +34,7 @@
 #include "photonlab/materials/material.hpp"
 #include "photonlab/modes/cross_section.hpp"
 #include "photonlab/pwe/pwe.hpp"
+#include "photonlab/signal/link.hpp"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -82,6 +84,9 @@ void print_usage() {
       "Hysterese\n"
       "                                               (--detuning in halben Linienbreiten; Bistabilitaet ab "
       "1,73)\n"
+      "  photonlab_cli run <datei> --eye [--csv <aus.csv>]  Augendiagramm der Übertragungsstrecke der Datei\n"
+      "  photonlab_cli pcm                            PCM-Speicherzelle: Schreiben, Lesen, Löschen, "
+      "Zwischenstufen\n"
       "  photonlab_cli materials [wellenlaenge_nm]    Brechzahl und Gruppenindex der Materialbibliothek\n"
       "  photonlab_cli validate [--out <ordner>]      Validierung gegen analytische Lösungen\n");
 }
@@ -775,6 +780,105 @@ int cmd_bistability(const std::string& q_text, const std::string& detuning_text,
   return 0;
 }
 
+// Augendiagramm der Übertragungsstrecke eines Projekts (Abschnitt "link"; ohne: Standard-Ring-Modulator)
+int cmd_eye(const std::string& file, const std::string& csv_path) {
+  const io::Project project = io::load_project(file);
+  const signal::LinkSettings settings = project.has_link ? project.link : signal::LinkSettings{};
+  if (!project.has_link) std::printf("Datei enthält keine Strecke: Standard-Ring-Modulator\n");
+  const signal::LinkResult r = signal::simulate_link(settings);
+  std::printf("%s, %.2f Gbit/s, PRBS %d, %d Bits\n",
+              settings.modulator == signal::ModulatorKind::ring ? "Ring-Modulator" : "Mach-Zehnder",
+              settings.bit_rate / 1e9, settings.prbs_order, settings.bits);
+  std::printf("  Pegel: 1 = %.4g uA (sigma %.3g uA), 0 = %.4g uA (sigma %.3g uA)\n", r.mean1 / 1e-6,
+              r.sigma1 / 1e-6, r.mean0 / 1e-6, r.sigma0 / 1e-6);
+  std::printf("  Q = %.2f, BER = %.2e, Extinktion %.2f dB, Augenöffnung ohne Rauschen %.0f %%\n", r.q_factor,
+              r.ber, r.extinction_db, 100.0 * r.eye_opening);
+  std::printf("  Rauschbandbreite %.2f GHz, erwartete Streuung 1: %.3g uA, 0: %.3g uA\n",
+              r.noise_bandwidth / 1e9, r.noise_sigma_expected1 / 1e-6, r.noise_sigma_expected0 / 1e-6);
+  if (!csv_path.empty()) {
+    std::ofstream csv(csv_path);
+    csv << "zeit_s";
+    for (std::size_t e = 0; e < r.eye.size(); ++e) csv << ",spur" << e;
+    csv << "\n";
+    csv.precision(8);
+    for (std::size_t k = 0; k < r.eye.front().size(); ++k) {
+      csv << static_cast<double>(k) * r.sample_interval;
+      for (const auto& trace : r.eye) csv << ',' << trace[k];
+      csv << '\n';
+    }
+    std::printf("Augendiagramm (%zu Spuren) nach %s geschrieben\n", r.eye.size(), csv_path.c_str());
+  }
+  return 0;
+}
+
+// PCM-Speicherzelle: Schreib-Lese-Lösch-Folge mit Programmieren und Nachlesen
+int cmd_pcm() {
+  circuit::PcmCell cell;
+  const double lambda = 1550e-9;
+  std::printf("PCM-Zelle (GST-225, %.1f um, Modenanteil %.0f %%): Lesen bei 1550 nm\n", cell.length / 1e-6,
+              100.0 * cell.confinement);
+  std::printf("  Start amorph: Transmission %.4f\n", circuit::pcm_transmission(cell, lambda));
+  for (const double target : {1.0, 0.0, 0.33, 0.66, 1.0, 0.2}) {
+    const double before = cell.fraction;
+    const circuit::ProgramResult r = circuit::program_pcm(cell, target, lambda);
+    double energy = 0.0, t_max = 0.0;
+    bool melted = false;
+    for (const auto& p : r.pulses) t_max = std::max(t_max, p.peak_temperature), melted = melted || p.melted;
+    (void)energy;
+    std::printf("  Ziel %.2f: Anteil %.2f -> %.3f, %2zu Pulse, max. %4.0f K%s -> Transmission %.4f%s\n",
+                target, before, cell.fraction, r.pulses.size(), t_max,
+                melted ? " (geschmolzen)" : "              ", circuit::pcm_transmission(cell, lambda),
+                r.reached ? "" : "  ZIEL VERFEHLT");
+  }
+  // Lesen ist zerstörungsfrei
+  const double before = cell.fraction;
+  for (int i = 0; i < 1000; ++i) circuit::apply_pcm_pulse(cell, 0.1e-3, 10e-9, lambda);
+  std::printf("  1000 Lesepulse (0,1 mW, 10 ns): Anteil %.4f -> %.4f\n", before, cell.fraction);
+  return 0;
+}
+
+// Phase 9: P_pi des Heizers, V_pi*L des PN-Phasenschiebers, PCM schreib- und lesbar, Empfängerrauschen
+bool validate_active() {
+  bool ok = true;
+  const circuit::PnSection pn;
+  const double per_m = (pn.index_change(4.0) - pn.index_change(0.0)) * 2.0 * constants::pi / 1550e-9;
+  const double vpil = 4.0 * constants::pi / per_m * 100.0;
+  std::printf(
+      "PN-Phasenschieber (5e17 cm^-3): V_pi L = %.2f V cm (gemessene Verarmungs-Modulatoren ca. 1 ... 3 V "
+      "cm)\n",
+      vpil);
+  ok = ok && vpil > 1.0 && vpil < 4.0;
+  const auto heater = circuit::ComponentRegistry::builtin().create("heater", {{"power_el", 24.77e-3}});
+  const auto cold = circuit::ComponentRegistry::builtin().create("heater", {});
+  const double dphi = std::abs(
+      std::remainder(std::arg(heater->s_matrix(1550e-9)(1, 0)) - std::arg(cold->s_matrix(1550e-9)(1, 0)),
+                     2.0 * constants::pi));
+  std::printf("Heizer 61,6 um: Phase bei 24,77 mW = %.4f rad (pi, Harris u. a. 2014)\n", dphi);
+  ok = ok && std::abs(dphi - constants::pi) < 1e-6;
+  circuit::PcmCell cell;
+  const double t_a = circuit::pcm_transmission(cell, 1550e-9);
+  const bool set = circuit::program_pcm(cell, 1.0, 1550e-9).reached;
+  const double t_c = circuit::pcm_transmission(cell, 1550e-9);
+  const bool reset = circuit::program_pcm(cell, 0.0, 1550e-9).reached;
+  const bool level = circuit::program_pcm(cell, 0.5, 1550e-9).reached;
+  std::printf("PCM-Zelle: amorph %.3f, kristallin %.3f; Schreiben %s, Löschen %s, Zwischenstufe 0,5 %s\n",
+              t_a, t_c, set ? "ok" : "FEHLER", reset ? "ok" : "FEHLER", level ? "ok" : "FEHLER");
+  ok = ok && set && reset && level && t_a - t_c > 0.2;
+  signal::LinkSettings s;
+  s.modulator = signal::ModulatorKind::mzm;
+  s.bits = 2000;
+  s.prbs_order = 9;
+  s.laser_power = 0.2e-3;
+  s.junction_rc = false;
+  const signal::LinkResult r = signal::simulate_link(s);
+  const double q_expected = std::abs(r.mean1 - r.mean0) / (r.noise_sigma_expected1 + r.noise_sigma_expected0);
+  std::printf(
+      "Empfängerrauschen: Q gemessen %.2f, aus Schrot- und thermischem Rauschen %.2f (Toleranz 10 %%)\n",
+      r.q_factor, q_expected);
+  ok = ok && std::abs(r.q_factor / q_expected - 1.0) < 0.1;
+  return ok;
+}
+
 bool validate_modes(const std::string& out_dir) {
   const modes::CrossSection section;
   const modes::CrossSectionResult result = modes::analyze(section, true);
@@ -976,6 +1080,7 @@ int cmd_validate(const std::string& out_dir) {
   ok = validate_modes(out_dir) && ok;
   ok = validate_pwe() && ok;
   ok = validate_phc_bend() && ok;
+  ok = validate_active() && ok;
   ok = validate_sparameters(out_dir) && ok;
   std::printf("%s\n", ok ? "BESTANDEN" : "NICHT BESTANDEN");
   return ok ? 0 : 1;
@@ -989,7 +1094,7 @@ int main(int argc, char** argv) {
 #endif
   const std::vector<std::string> args(argv + 1, argv + argc);
   if (args.empty()) {
-    std::printf("PhotonLab CLI 0.8.0 (Phase 7)\n");
+    std::printf("PhotonLab CLI 0.10.0 (Phase 9)\n");
     print_usage();
     return 0;
   }
@@ -1014,6 +1119,8 @@ int main(int argc, char** argv) {
     if (command == "materials")
       return cmd_materials(args.size() >= 2 ? std::atof(args[1].c_str()) * units::nm : 1550e-9);
     if (command == "run" && args.size() >= 2 && flag("--modes")) return cmd_modes(args[1]);
+    if (command == "run" && args.size() >= 2 && flag("--eye")) return cmd_eye(args[1], option("--csv"));
+    if (command == "pcm") return cmd_pcm();
     if (command == "run" && args.size() >= 2 && flag("--sparam"))
       return cmd_sparam(args[1], option("--out"), option("--name"));
     if (command == "run" && args.size() >= 2 && flag("--field")) return cmd_field(args[1], option("--csv"));

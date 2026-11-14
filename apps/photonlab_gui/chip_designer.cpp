@@ -699,6 +699,27 @@ void ChipDesigner::draw_properties() {
         touch();
       }
     }
+    // Handlungen des Bauteils (z. B. PCM schreiben/löschen): ändern gespeicherte Parameter
+    if (!type->actions.empty()) {
+      ImGui::SeparatorText("Handlungen");
+      for (const auto& action : type->actions) {
+        if (ImGui::Button(action.label.c_str())) {
+          circuit::ParamMap params = type->default_params();
+          for (const auto& [key, value] : instance->params) params[key] = value;
+          try {
+            const std::string message = action.apply(params, project_.wavelength);
+            instance->params = params;
+            touch();
+            set_status(message, false);
+          } catch (const std::exception& e) {
+            set_status(e.what(), true);
+          }
+        }
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+          ImGui::SetTooltip("%s", action.description.c_str());
+      }
+      ImGui::Spacing();
+    }
     if (ImGui::Button("Bauteil löschen")) {
       project_.circuit.remove_instance(selected_);
       selected_.clear();

@@ -23,10 +23,14 @@ TEST_CASE("PCM: Transmission = exp(-2 k0 Gamma k L) für die reinen Phasen") {
   const double k0 = 2.0 * constants::pi / lambda0;
   c.fraction = 0.0;
   CHECK(pcm_transmission(c, lambda0) ==
-        doctest::Approx(std::exp(-2.0 * k0 * c.confinement * gst.index_amorphous.imag() * c.length)).epsilon(1e-12).scale(0.0));
+        doctest::Approx(std::exp(-2.0 * k0 * c.confinement * gst.index_amorphous.imag() * c.length))
+            .epsilon(1e-12)
+            .scale(0.0));
   c.fraction = 1.0;
   CHECK(pcm_transmission(c, lambda0) ==
-        doctest::Approx(std::exp(-2.0 * k0 * c.confinement * gst.index_crystalline.imag() * c.length)).epsilon(1e-12).scale(0.0));
+        doctest::Approx(std::exp(-2.0 * k0 * c.confinement * gst.index_crystalline.imag() * c.length))
+            .epsilon(1e-12)
+            .scale(0.0));
   // Zwischenstufen liegen monoton dazwischen
   double last = 2.0;
   for (double x = 0.0; x <= 1.0001; x += 0.1) {
@@ -48,8 +52,8 @@ TEST_CASE("PCM: Lesen bei kleiner Leistung verändert den Zustand nicht (nichtfl
 }
 
 TEST_CASE("PCM: ein einzelner starker Puls aus dem amorphen Zustand schmilzt statt zu kristallisieren") {
-  // Amorphes GST absorbiert wenig; heizt ein Puls es ins Fenster, steigt beim Kristallisieren die Absorption und
-  // es überhitzt: deshalb Programmieren mit Nachlesen
+  // Amorphes GST absorbiert wenig; heizt ein Puls es ins Fenster, steigt beim Kristallisieren die Absorption
+  // und es überhitzt: deshalb Programmieren mit Nachlesen
   PcmCell c;
   const PulseResult r = apply_pcm_pulse(c, 30e-3, 200e-9, lambda0);
   CHECK(r.melted);
@@ -64,7 +68,8 @@ TEST_CASE("PCM: Schreiben, Lesen, Löschen und Zwischenstufen (Abnahme Phase 9)"
   CHECK(r.reached);
   for (const auto& p : r.pulses) CHECK_FALSE(p.melted);
   const double t_cryst = pcm_transmission(c, lambda0);
-  MESSAGE("Transmission amorph " << t_amorph << ", kristallin " << t_cryst << " (" << r.pulses.size() << " Pulse)");
+  MESSAGE("Transmission amorph " << t_amorph << ", kristallin " << t_cryst << " (" << r.pulses.size()
+                                 << " Pulse)");
   CHECK(t_amorph - t_cryst > 0.2);  // deutlicher Lesekontrast
   // Löschen (RESET) durch Schmelzen
   r = program_pcm(c, 0.0, lambda0);

@@ -39,7 +39,8 @@ PulseResult apply_pcm_pulse(PcmCell& cell, double power, double duration, double
     const double t = static_cast<double>(i) * dt;
     const double p = t < duration ? power : 0.0;
     const double absorbed = p * (1.0 - pcm_transmission(cell, wavelength));
-    temperature += dt / cell.thermal_time * (cell.thermal_resistance * absorbed - (temperature - cell.ambient));
+    temperature +=
+        dt / cell.thermal_time * (cell.thermal_resistance * absorbed - (temperature - cell.ambient));
     r.peak_temperature = std::max(r.peak_temperature, temperature);
     if (temperature >= gst.melting_temperature) r.melted = true;
     if (!r.melted && temperature >= gst.crystallization_temperature)
@@ -55,28 +56,30 @@ ProgramResult program_pcm(PcmCell& cell, double target_fraction, double waveleng
   const auto& gst = materials::gst225();
   ProgramResult result;
   const double target = std::clamp(target_fraction, 0.0, 1.0);
-  if (target < cell.fraction - tolerance) result.pulses.push_back(apply_pcm_pulse(cell, reset_power, reset_duration, wavelength));
+  if (target < cell.fraction - tolerance)
+    result.pulses.push_back(apply_pcm_pulse(cell, reset_power, reset_duration, wavelength));
   // Zieltemperatur im unteren Drittel des Fensters: Reserve, weil die Absorption beim Kristallisieren steigt
   const double t_target =
       gst.crystallization_temperature + 0.3 * (gst.melting_temperature - gst.crystallization_temperature);
   // Aufheizzeit bis zur Kristallisationstemperatur
-  const double t_heat = cell.thermal_time * std::log((t_target - cell.ambient) /
-                                                     (t_target - gst.crystallization_temperature));
+  const double t_heat =
+      cell.thermal_time * std::log((t_target - cell.ambient) / (t_target - gst.crystallization_temperature));
   // Nach dem Puls bleibt das GST noch eine Weile im Fenster (Abkühlen bis T_c): diese Zeit kristallisiert mit
-  const double t_cool =
-      cell.thermal_time * std::log((t_target - cell.ambient) / (gst.crystallization_temperature - cell.ambient));
+  const double t_cool = cell.thermal_time * std::log((t_target - cell.ambient) /
+                                                     (gst.crystallization_temperature - cell.ambient));
   for (int k = 0; k < max_pulses && cell.fraction < target - tolerance; ++k) {
     // Lesen: Absorption bei kleiner Leistung (verändert den Zustand nicht)
     const double absorption = 1.0 - pcm_transmission(cell, wavelength);
     const double power = (t_target - cell.ambient) / (cell.thermal_resistance * absorption);
-    // Dauer so, dass der Zuwachs höchstens max_step bzw. der Rest bis zum Ziel beträgt (bei Fenstertemperatur)
-    // Zwischenziel: höchstens max_step weiter, nie ganz 1 (sonst unendliche Dauer)
+    // Dauer so, dass der Zuwachs höchstens max_step bzw. der Rest bis zum Ziel beträgt (bei
+    // Fenstertemperatur) Zwischenziel: höchstens max_step weiter, nie ganz 1 (sonst unendliche Dauer)
     const double goal = std::min({cell.fraction + max_step, target, 0.995});
     const double step = std::max(goal - cell.fraction, 1e-6);
     const double duration =
-        t_heat + std::max(cell.crystallization_time * std::log((1.0 - cell.fraction) / (1.0 - cell.fraction - step)) -
-                              t_cool,
-                          0.2e-9);
+        t_heat +
+        std::max(cell.crystallization_time * std::log((1.0 - cell.fraction) / (1.0 - cell.fraction - step)) -
+                     t_cool,
+                 0.2e-9);
     result.pulses.push_back(apply_pcm_pulse(cell, power, duration, wavelength));
     if (result.pulses.back().melted) break;  // sollte nicht vorkommen; dann lieber abbrechen
   }

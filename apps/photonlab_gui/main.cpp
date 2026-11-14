@@ -10,6 +10,7 @@
 #include <string_view>
 
 #include "chip_designer.hpp"
+#include "eye_view.hpp"
 #include "field_lab.hpp"
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
@@ -22,6 +23,7 @@
 namespace {
 
 using photonlab::gui::ChipDesigner;
+using photonlab::gui::EyeView;
 
 const char* window_field = photonlab::gui::FieldLab::window_name;
 const char* window_logic = photonlab::gui::LogicLab::window_name;
@@ -81,6 +83,7 @@ void build_default_layout(ImGuiID dock_id, ImVec2 size) {
   ImGui::DockBuilderDockWindow(ChipDesigner::window_spectrum, bottom);
   ImGui::DockBuilderDockWindow(ChipDesigner::window_monte_carlo, bottom_right);
   ImGui::DockBuilderDockWindow(ChipDesigner::window_curve, bottom_right);
+  ImGui::DockBuilderDockWindow(EyeView::window_name, bottom_right);
   ImGui::DockBuilderDockWindow(window_field, center);
   ImGui::DockBuilderDockWindow(ChipDesigner::window_canvas, center);
   ImGui::DockBuilderDockWindow(window_logic, center);
@@ -146,6 +149,7 @@ int main(int argc, char** argv) {
     photonlab::ThreadPool pool;
     ChipDesigner chip_designer(pool, window, ui_scale);
     photonlab::gui::LogicLab logic_lab(pool, chip_designer);
+    photonlab::gui::EyeView eye_view(pool, chip_designer);
     photonlab::gui::FieldLab field_lab(pool, chip_designer, renderer, ui_scale);
     if (!project_path.empty() && !chip_designer.open_file(project_path) && automated) exit_code = 1;
 
@@ -197,6 +201,7 @@ int main(int argc, char** argv) {
       field_lab.draw();
       chip_designer.draw();
       logic_lab.draw();
+      eye_view.draw();
       placeholder(window_quantum, "Kommt in Phase 11",
                   "Einzelphotonen, Hong-Ou-Mandel, linear-optisches CNOT, Boson Sampling.");
       // Beim Start liegt der Chip-Designer vorn (einziger schon nutzbarer Arbeitsbereich)

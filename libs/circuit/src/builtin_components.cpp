@@ -601,8 +601,9 @@ class Photodiode final : public Component {
   double responsivity_, dark_, bandwidth_, load_, temperature_;
 };
 
-// PCM-Speicherzelle: GST-Fleck auf dem Wellenleiter; der kristalline Anteil ist ein Parameter (Speicherinhalt) und
-// wird über die Handlungen "Schreiben", "Löschen" und "Kristallisieren" geändert (Pulsmodell in pcm.cpp).
+// PCM-Speicherzelle: GST-Fleck auf dem Wellenleiter; der kristalline Anteil ist ein Parameter
+// (Speicherinhalt) und wird über die Handlungen "Schreiben", "Löschen" und "Kristallisieren" geändert
+// (Pulsmodell in pcm.cpp).
 PcmCell pcm_cell(const ParamMap& p) {
   PcmCell c;
   c.length = p.at("length");
@@ -618,7 +619,9 @@ class PcmCellComponent final : public Component {
  public:
   explicit PcmCellComponent(const ParamMap& p) : cell_(pcm_cell(p)) {}
   int port_count() const override { return 2; }
-  CMatrix s_matrix(double wavelength) const override { return two_port(pcm_field_transmission(cell_, wavelength)); }
+  CMatrix s_matrix(double wavelength) const override {
+    return two_port(pcm_field_transmission(cell_, wavelength));
+  }
   std::vector<Measurement> measure(const CVector& /*a*/, const CVector& /*b*/) const override {
     return {{"Kristalliner Anteil", cell_.fraction, ""},
             {"Transmission", pcm_transmission(cell_, 1550e-9), ""}};
@@ -632,7 +635,8 @@ class PcmCellComponent final : public Component {
 std::string program_action(ParamMap& params, double wavelength, double target) {
   PcmCell cell = pcm_cell(params);
   const double before = cell.fraction;
-  const ProgramResult r = program_pcm(cell, target, wavelength, params.at("reset_power"), params.at("reset_duration"));
+  const ProgramResult r =
+      program_pcm(cell, target, wavelength, params.at("reset_power"), params.at("reset_duration"));
   params["crystalline_fraction"] = cell.fraction;
   double energy = 0.0, t_max = 0.0;
   bool melted = false;
@@ -643,7 +647,8 @@ std::string program_action(ParamMap& params, double wavelength, double target) {
   (void)energy;
   char text[240];
   std::snprintf(text, sizeof text,
-                "PCM: kristalliner Anteil %.2f -> %.2f mit %zu Pulsen (höchste Temperatur %.0f K%s), Transmission %.3f%s",
+                "PCM: kristalliner Anteil %.2f -> %.2f mit %zu Pulsen (höchste Temperatur %.0f K%s), "
+                "Transmission %.3f%s",
                 before, cell.fraction, r.pulses.size(), t_max, melted ? ", geschmolzen" : "",
                 pcm_transmission(cell, wavelength), r.reached ? "" : " - Ziel nicht erreicht");
   return text;
@@ -755,12 +760,12 @@ void register_builtin_components(ComponentRegistry& registry) {
     const double r_th = 1550e-9 / (2.0 * 61.6e-6 * dn_dT * 24.77e-3);
     std::vector<ParamSpec> params = {
         {"length", "Länge", 61.6e-6, 1e-6, 1e-2, "µm", 1e-6},
-        {"power_el", "Heizleistung", 0.0, 0.0, 1.0, "mW", 1e-3},
+        {"power_el", "Heizleistung", 0.0, 0.0, 0.2, "mW", 1e-3},
         {"thermal_resistance", "Wärmewiderstand", r_th, 1.0, 1e7, "K/mW", 1e3},
         {"dn_dT", "Thermo-optischer Koeffizient", dn_dT, -1e-3, 1e-3, "1e-4/K", 1e-4}};
     params.insert(params.end(), guided.begin(), guided.end());
     registry.add({"heater",
-                  "Heizer-Phasenschieber",
+                  "Heizer",
                   "Wellenleiter mit Heizer: Phase 2 pi/lambda dn/dT R_th P L; stationär (keine thermische "
                   "Zeitkonstante), gleichmäßige Erwärmung, kein Übersprechen.",
                   {"in", "out"},
@@ -799,7 +804,7 @@ void register_builtin_components(ComponentRegistry& registry) {
     params.insert(params.end(), pn_params.begin(), pn_params.end());
     params.insert(params.end(), guided.begin(), guided.end());
     registry.add({"ring_pn",
-                  "Ring-Modulator (PN)",
+                  "Ring-Modulator",
                   "All-Pass-Ring mit PN-Übergang auf einem Teil des Umfangs; stationär (Zeitverhalten im "
                   "Zeitbereich/Augendiagramm).",
                   {"in", "out"},
@@ -811,7 +816,7 @@ void register_builtin_components(ComponentRegistry& registry) {
   // Rauschen.
   registry.add(
       {"photodiode",
-       "Photodiode (Ge, mit Rauschen)",
+       "Photodiode",
        "I = R P + I_dunkel; Schrot- und thermisches Rauschen in der Bandbreite B, Signal-Rausch-Verhältnis.",
        {"in"},
        {{"responsivity", "Responsivität", 1.0, 0.0, 10.0, "A/W", 1.0},
@@ -822,23 +827,24 @@ void register_builtin_components(ComponentRegistry& registry) {
        make<Photodiode>});
 
   {
-    // PCM-Zelle mit GST-225 (Materialdaten in libs/materials/phase_change); Fleckgröße, Modenanteil und thermische
-    // Parameter sind Annahmen in der Größenordnung von Ríos u. a., Nature Photonics 9, 725 (2015).
-    ComponentType type{"pcm_cell",
-                       "PCM-Speicherzelle (GST)",
-                       "GST-Fleck auf dem Wellenleiter: Transmission hängt vom kristallinen Anteil ab (nichtflüchtig). "
-                       "Schreiben mit optischen Pulsen (Programmieren mit Nachlesen), Löschen durch Schmelzen.",
-                       {"in", "out"},
-                       {{"crystalline_fraction", "Kristalliner Anteil", 0.0, 0.0, 1.0, "", 1.0},
-                        {"write_target", "Schreibziel", 1.0, 0.0, 1.0, "", 1.0},
-                        {"length", "Länge des Flecks", 2e-6, 0.1e-6, 100e-6, "µm", 1e-6},
-                        {"confinement", "Anteil der Mode im GST", 0.03, 0.0, 1.0, "", 1.0},
-                        {"thermal_resistance", "Wärmewiderstand", 1e5, 1.0, 1e9, "K/mW", 1e3},
-                        {"thermal_time", "Thermische Zeitkonstante", 5e-9, 1e-12, 1e-3, "ns", 1e-9},
-                        {"crystallization_time", "Kristallisationszeit", 50e-9, 1e-12, 1e-3, "ns", 1e-9},
-                        {"reset_power", "Löschpuls: Leistung", 50e-3, 0.0, 10.0, "mW", 1e-3},
-                        {"reset_duration", "Löschpuls: Dauer", 20e-9, 1e-12, 1e-3, "ns", 1e-9}},
-                       make<PcmCellComponent>};
+    // PCM-Zelle mit GST-225 (Materialdaten in libs/materials/phase_change); Fleckgröße, Modenanteil und
+    // thermische Parameter sind Annahmen in der Größenordnung von Ríos u. a., Nature Photonics 9, 725 (2015).
+    ComponentType type{
+        "pcm_cell",
+        "PCM-Zelle (GST)",
+        "GST-Fleck auf dem Wellenleiter: Transmission hängt vom kristallinen Anteil ab (nichtflüchtig). "
+        "Schreiben mit optischen Pulsen (Programmieren mit Nachlesen), Löschen durch Schmelzen.",
+        {"in", "out"},
+        {{"crystalline_fraction", "Kristalliner Anteil", 0.0, 0.0, 1.0, "", 1.0},
+         {"write_target", "Schreibziel", 1.0, 0.0, 1.0, "", 1.0},
+         {"length", "Länge des Flecks", 2e-6, 0.1e-6, 100e-6, "µm", 1e-6},
+         {"confinement", "Anteil der Mode im GST", 0.03, 0.0, 1.0, "", 1.0},
+         {"thermal_resistance", "Wärmewiderstand", 1e5, 1.0, 1e9, "K/mW", 1e3},
+         {"thermal_time", "Thermische Zeitkonstante", 5e-9, 1e-12, 1e-3, "ns", 1e-9},
+         {"crystallization_time", "Kristallisationszeit", 50e-9, 1e-12, 1e-3, "ns", 1e-9},
+         {"reset_power", "Löschpuls: Leistung", 50e-3, 0.0, 10.0, "mW", 1e-3},
+         {"reset_duration", "Löschpuls: Dauer", 20e-9, 1e-12, 1e-3, "ns", 1e-9}},
+        make<PcmCellComponent>};
     type.actions = {
         {"Schreiben (Schreibziel)", "Programmieren mit Nachlesen auf den eingestellten kristallinen Anteil.",
          [](ParamMap& p, double w) { return program_action(p, w, p.at("write_target")); }},
@@ -877,7 +883,7 @@ void register_builtin_components(ComponentRegistry& registry) {
   // SOA: 20 dB Kleinsignal-Verstärkung und 10 mW Sättigungsleistung als Größenordnung (Agrawal, Fiber-Optic
   // Communication Systems, Kap. 7); Henry-Faktor 0 = ohne Phasenkopplung (typisch 3 bis 6).
   registry.add({"soa",
-                "Halbleiterverstärker (SOA)",
+                "SOA-Verstärker",
                 "Verstärkung mit Sättigung G = G0 exp(-(G-1) P/P_sat), stationär, ohne Rauschen und Dynamik.",
                 {"in", "out"},
                 {{"gain_db", "Kleinsignal-Verstärkung", 20.0, -10.0, 40.0, "dB", 1.0},

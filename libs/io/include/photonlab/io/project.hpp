@@ -17,6 +17,7 @@
 #include "photonlab/logic/gate.hpp"
 #include "photonlab/logic/report.hpp"
 #include "photonlab/modes/cross_section.hpp"
+#include "photonlab/signal/link.hpp"
 
 namespace photonlab::io {
 
@@ -34,6 +35,9 @@ struct Project {
   // Bauteilbibliothek: gemessene S-Matrizen, im Chip-Designer als Bauteile "sparam:<name>" verfügbar
   std::vector<circuit::SParameterTable> sparameters;
   logic::GateDefinition gate;  // Gatter-Definition des Logik-Labors; leer, wenn die Schaltung kein Gatter ist
+  // Übertragungsstrecke im Zeitbereich (Augendiagramm); nur gespeichert, wenn has_link
+  signal::LinkSettings link;
+  bool has_link = false;
 };
 
 // Projekt aus einem Referenz-Design der Schaltungs-Ebene (photonlab/circuit/reference_designs.hpp) oder

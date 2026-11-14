@@ -10,7 +10,8 @@ const PhaseChangeMaterial& gst225() {
       430.0,
       890.0,
       "n, k: 'Reversible optical gate switching in Si wire waveguide integrated with Ge2Sb2Te5 thin film' "
-      "(Simulationswerte, Literatur streut stark); Temperaturen: Wuttig und Yamada, Nature Materials 6, 824 (2007)"};
+      "(Simulationswerte, Literatur streut stark); Temperaturen: Wuttig und Yamada, Nature Materials 6, 824 "
+      "(2007)"};
   return gst;
 }
 

@@ -116,3 +116,13 @@ Offen aus Phase 6 (Folge-Issues):
 - [x] #82 Kerr/TPA im FDTD auch für die Hz-Polarisation (E in der Ebene, |E|² aus Ex und Ey)
 - [ ] #83 Nichtlinearer Ring im FDTD (ring in `field_ring` mit Kerr) und Vergleich mit dem Kompaktmodell des Rings statt des Bragg-Resonators
 - [ ] #84 Dynamik in der Schaltung: thermische Zeitkonstante, SOA-Verstärkungsdynamik, freie Ladungsträger im Ring-Bauteil (Zeitbereich, Phase 9)
+
+## Phase 9 – Aktive Photonik
+- [x] #85 Heizer-Phasenschieber (P_pi kalibriert auf 24,8 mW, Harris 2014)
+- [x] #86 PN-Phasenschieber und Ring-Modulator (Soref-Bennett, Verarmungszone, V_pi L = 2,6 V cm, RC-Grenzfrequenz)
+- [x] #87 Photodiode mit Schrot- und thermischem Rauschen, SNR
+- [x] #88 Zeitbereich der Strecke: PRBS, Treiber, Ring (Coupled-Mode) und MZM, Empfänger, Augendiagramm, Q, BER (`libs/signal`)
+- [x] #89 PCM-Speicherzelle (GST): Pulsmodell, Programmieren mit Nachlesen, Zwischenstufen; Handlungen im Chip-Designer
+- [ ] #90 Zeitbereich für beliebige Schaltungen (Vector Fitting der S-Parameter, Bauplan 5.3)
+- [ ] #91 PN-Überlapp mit dem Modenlöser statt gleichmäßiger Verteilung; Wanderwellen-Elektrode für lange MZM
+- [ ] #92 Thermische Zeitkonstante und Übersprechen der Heizer; Laser-RIN-Spektrum statt weiß
