@@ -71,7 +71,7 @@ bool instance_combo(const char* id, const circuit::Circuit& circuit, std::string
 }  // namespace
 
 LogicLab::LogicLab(ThreadPool& pool, ChipDesigner& designer)
-    : pool_(pool), designer_(designer), field_gate_view_(pool, designer) {
+    : pool_(pool), designer_(designer), field_gate_view_(pool, designer), logic_sim_view_(pool) {
   designer_.on_save_gate = [this](const std::string& path) {
     if (result_.key.empty() || !result_.error.empty()) {
       designer_.show_status("Kein gültiges Zeugnis zum Exportieren.", true);
@@ -140,6 +140,10 @@ void LogicLab::draw() {
   if (ImGui::BeginTabBar("logik_ansichten")) {
     if (ImGui::BeginTabItem("Schaltung")) {
       draw_circuit_tab();
+      ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("Logikschaltung")) {
+      logic_sim_view_.draw();
       ImGui::EndTabItem();
     }
     if (ImGui::BeginTabItem("Feld-Gatter (Kristall)")) {

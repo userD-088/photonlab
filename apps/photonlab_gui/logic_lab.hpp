@@ -8,6 +8,7 @@
 
 #include "chip_designer.hpp"
 #include "field_gate_view.hpp"
+#include "logic_sim_view.hpp"
 #include "photonlab/core/thread_pool.hpp"
 #include "photonlab/logic/optimize.hpp"
 #include "photonlab/logic/report.hpp"
@@ -43,6 +44,7 @@ class LogicLab {
   ThreadPool& pool_;
   ChipDesigner& designer_;
   FieldGateView field_gate_view_;
+  LogicSimView logic_sim_view_;
 
   std::future<Result> future_;
   Result result_;

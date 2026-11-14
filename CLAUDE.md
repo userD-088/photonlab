@@ -11,7 +11,7 @@ Ziel: physikalisch realistisch und ehrlich bewertet.
 Bauplan: `docs/PhotonLab_Bauplan_v2.pdf` (Roadmap = Abschnitt 15).
 Interaktiver Prototyp (JS, gleiche Physik): `docs/prototypes/photonische_gatter.html`.
 Offene Aufgaben: `docs/ISSUES.md`.
-**Aktuelle Phase: 10 (Logik-Ebene).** Umgesetzt: Phase 1 und 2 (Schaltung), Phase 3 (Logik-Labor, linear), Phase 4 (2D-FDTD), Phase 5 (Materialien, Modenlöser), Phase 6 (S-Parameter vom Feld zur Schaltung), Phase 7 (photonische Kristalle: PWE-Bandstruktur, Generatoren, Kristall-Gatter). Phase 8 (nichtlineare Optik: Kompaktmodell `kerr_cavity`, Kerr/TPA/Ladungsträger im FDTD, nichtlineare Bauteile `ring_kerr` und `soa` in der Schaltung mit Ast-Verfolgung). Phase 9 (aktive Photonik: Heizer, PN-Phasenschieber, Ring-Modulator, Photodiode mit Rauschen, Zeitbereich/Augendiagramm in `libs/signal`, PCM-Zelle).
+**Aktuelle Phase: 11 (Quanten + MZI-Gitter).** Umgesetzt: Phase 1 und 2 (Schaltung), Phase 3 (Logik-Labor, linear), Phase 4 (2D-FDTD), Phase 5 (Materialien, Modenlöser), Phase 6 (S-Parameter vom Feld zur Schaltung), Phase 7 (photonische Kristalle: PWE-Bandstruktur, Generatoren, Kristall-Gatter). Phase 8 (nichtlineare Optik: Kompaktmodell `kerr_cavity`, Kerr/TPA/Ladungsträger im FDTD, nichtlineare Bauteile `ring_kerr` und `soa` in der Schaltung mit Ast-Verfolgung). Phase 9 (aktive Photonik: Heizer, PN-Phasenschieber, Ring-Modulator, Photodiode mit Rauschen, Zeitbereich/Augendiagramm in `libs/signal`, PCM-Zelle). Phase 10 (Logik-Ebene: Logikblöcke, Event-Simulator mit Physik, Pegel-/Codierungs-Prüfung, Addierer, Flip-Flop).
 
 ## Build
 ```
@@ -29,10 +29,10 @@ Ohne GUI (schneller, z. B. für reine Physik-Arbeit): `-DPHOTONLAB_BUILD_GUI=OFF
 - `libs/field` – Feld-Szene (Formen, Quellen, Monitore, Ports), 2D-FDTD nach Yee mit CPML, Moden- und Linienquellen, Spektrum, S-Parameter-Extraktion, Kristall-Generatoren (`photonic_crystal.*`: Gitter, Liniendefekte, Punktdefekte)
 - `libs/pwe` – PWE-Bandstruktur photonischer Kristalle (2D, ez/hz), Lücken, Pfad Gamma-M-K bzw. Gamma-X-M
 - `libs/signal` – Zeitbereich einer Übertragungsstrecke (PRBS, Treiber, Ring/MZM-Modulator, Empfänger mit Rauschen, Augendiagramm, Q, BER)
-- `libs/logic` – Gatter-Definition, Wahrheitstabellen-Läufer, Schwellwert-Analyse, Gatter-Zeugnis, Optimierer, Gatter auf Feld-Ebene (`field_gate.*`: Eingänge = Quellen einer FDTD-Szene)
+- `libs/logic` – Gatter-Definition, Wahrheitstabellen-Läufer, Schwellwert-Analyse, Gatter-Zeugnis, Optimierer, Gatter auf Feld-Ebene (`field_gate.*`: Eingänge = Quellen einer FDTD-Szene), Logik-Ebene (`logic_sim.*`: Logikblöcke, Event-Simulator, Designs)
 - `libs/io` – Projektdatei `.plab.json` (mit Bauteilbibliothek), `.sparam.json`, `.gate.json` (alle Zahlen in SI); `make_registry(project)` liefert die Registry eines Projekts
-- `apps/photonlab_gui` – SDL3 + Dear ImGui (Docking) + ImPlot; Bauteil-Labor in `field_lab.cpp` (Feld), `mode_view.cpp` (Querschnitt) und `sparam_view.cpp` (S-Parameter), Bandstruktur in `band_view.cpp`, Chip-Designer in `chip_designer.cpp`, Logik-Labor in `logic_lab.cpp` (Feld-Gatter in `field_gate_view.cpp`), Augendiagramm in `eye_view.cpp`
-- `apps/photonlab_cli` – Kommandozeile: `components`, `example`, `materials`, `bands`, `field-gate`, `pcm`, `bistability`, `run [--sweep | --resonances | --monte-carlo | --logic | --field | --modes | --sparam | --eye] [--csv | --out]`, `validate`
+- `apps/photonlab_gui` – SDL3 + Dear ImGui (Docking) + ImPlot; Bauteil-Labor in `field_lab.cpp` (Feld), `mode_view.cpp` (Querschnitt) und `sparam_view.cpp` (S-Parameter), Bandstruktur in `band_view.cpp`, Chip-Designer in `chip_designer.cpp`, Logik-Labor in `logic_lab.cpp` (Feld-Gatter in `field_gate_view.cpp`, Logikschaltung in `logic_sim_view.cpp`), Augendiagramm in `eye_view.cpp`
+- `apps/photonlab_cli` – Kommandozeile: `components`, `example`, `materials`, `bands`, `field-gate`, `logic-sim`, `pcm`, `bistability`, `run [--sweep | --resonances | --monte-carlo | --logic | --field | --modes | --sparam | --eye] [--csv | --out]`, `validate`
 - `examples` – Referenz-Designs als `.plab.json` (erzeugt mit `photonlab_cli example <name>`)
 - `tests` – doctest; Physik-Validierung gegen analytische Lösungen
 - `cmake/Dependencies.cmake` – alle externen Abhängigkeiten, Versionen gepinnt

@@ -126,3 +126,12 @@ Offen aus Phase 6 (Folge-Issues):
 - [ ] #90 Zeitbereich für beliebige Schaltungen (Vector Fitting der S-Parameter, Bauplan 5.3)
 - [ ] #91 PN-Überlapp mit dem Modenlöser statt gleichmäßiger Verteilung; Wanderwellen-Elektrode für lange MZM
 - [ ] #92 Thermische Zeitkonstante und Übersprechen der Heizer; Laser-RIN-Spektrum statt weiß
+
+## Phase 10 – Logik-Ebene
+- [x] #93 Brücke 2: Logikblöcke mit gemessenen Pegeln, Codierung, Laufzeit, Energie (ideal, regeneriert, passiv aus Schaltungen)
+- [x] #94 Ereignisgesteuerter Simulator mit Physik und idealer Logik je Netz; erste Fehlerursache mit Pegel und Schwelle
+- [x] #95 Pegel- und Codierungs-Prüfung je Verbindung (Fan-out, Regeneration)
+- [x] #96 Halbaddierer, Volladdierer, 4-Bit-Addierer, UND-Kette, SR-Flip-Flop (Kerr-Ring); Abnahme: 512/512 regeneriert, passiv nachvollziehbar gemeldet
+- [ ] #97 Schieberegister und Takt (Flip-Flops + Verzögerungsleitungen), Multiplexer/Router aus Ring-Weichen
+- [ ] #98 Logikblöcke direkt aus dem Zeugnis eines eigenen Gatters im Logik-Labor übernehmen (bisher: Referenz-Gatter)
+- [ ] #99 Rauschen und Phasenstabilität auf der Logik-Ebene; WDM-Kanäle unterscheiden

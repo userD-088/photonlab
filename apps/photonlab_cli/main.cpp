@@ -932,6 +932,27 @@ int cmd_logic_sim(const std::string& name, const std::string& family_text) {
   return r.correct == r.checked ? 0 : 3;
 }
 
+// Phase 10: 4-Bit-Addierer regeneriert korrekt, passiv mit gemeldeten Kaskadierungsproblemen
+bool validate_logic_level() {
+  const logic::LogicCircuit adder = logic::ripple_adder(4);
+  logic::SimSettings settings;
+  settings.keep_traces = false;
+  const logic::SimResult regen =
+      logic::simulate(adder, logic::Family::regenerated, logic::all_vectors(9), settings);
+  const logic::SimResult passive =
+      logic::simulate(adder, logic::Family::passive, logic::all_vectors(9), settings);
+  int explained = 0, wrong = 0, errors = 0;
+  for (const auto& v : passive.vectors)
+    if (!v.correct) ++wrong, explained += v.first_error.empty() ? 0 : 1;
+  for (const auto& i : passive.static_issues) errors += i.severity == logic::Issue::Severity::error ? 1 : 0;
+  std::printf(
+      "4-Bit-Addierer: regeneriert %d/%d richtig (%.0f ps); passiv %d/%d, %d Prüffehler, %d/%d Fehler mit "
+      "Ursache\n",
+      regen.correct, regen.checked, regen.latency / 1e-12, passive.correct, passive.checked, errors,
+      explained, wrong);
+  return regen.correct == 512 && errors > 0 && explained == wrong;
+}
+
 bool validate_modes(const std::string& out_dir) {
   const modes::CrossSection section;
   const modes::CrossSectionResult result = modes::analyze(section, true);
@@ -1134,6 +1155,7 @@ int cmd_validate(const std::string& out_dir) {
   ok = validate_pwe() && ok;
   ok = validate_phc_bend() && ok;
   ok = validate_active() && ok;
+  ok = validate_logic_level() && ok;
   ok = validate_sparameters(out_dir) && ok;
   std::printf("%s\n", ok ? "BESTANDEN" : "NICHT BESTANDEN");
   return ok ? 0 : 1;
@@ -1147,7 +1169,7 @@ int main(int argc, char** argv) {
 #endif
   const std::vector<std::string> args(argv + 1, argv + argc);
   if (args.empty()) {
-    std::printf("PhotonLab CLI 0.10.0 (Phase 9)\n");
+    std::printf("PhotonLab CLI 0.11.0 (Phase 10)\n");
     print_usage();
     return 0;
   }

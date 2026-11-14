@@ -6,6 +6,7 @@ add_executable(photonlab_gui
   field_lab.cpp
   file_dialog.cpp
   logic_lab.cpp
+  logic_sim_view.cpp
   band_view.cpp
   mode_view.cpp
   sparam_view.cpp)
