@@ -57,17 +57,20 @@ logic::GateDefinition gate_from_json(const ordered_json& json) {
 ordered_json scene_to_json(const field::FieldScene& scene) {
   ordered_json shapes = ordered_json::array(), sources = ordered_json::array(),
                monitors = ordered_json::array();
-  for (const auto& sh : scene.shapes)
-    shapes.push_back({{"name", sh.name},
-                      {"kind", std::string(field::to_string(sh.kind))},
-                      {"x", sh.x},
-                      {"y", sh.y},
-                      {"width", sh.width},
-                      {"height", sh.height},
-                      {"rotation", sh.rotation},
-                      {"radius", sh.radius},
-                      {"inner_radius", sh.inner_radius},
-                      {"index", sh.index}});
+  for (const auto& sh : scene.shapes) {
+    ordered_json shape = {{"name", sh.name},
+                          {"kind", std::string(field::to_string(sh.kind))},
+                          {"x", sh.x},
+                          {"y", sh.y},
+                          {"width", sh.width},
+                          {"height", sh.height},
+                          {"rotation", sh.rotation},
+                          {"radius", sh.radius},
+                          {"inner_radius", sh.inner_radius},
+                          {"index", sh.index}};
+    if (sh.n2 != 0.0) shape["n2"] = sh.n2;  // nur wenn nichtlinear: bestehende Dateien bleiben gleich
+    shapes.push_back(std::move(shape));
+  }
   for (const auto& q : scene.sources)
     sources.push_back({{"name", q.name},
                        {"kind", std::string(field::to_string(q.kind))},
@@ -152,6 +155,7 @@ field::FieldScene scene_from_json(const ordered_json& json) {
       sh.radius = j.value("radius", sh.radius);
       sh.inner_radius = j.value("inner_radius", sh.inner_radius);
       sh.index = j.value("index", sh.index);
+      sh.n2 = j.value("n2", 0.0);
       scene.shapes.push_back(std::move(sh));
     }
   if (json.contains("sources"))

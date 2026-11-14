@@ -35,6 +35,12 @@ double index_at(const FieldScene& scene, double x, double y) {
   return scene.background_index;
 }
 
+double kerr_n2_at(const FieldScene& scene, double x, double y) {
+  for (auto it = scene.shapes.rbegin(); it != scene.shapes.rend(); ++it)
+    if (contains(*it, x, y)) return it->n2;
+  return 0.0;
+}
+
 int grid_nx(const FieldScene& scene) { return static_cast<int>(std::lround(scene.width / scene.cell_size)); }
 int grid_ny(const FieldScene& scene) { return static_cast<int>(std::lround(scene.height / scene.cell_size)); }
 
@@ -48,6 +54,11 @@ void validate(const FieldScene& scene) {
   if (scene.empty())
     throw FieldError("Die Szene hat kein Rechengebiet (Breite und Höhe müssen positiv sein)");
   if (!(scene.cell_size > 0.0)) throw FieldError("Die Zellgröße muss positiv sein");
+  for (const auto& shape : scene.shapes) {
+    if (shape.n2 != 0.0 && scene.polarization == Polarization::hz)
+      throw FieldError("Kerr-Effekt (n2) ist nur in der Ez-Polarisation implementiert (Form '" + shape.name +
+                       "')");
+  }
   const double nx = scene.width / scene.cell_size, ny = scene.height / scene.cell_size;
   if (nx < 8 || ny < 8) throw FieldError("Das Rechengebiet braucht mindestens 8 x 8 Zellen");
   if (nx * ny > 4.0e6)

@@ -87,6 +87,11 @@ Fdtd::Fdtd(const FieldScene& scene) : polarization_(scene.polarization) {
       eps_f_[k] = index * index;
       if (ez) {
         cf_[k] = dt_ / (constants::eps0 * eps_f_[k]);
+        const double n2 = kerr_n2_at(scene, i * dx_, j * dx_);
+        // Kerr: n2 = 3 chi3 / (4 n0^2 eps0 c) (docs/physics/nonlinear.md)
+        if (n2 != 0.0)
+          kerr_cells_.push_back(
+              {k, eps_f_[k], 4.0 * eps_f_[k] * constants::eps0 * constants::c0 * n2 / 3.0, 0.0});
       } else {
         const double nx_index = index_at(scene, (i + 0.5) * dx_, j * dx_);  // Ex bei (i + 1/2, j)
         const double ny_index = index_at(scene, i * dx_, (j + 0.5) * dx_);  // Ey bei (i, j + 1/2)
@@ -336,6 +341,21 @@ void Fdtd::step_ez() {
       psi_y[i] = by * psi_y[i] + cy * dhx;
       e[i] += cf[i] * (dhy + psi_x[i] - dhx - psi_y[i]);
     }
+  }
+
+  // Kerr-Zellen: der lineare Schritt hat den Zuwachs von D/eps0 mal 1/eps geliefert; D weiterführen und E aus
+  // eps*E + chi3*E^3 = D/eps0 lösen (monotone Kubik, Newton ab dem alten Wert)
+  for (KerrCell& cell : kerr_cells_) {
+    const double e_old = f_prev_[cell.index];
+    cell.d += cell.eps * (f_[cell.index] - e_old);
+    double e = e_old;
+    for (int iteration = 0; iteration < 8; ++iteration) {
+      const double residual = cell.eps * e + cell.chi3 * e * e * e - cell.d;
+      const double step = residual / (cell.eps + 3.0 * cell.chi3 * e * e);
+      e -= step;
+      if (std::abs(step) <= 1e-12 * (std::abs(e) + 1e-30)) break;
+    }
+    f_[cell.index] = e;
   }
 }
 

@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <complex>
 #include <vector>
 
 #include "photonlab/core/units.hpp"
@@ -363,4 +364,45 @@ TEST_CASE("Wellenleiter führt Licht: hinter 9 µm kommt der Großteil der einge
   // Ein Teil des Gauß-Strahls passt nicht zur Mode und strahlt ab; der geführte Rest kommt verlustfrei an.
   CHECK(p_back / p_front > 0.5);
   CHECK(p_back / p_front < 1.02);
+}
+
+// Kerr-Effekt im FDTD: Phasenverschiebung einer ebenen Welle in einem nichtlinearen Streifen gegen die
+// analytische Näherung phi = 2 pi/lambda * n2 * I * L mit I = n0 c eps0 E0^2 / 2 (Ez-Polarisation).
+TEST_CASE("Kerr-Effekt im FDTD: Phasenverschiebung entspricht n2*I*L") {
+  const double n0 = 1.5, e0 = 1e8, length = 20e-6, wavelength = 1550e-9;
+  auto run = [&](double n2) {
+    FieldScene s;
+    s.width = 40e-6, s.height = 0.4e-6, s.cell_size = 50e-9;
+    s.background_index = n0;
+    s.polarization = Polarization::ez;
+    s.boundary_x = Boundary::pml;
+    s.boundary_y = Boundary::periodic;
+    s.shapes = {{"Kerr", ShapeKind::rectangle, 25e-6, 0.2e-6, length, 1e-6, 0.0, 1e-6, 0.5e-6, n0, n2}};
+    Source q;
+    q.kind = SourceKind::line;
+    q.x1 = q.x2 = 5e-6, q.y1 = 0.0, q.y2 = s.height;
+    q.amplitude = e0;
+    q.wavelength = wavelength;
+    s.sources = {q};
+    s.monitors = {{"E hinter dem Streifen", MonitorKind::point, 37e-6, 0.2e-6, 0.0, 0.0}};
+    Fdtd sim(s);
+    sim.run(static_cast<std::size_t>(400e-15 / sim.time_step()));
+    const MonitorData& m = sim.monitors().front();
+    // Lock-in über die letzten 8 Perioden
+    const double omega = 2.0 * pi * c0 / wavelength;
+    const std::size_t count = static_cast<std::size_t>(8.0 * wavelength / c0 / m.sample_interval);
+    std::complex<double> z = 0.0;
+    for (std::size_t k = m.values.size() - count; k < m.values.size(); ++k)
+      z += m.values[k] * std::exp(std::complex<double>(
+                             0.0, -omega * (m.start_time + static_cast<double>(k) * m.sample_interval)));
+    return z;
+  };
+  const double n2 = 1e-16;  // künstlich groß, damit die Verschiebung messbar ist (Silizium: 4,5e-18)
+  const std::complex<double> linear = run(0.0), kerr = run(n2);
+  const double measured = -std::arg(kerr / linear);
+  const double intensity = n0 * c0 * constants::eps0 * e0 * e0 / 2.0;
+  const double expected = 2.0 * pi / wavelength * n2 * intensity * length;
+  INFO("Phase gemessen " << measured << ", erwartet " << expected);
+  CHECK(measured == doctest::Approx(expected).epsilon(0.02));
+  CHECK(std::abs(kerr) == doctest::Approx(std::abs(linear)).epsilon(0.03));  // keine Verluste
 }

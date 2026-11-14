@@ -38,6 +38,7 @@ struct Shape {
   double radius = 1e-6;          // Kreis und Ring: Außenradius [m]
   double inner_radius = 0.5e-6;  // Ring: Innenradius [m]
   double index = 3.476;          // Brechzahl (reell, ohne Dispersion)
+  double n2 = 0.0;               // Kerr-Koeffizient [m^2/W]: n = index + n2*I (nur Ez-Polarisation); 0 = linear
   bool operator==(const Shape&) const = default;
 };
 
@@ -127,6 +128,8 @@ struct FieldScene {
 // Brechzahl an einem Punkt (oberste Form gewinnt, sonst Hintergrund).
 double index_at(const FieldScene& scene, double x, double y);
 bool contains(const Shape& shape, double x, double y);
+// Kerr-Koeffizient n2 [m^2/W] an einem Punkt (oberste Form gewinnt, Hintergrund ist linear).
+double kerr_n2_at(const FieldScene& scene, double x, double y);
 
 // Prüft die Szene; wirft FieldError mit Klartext (Gittergröße, Courant-Zahl, Lage der Monitore ...).
 void validate(const FieldScene& scene);

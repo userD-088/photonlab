@@ -98,6 +98,14 @@ class Fdtd {
   std::vector<double> f_, f_prev_, gx_, gy_;
   std::vector<double> zero_row_;   // Nachbarzeile jenseits einer ideal leitenden Wand
   std::vector<double> eps_f_;      // relative Permittivität am Skalarfeld
+  // Kerr-Zellen (nur Ez): D/eps0 wird mitgeführt, E aus eps*E + chi3*E^3 = D/eps0 per Newton-Verfahren
+  struct KerrCell {
+    std::size_t index;
+    double eps;   // lineare relative Permittivität
+    double chi3;  // [m^2/V^2]
+    double d;     // D/eps0 [V/m]
+  };
+  std::vector<KerrCell> kerr_cells_;
   std::vector<double> cf_;         // Update-Koeffizient des Skalarfeldes (Ez: dt/(eps0*eps_r), Hz: dt/mu0)
   std::vector<double> cgx_, cgy_;  // Update-Koeffizienten der Felder in der Ebene
   // CPML: Koeffizienten je Achse an ganzen (e) und halben (h) Gitterplätzen, Hilfsfelder psi
