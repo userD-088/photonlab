@@ -359,14 +359,41 @@ void ChipDesigner::update_sweep() {
         SeriesData data;
         data.key = key;
         try {
-          const auto solutions = circuit::sweep(*compiled, settings, pool, control.get());
-          data.x.reserve(solutions.size());
-          for (const auto& solution : solutions) {
-            std::vector<double> values;
-            collect_powers(*compiled, solution, data.names.empty() ? &data.names : nullptr, &values);
-            if (data.power_mw.empty()) data.power_mw.resize(values.size());
-            data.x.push_back(solution.wavelength / units::nm);
-            for (std::size_t k = 0; k < values.size(); ++k) data.power_mw[k].push_back(values[k]);
+          if (compiled->nonlinear()) {
+            // Nichtlineare Schaltung: Rampe hin (aufsteigend) und zurück mit Ast-Verfolgung; die Kurven
+            // unterscheiden sich, wo die Schaltung bistabil ist (Hysterese)
+            const std::vector<double> forward = circuit::sweep_wavelengths(settings);
+            const std::vector<double> backward(forward.rbegin(), forward.rend());
+            const circuit::RampResult up =
+                circuit::wavelength_ramp(*compiled, forward, 1.0, nullptr, control.get());
+            const circuit::RampResult down =
+                circuit::wavelength_ramp(*compiled, backward, 1.0, nullptr, control.get());
+            if (!up.solutions.empty() && !down.solutions.empty()) {
+              std::vector<std::string> names;
+              for (std::size_t i = 0; i < forward.size(); ++i) {
+                std::vector<double> v_up, v_down;
+                collect_powers(*compiled, up.solutions[i], names.empty() ? &names : nullptr, &v_up);
+                collect_powers(*compiled, down.solutions[forward.size() - 1 - i], nullptr, &v_down);
+                if (data.power_mw.empty()) data.power_mw.resize(2 * v_up.size());
+                data.x.push_back(forward[i] / units::nm);
+                for (std::size_t k = 0; k < v_up.size(); ++k) {
+                  data.power_mw[k].push_back(v_up[k]);
+                  data.power_mw[v_up.size() + k].push_back(v_down[k]);
+                }
+              }
+              for (const auto& n : names) data.names.push_back(n + " (hin)");
+              for (const auto& n : names) data.names.push_back(n + " (zurück)");
+            }
+          } else {
+            const auto solutions = circuit::sweep(*compiled, settings, pool, control.get());
+            data.x.reserve(solutions.size());
+            for (const auto& solution : solutions) {
+              std::vector<double> values;
+              collect_powers(*compiled, solution, data.names.empty() ? &data.names : nullptr, &values);
+              if (data.power_mw.empty()) data.power_mw.resize(values.size());
+              data.x.push_back(solution.wavelength / units::nm);
+              for (std::size_t k = 0; k < values.size(); ++k) data.power_mw[k].push_back(values[k]);
+            }
           }
         } catch (const std::exception& e) {
           data.error = e.what();
@@ -427,16 +454,34 @@ void ChipDesigner::update_curve() {
   circuit::Circuit varied = project_.circuit;
   Instance* target = varied.find_instance(selected_);
   try {
-    for (int i = 0; i < points; ++i) {
+    // Nichtlineare Schaltungen: Hin- und Rückweg mit Ast-Verfolgung (der Zustand wird weitergereicht, der
+    // Rückweg beginnt am Endzustand des Hinwegs)
+    const bool nonlinear = compiled_ && compiled_->nonlinear();
+    std::vector<std::vector<double>> up(points), down(points);
+    circuit::CircuitState state;
+    auto point = [&](int i, std::vector<double>* values, bool with_names) {
       const double x = curve_min_ + (curve_max_ - curve_min_) * i / (points - 1);
       target->params[curve_param_] = std::clamp(x * spec->display_scale, spec->min_value, spec->max_value);
       const circuit::CompiledCircuit compiled(varied, registry());
-      const circuit::Solution solution = compiled.solve(project_.wavelength);
-      std::vector<double> values;
-      collect_powers(compiled, solution, curve_.names.empty() ? &curve_.names : nullptr, &values);
-      if (curve_.power_mw.empty()) curve_.power_mw.resize(values.size());
-      curve_.x.push_back(x);
-      for (std::size_t k = 0; k < values.size(); ++k) curve_.power_mw[k].push_back(values[k]);
+      const circuit::Solution solution =
+          nonlinear ? compiled.solve(project_.wavelength, state) : compiled.solve(project_.wavelength);
+      collect_powers(compiled, solution, with_names ? &curve_.names : nullptr, values);
+    };
+    for (int i = 0; i < points; ++i) point(i, &up[static_cast<std::size_t>(i)], i == 0);
+    if (nonlinear)
+      for (int i = points - 1; i >= 0; --i) point(i, &down[static_cast<std::size_t>(i)], false);
+    const std::size_t n = up.front().size();
+    curve_.power_mw.resize(nonlinear ? 2 * n : n);
+    for (int i = 0; i < points; ++i) {
+      curve_.x.push_back(curve_min_ + (curve_max_ - curve_min_) * i / (points - 1));
+      for (std::size_t k = 0; k < n; ++k) {
+        curve_.power_mw[k].push_back(up[static_cast<std::size_t>(i)][k]);
+        if (nonlinear) curve_.power_mw[n + k].push_back(down[static_cast<std::size_t>(i)][k]);
+      }
+    }
+    if (nonlinear) {
+      for (std::size_t k = 0; k < n; ++k) curve_.names.push_back(curve_.names[k] + " (zurück)");
+      for (std::size_t k = 0; k < n; ++k) curve_.names[k] += " (hin)";
     }
   } catch (const std::exception& e) {
     curve_.x.clear();

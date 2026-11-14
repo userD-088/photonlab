@@ -9,6 +9,20 @@ CVector Component::source(double /*wavelength*/) const { return CVector::Zero(po
 
 std::vector<Measurement> Component::measure(const CVector& /*a*/, const CVector& /*b*/) const { return {}; }
 
+CMatrix Component::s_matrix_at(double wavelength, const std::vector<double>& /*state*/) const {
+  return s_matrix(wavelength);
+}
+
+std::vector<double> Component::settle_state(double /*wavelength*/, const CVector& /*a*/,
+                                            const std::vector<double>& previous) const {
+  return previous;
+}
+
+std::vector<Measurement> Component::measure_at(const CVector& a, const CVector& b,
+                                               const std::vector<double>& /*state*/) const {
+  return measure(a, b);
+}
+
 int ComponentType::port_index(std::string_view port) const {
   for (std::size_t i = 0; i < port_names.size(); ++i)
     if (port_names[i] == port) return static_cast<int>(i);

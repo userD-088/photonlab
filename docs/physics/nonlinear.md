@@ -66,14 +66,15 @@ Verstimmung und hoher Leistung wieder zulässt.
 * Die Zahlen sind für **Streifenwellenleiter-Ringe** gedacht; V_eff ist eine Eingabe (A_eff·L), keine
   aus dem Modenlöser gerechnete Größe (Kopplung an die Feld-Ebene: Issue #64).
 
-## Nichtlinearität im FDTD (Ez-Polarisation)
+## Nichtlinearität im FDTD (Ez- und Hz-Polarisation)
 
 Eingeschaltet über Formen mit `n2` [m²/W], `beta_tpa` [m/W] und `carrier_lifetime` [s] (Szene, `.plab.json`; nur
-wenn ≠ 0 gespeichert). Hz-Polarisation lehnt die Szene mit Klartext ab (E in der Ebene braucht |E|² aus zwei Komponenten;
-offen). In den Zellen dieser Formen wird nicht E, sondern D/ε0 =: d fortgeschrieben:
+wenn ≠ 0 gespeichert). In den Zellen dieser Formen wird nicht E, sondern D/ε0 =: d fortgeschrieben (Ez: die Zellen von
+Ez; Hz: die Zellen von Ex und Ey getrennt, isotroper Kerr-Effekt P_NL = ε0 χ3 |E|² E mit |E|² = Ex² + Ey², die jeweils
+andere Komponente gemittelt aus den vier Nachbarn des versetzten Gitters):
 
     d  ←  d + ε ΔE_lin  −  (Δt/ε0) σ E          (ΔE_lin: normaler Yee-Schritt inkl. CPML-Terme)
-    ε_eff(N) E + χ3 E³ = d                        (monotone Kubik, Newton ab dem alten E, ≤ 8 Schritte)
+    ε_eff(N) E + χ3 (E² + E_andere²) E = d         (monotone Kubik, Newton ab dem alten E, ≤ 8 Schritte)
 
 * **Kerr**: P_NL = ε0 χ3 E³, n2 = 3 χ3 /(4 n0² ε0 c) ⇒ χ3 = 4 n0² ε0 c n2/3. Eine ebene Welle der Amplitude E0 sieht
   Δε = (3/4) χ3 E0² (Dritte-Harmonische-Terme entstehen im Löser mit, werden aber hier nicht ausgewertet).
@@ -88,8 +89,8 @@ offen). In den Zellen dieser Formen wird nicht E, sondern D/ε0 =: d fortgeschri
 
 | Prüfung | Ergebnis |
 |---|---|
-| Phase einer ebenen Welle im Kerr-Streifen gegen φ = (2π/λ) n2 I L | Abweichung unter 2 % (Test mit 0,5 % bestanden) |
-| TPA-Transmission gegen 1/(1 + β I0 L) | 4 % Toleranz bestanden |
+| Phase einer ebenen Welle im Kerr-Streifen gegen φ = (2π/λ) n2 I L (Ez und Hz) | Abweichung unter 2 % |
+| TPA-Transmission gegen 1/(1 + β I0 L) (Ez und Hz) | 4 % Toleranz bestanden |
 | Ladungsträgerdichte gegen β I² τ /(2ħω) | 10 % Toleranz bestanden |
 | freie Ladungsträger senken die Phase (Blauverschiebung) | ja |
 | **Abnahme Resonanzverschiebung**: Bragg-Resonator (Q ≈ 390) mit Kerr-Spacer, Verstimmung 0,5 γ, Verschiebung ≈ 0,55 γ | Energie im FDTD 0,01555, Vorhersage aus verschobener gemessener Linienform 0,01596 (2,6 %), Kompaktmodell mit Lorentz-Linie 0,01651 (6 %); kalt 0,00842 |
@@ -108,3 +109,46 @@ Messung "Hysteresebreite" gilt immer für eine bestimmte Rampengeschwindigkeit; 
 
 Hinweis zu den Tests: doctest-`Approx` rechnet mit `scale = 1` (Toleranz ε·(1 + |x|)); für kleine Zahlen ist das praktisch
 eine absolute Toleranz. Die neuen Tests nutzen deshalb `.scale(0.0)`.
+
+## Nichtlineare Bauteile in der Schaltung (Phase 8, #79/#81)
+
+Code: `ring_kerr`, `soa` in `libs/circuit/src/builtin_components.cpp`; Löser `CompiledCircuit::solve(λ, state, …)`,
+Rampen `wavelength_ramp` / `power_ramp` (`sweep.hpp`). Tests: `tests/test_circuit_nonlinear.cpp`.
+
+**Löser.** Ein nichtlineares Bauteil hat einen inneren Zustand (Ring: umlaufende Leistung je Richtung; SOA: Verstärkung).
+Fixpunkt-Iteration: lineares System mit den S-Matrizen beim aktuellen Zustand lösen → jedes nichtlineare Bauteil bestimmt
+aus seinen einlaufenden Wellen den passenden Zustand (`settle_state`) → wiederholen, bis sich nichts mehr ändert
+(relativ 1e-10). Ohne Rückkopplung zwischen nichtlinearen Bauteilen genügen 2 Durchläufe; bei Rückkopplung wird nach 20
+Schritten gedämpft, nach 400 meldet der Löser Nichtkonvergenz. Gibt es mehrere Zustände (Bistabilität), wählt das Bauteil
+den, der dem vorigen am nächsten liegt: eine **Rampe**, die den Zustand weiterreicht, folgt einem Ast und zeigt Hysterese.
+Ein einzelnes `solve(λ)` startet beim Zustand null (unterster Ast).
+
+**Kerr-Ring** (`ring_kerr`, All-Pass): Umlauf je Richtung
+
+    H = e^{iθ} · H_lin · sqrt(1/(1 + β_TPA I L)) · exp(i (k0 n2 I L + k0 (dn/dT) R_th P_abs L)),   I = (P_selbst + 2 P_gegen)/A_eff
+    P_selbst = κ² |a_ein|² / |1 - t H|²       (selbstkonsistent, Nullstellen per Abtastung + Bisektion)
+    τ = (t - H)/(1 - t H)
+
+P_abs = im Ring absorbierte Leistung (linearer Verlust + TPA), R_th = Wärmewiderstand. Die Gegenrichtung wirkt doppelt
+(Kreuzphasenmodulation). Thermik ist stationär (keine thermische Zeitkonstante). Silizium-Werte: n2 = 4,5e-18 m²/W,
+β_TPA = 8e-12 m/W (Bristow 2007), dn/dT aus `libs/materials`; A_eff = 0,1 µm² ist eine Annahme für Si-Streifen, R_th ist
+aufbauabhängig (Größenordnung 1e3…1e4 K/W) und standardmäßig 0. Freie Ladungsträger fehlen im Ring-Bauteil noch
+(im Kompaktmodell `kerr_cavity` und im FDTD vorhanden).
+
+**SOA** (`soa`): stationäre Sättigung G = G0 exp(-(G-1) P_ein/P_sat) (Saleh 1989; Agrawal, *Fiber-Optic Communication
+Systems*, Kap. 7), P_ein = Summe beider Richtungen, Phase -(α_H/2) ln(G/G0). Ohne Rauschen (ASE) und ohne Dynamik.
+20 dB und 10 mW sind Größenordnungen, keine Datenblattwerte.
+
+| Prüfung | Ergebnis |
+|---|---|
+| `ring_kerr` ohne Nichtlinearität = `ring_allpass` | Abweichung < 1e-12 |
+| Klappleistungen der Leistungsrampe (600 Schritte) = Extrema der geschlossenen Ringgleichung | innerhalb 1,5 Schritten |
+| Ring-Klappleistungen gegen das Coupled-Mode-Kompaktmodell (T_rt = n_g L/c, κ_in = κ²/T_rt, κ_0 = (1-a²)/T_rt, β = ω n2/(n_g A T_rt)) | 33,8 / 19,3 mW gegen 34,0 / 19,2 mW (< 1 %) |
+| TPA senkt die umlaufende Leistung; Selbstkonsistenz P = κ²P_ein/|1 - tH|² | 1e-8 |
+| Thermik-Dreieck (R_th = 5 K/mW, 5 mW): Minimum hin 1550,40 nm, zurück 1550,11 nm | Hin- und Rückweg verschieden |
+| SOA: 3-dB-Ausgangsleistung P_sat G0 ln2/(G0 - 2) | 1e-6 |
+| zwei Kerr-Ringe hintereinander = einzeln gerechnet | 1e-8 |
+
+Beispiel: `examples/08_ring_nichtlinear.plab.json` (2 mW, R_th = 5 K/mW). `photonlab_cli run … --sweep` rechnet bei
+nichtlinearen Schaltungen hin und zurück (Spalte `richtung`); der Chip-Designer zeigt im Spektrum und in der Kennlinie
+beide Wege („(hin)“, „(zurück)“). Der Monte-Carlo-Lauf und die Resonanz-Auswertung nutzen den untersten Ast.

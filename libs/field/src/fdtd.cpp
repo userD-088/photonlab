@@ -38,8 +38,9 @@ double Fdtd::carrier_density_at(double x, double y) const {
   const int i = static_cast<int>(std::lround(x / dx_)), j = static_cast<int>(std::lround(y / dx_));
   if (i < 0 || j < 0 || i >= nx_ || j >= ny_) return 0.0;
   const std::size_t k = at(i, j);
-  for (const KerrCell& cell : kerr_cells_)
-    if (cell.index == k) return cell.n;
+  for (const auto* list : {&kerr_cells_, &kerr_y_cells_, &kerr_x_cells_})
+    for (const KerrCell& cell : *list)
+      if (cell.index == k) return cell.n;
   return 0.0;
 }
 
@@ -91,6 +92,24 @@ Fdtd::Fdtd(const FieldScene& scene) : polarization_(scene.polarization) {
   const double offset = ez ? 0.0 : 0.5;  // Ez auf Knoten, Hz in Zellmitten
   if (ez) cf_.resize(n);
   if (!ez) cgx_.resize(n), cgy_.resize(n);
+  // Nichtlineare Zelle: Kerr n2 = 3 chi3 / (4 n0^2 eps0 c); TPA <sigma2 E^4> = beta I^2  =>  sigma2 = 2/3
+  // beta n0^2 c^2 eps0^2; Ladungsträger (Silizium, Soref-Bennett linearisiert): dn/dN = -3,6e-27 m^3,
+  // Absorption 1,45e-21 m^2 (docs/physics/nonlinear.md)
+  auto make_kerr_cell = [&](std::size_t k, double index, const NonlinearParams& nl) {
+    KerrCell cell;
+    cell.index = k;
+    cell.eps = index * index;
+    cell.chi3 = 4.0 * cell.eps * constants::eps0 * constants::c0 * nl.n2 / 3.0;
+    cell.sigma2 = 2.0 / 3.0 * nl.beta_tpa * cell.eps * constants::c0 * constants::c0 * constants::eps0 *
+                  constants::eps0;
+    cell.tau = nl.carrier_lifetime;
+    cell.sigma_fc = 1.45e-21 * index * constants::c0 * constants::eps0;
+    cell.eps_fc = 2.0 * index * -3.6e-27;
+    cell.d = 0.0;
+    cell.n = 0.0;
+    cell.e_old = 0.0;
+    return cell;
+  };
   for (int j = 0; j < ny_; ++j)
     for (int i = 0; i < nx_; ++i) {
       const std::size_t k = at(i, j);
@@ -99,28 +118,16 @@ Fdtd::Fdtd(const FieldScene& scene) : polarization_(scene.polarization) {
       if (ez) {
         cf_[k] = dt_ / (constants::eps0 * eps_f_[k]);
         const NonlinearParams nl = nonlinear_at(scene, i * dx_, j * dx_);
-        if (nl.any()) {
-          // Kerr: n2 = 3 chi3 / (4 n0^2 eps0 c); TPA: <sigma2 E^4> = beta I^2  =>  sigma2 = 2/3 beta n0^2 c^2
-          // eps0^2; Ladungsträger (Silizium, Soref-Bennett linearisiert): dn/dN = -3,6e-27 m^3, Absorption
-          // 1,45e-21 m^2 (docs/physics/nonlinear.md)
-          KerrCell cell;
-          cell.index = k;
-          cell.eps = eps_f_[k];
-          cell.chi3 = 4.0 * eps_f_[k] * constants::eps0 * constants::c0 * nl.n2 / 3.0;
-          cell.sigma2 = 2.0 / 3.0 * nl.beta_tpa * eps_f_[k] * constants::c0 * constants::c0 *
-                        constants::eps0 * constants::eps0;
-          cell.tau = nl.carrier_lifetime;
-          cell.sigma_fc = 1.45e-21 * index * constants::c0 * constants::eps0;
-          cell.eps_fc = 2.0 * index * -3.6e-27;
-          cell.d = 0.0;
-          cell.n = 0.0;
-          kerr_cells_.push_back(cell);
-        }
+        if (nl.any()) kerr_cells_.push_back(make_kerr_cell(k, index, nl));
       } else {
         const double nx_index = index_at(scene, (i + 0.5) * dx_, j * dx_);  // Ex bei (i + 1/2, j)
         const double ny_index = index_at(scene, i * dx_, (j + 0.5) * dx_);  // Ey bei (i, j + 1/2)
         cgx_[k] = dt_ / (constants::eps0 * nx_index * nx_index);
         cgy_[k] = dt_ / (constants::eps0 * ny_index * ny_index);
+        const NonlinearParams nlx = nonlinear_at(scene, (i + 0.5) * dx_, j * dx_);
+        const NonlinearParams nly = nonlinear_at(scene, i * dx_, (j + 0.5) * dx_);
+        if (nlx.any()) kerr_x_cells_.push_back(make_kerr_cell(k, nx_index, nlx));
+        if (nly.any()) kerr_y_cells_.push_back(make_kerr_cell(k, ny_index, nly));
       }
     }
 
@@ -370,25 +377,30 @@ void Fdtd::step_ez() {
   // Kerr-Zellen: der lineare Schritt hat den Zuwachs von D/eps0 mal 1/eps geliefert; D weiterführen und E aus
   // eps*E + chi3*E^3 = D/eps0 lösen (monotone Kubik, Newton ab dem alten Wert)
   for (KerrCell& cell : kerr_cells_) {
-    const double e_old = f_prev_[cell.index];
-    // TPA und Absorption an Ladungsträgern als Leitfähigkeit: D/eps0 sinkt um dt/eps0 * sigma * E
-    const double sigma = cell.sigma2 * e_old * e_old + cell.sigma_fc * cell.n;
-    cell.d += cell.eps * (f_[cell.index] - e_old) - dt_ / constants::eps0 * sigma * e_old;
-    if (cell.tau >
-        0.0) {  // Paare je absorbierter Photonenpaar-Leistung: dN/dt = sigma2 E^4 /(2 hbar w) - N/tau
-      cell.n += dt_ * (cell.sigma2 * e_old * e_old * e_old * e_old / (2.0 * hbar_omega_) - cell.n / cell.tau);
-      cell.n = std::max(cell.n, 0.0);
-    }
-    const double eps = cell.eps + cell.eps_fc * cell.n;
-    double e = e_old;
-    for (int iteration = 0; iteration < 8; ++iteration) {
-      const double residual = eps * e + cell.chi3 * e * e * e - cell.d;
-      const double step = residual / (eps + 3.0 * cell.chi3 * e * e);
-      e -= step;
-      if (std::abs(step) <= 1e-12 * (std::abs(e) + 1e-30)) break;
-    }
-    f_[cell.index] = e;
+    cell.e_old = f_prev_[cell.index];
+    f_[cell.index] = nonlinear_update(cell, f_[cell.index], 0.0);
   }
+}
+
+double Fdtd::nonlinear_update(KerrCell& cell, double e_lin, double other_sq) const {
+  const double e_old = cell.e_old;
+  const double intensity_sq = e_old * e_old + other_sq;  // |E|^2 in der Zelle
+  // TPA und Absorption an Ladungsträgern als Leitfähigkeit: D/eps0 sinkt um dt/eps0 * sigma * E
+  const double sigma = cell.sigma2 * intensity_sq + cell.sigma_fc * cell.n;
+  cell.d += cell.eps * (e_lin - e_old) - dt_ / constants::eps0 * sigma * e_old;
+  if (cell.tau > 0.0) {  // ein Paar je zwei absorbierten Photonen: dN/dt = sigma2 |E|^4 /(2 hbar w) - N/tau
+    cell.n += dt_ * (cell.sigma2 * intensity_sq * intensity_sq / (2.0 * hbar_omega_) - cell.n / cell.tau);
+    cell.n = std::max(cell.n, 0.0);
+  }
+  const double eps = cell.eps + cell.eps_fc * cell.n;
+  double e = e_old;
+  for (int iteration = 0; iteration < 8; ++iteration) {
+    const double residual = eps * e + cell.chi3 * (e * e + other_sq) * e - cell.d;
+    const double step = residual / (eps + cell.chi3 * (3.0 * e * e + other_sq));
+    e -= step;
+    if (std::abs(step) <= 1e-12 * (std::abs(e) + 1e-30)) break;
+  }
+  return e;
 }
 
 // Hz in Zellmitten (i + 1/2, j + 1/2); Ex bei (i + 1/2, j); Ey bei (i, j + 1/2).
@@ -398,6 +410,8 @@ void Fdtd::step_hz() {
   const std::size_t nx = static_cast<std::size_t>(nx_);
 
   // E von n - 1/2 nach n + 1/2 aus Hz zur Zeit n; tangentiales E auf dem linken und oberen Rand bleibt 0
+  for (KerrCell& cell : kerr_x_cells_) cell.e_old = gx_[cell.index];
+  for (KerrCell& cell : kerr_y_cells_) cell.e_old = gy_[cell.index];
   for (int j = 0; j < ny_; ++j) {
     const std::size_t row = at(0, j);
     const double* h = &f_[row];
@@ -425,6 +439,28 @@ void Fdtd::step_hz() {
       const double d = (h[i] - h[i - 1]) * inv;  // dHz/dx bei (i, j + 1/2)
       psi_y[i] = bxe_[i] * psi_y[i] + cxe_[i] * d;
       ey[i] -= c[i] * (d + psi_y[i]);
+    }
+  }
+
+  // Nichtlineare Zellen: |E|^2 = Ex^2 + Ey^2, die andere Komponente gemittelt aus den vier Nachbarn
+  // (Ex bei (i+1/2, j) hat Ey bei (i, j-+1/2) und (i+1, j-+1/2); Ey bei (i, j+1/2) hat Ex bei (i-+1/2, j) und
+  // (i-+1/2, j+1))
+  if (!kerr_x_cells_.empty() || !kerr_y_cells_.empty()) {
+    auto value = [&](const std::vector<double>& field, int i, int j) {
+      if (i < 0 || j < 0 || i >= nx_ || j >= ny_) return 0.0;
+      return field[at(i, j)];
+    };
+    for (KerrCell& cell : kerr_x_cells_) {
+      const int i = static_cast<int>(cell.index % nx), j = static_cast<int>(cell.index / nx);
+      const double ey =
+          0.25 * (value(gy_, i, j) + value(gy_, i + 1, j) + value(gy_, i, j - 1) + value(gy_, i + 1, j - 1));
+      gx_[cell.index] = nonlinear_update(cell, gx_[cell.index], ey * ey);
+    }
+    for (KerrCell& cell : kerr_y_cells_) {
+      const int i = static_cast<int>(cell.index % nx), j = static_cast<int>(cell.index / nx);
+      const double ex =
+          0.25 * (value(gx_, i, j) + value(gx_, i - 1, j) + value(gx_, i, j + 1) + value(gx_, i - 1, j + 1));
+      gy_[cell.index] = nonlinear_update(cell, gy_[cell.index], ex * ex);
     }
   }
 

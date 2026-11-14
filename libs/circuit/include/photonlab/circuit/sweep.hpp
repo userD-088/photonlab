@@ -22,4 +22,21 @@ std::vector<double> sweep_wavelengths(const SweepSettings& settings);
 std::vector<Solution> sweep(const CompiledCircuit& circuit, const SweepSettings& settings,
                             ThreadPool* pool = nullptr, JobControl* control = nullptr);
 
+// Rampe mit Ast-Verfolgung für nichtlineare Schaltungen: die Punkte werden der Reihe nach gerechnet, der
+// Zustand des vorigen Punktes ist Startwert des nächsten. Hin- und Rückweg getrennt aufrufen, um Hysterese zu
+// sehen (z. B. Wellenlängen aufsteigend und absteigend). Lineare Schaltungen liefern dasselbe wie sweep().
+struct RampResult {
+  std::vector<Solution> solutions;
+  std::vector<CircuitState> states;
+};
+// Wellenlängen-Rampe bei fester Quellstärke; state (optional) ist Start- und Endzustand.
+RampResult wavelength_ramp(const CompiledCircuit& circuit, const std::vector<double>& wavelengths,
+                           double source_scale = 1.0, CircuitState* state = nullptr,
+                           JobControl* control = nullptr);
+// Leistungsrampe bei fester Wellenlänge: source_scales skaliert die Amplituden aller Quellen (Leistung ~
+// Quadrat).
+RampResult power_ramp(const CompiledCircuit& circuit, double wavelength,
+                      const std::vector<double>& source_scales, CircuitState* state = nullptr,
+                      JobControl* control = nullptr);
+
 }  // namespace photonlab::circuit

@@ -19,6 +19,9 @@ struct Solution {
   double residual = 0.0;    // relatives Residuum des linearen Systems
 };
 
+// Innerer Zustand aller Bauteile (je Instanz ein Vektor, leer bei linearen Bauteilen).
+using CircuitState = std::vector<std::vector<double>>;
+
 struct InstanceMeasurement {
   std::string instance;
   Measurement measurement;
@@ -53,9 +56,21 @@ class CompiledCircuit {
   // Wirft CircuitError, wenn das System singulär ist (verlustfreie Schleife exakt in Resonanz).
   // source_scale skaliert die Amplituden aller Quellen-Bauteile (1 = Nennwert); damit lässt sich messen,
   // wie Ausgangspegel auf weniger Eingangslicht reagieren, ohne einzelne Bauteile zu kennen.
+  // Enthält die Schaltung nichtlineare Bauteile, wird vom Zustand null aus iteriert (unterster Ast).
   Solution solve(double wavelength, const CVector* a_ext = nullptr, double source_scale = 1.0) const;
 
+  // Nichtlineare Schaltungen: Fixpunkt-Iteration über die Zustände der Bauteile (lineares System lösen ->
+  // Zustände aus den einlaufenden Wellen neu bestimmen -> wiederholen). state ist Startwert und Ergebnis;
+  // leer = Zustand null. Für Rampen (Hysterese) den Zustand des vorigen Punktes weiterreichen. Wirft
+  // CircuitError, wenn die Iteration nicht konvergiert (starke Rückkopplung zwischen nichtlinearen
+  // Bauteilen).
+  Solution solve(double wavelength, CircuitState& state, const CVector* a_ext = nullptr,
+                 double source_scale = 1.0, int* iterations = nullptr) const;
+  bool nonlinear() const { return nonlinear_; }
+  CircuitState zero_state() const;
+
   std::vector<InstanceMeasurement> measurements(const Solution& solution) const;
+  std::vector<InstanceMeasurement> measurements(const Solution& solution, const CircuitState& state) const;
   PowerBalance power_balance(const Solution& solution, const CVector* a_ext = nullptr) const;
 
  private:
@@ -64,7 +79,11 @@ class CompiledCircuit {
     int first_port = 0;
     int port_count = 0;
   };
+  Solution solve_linear(double wavelength, const CVector* a_ext, double source_scale,
+                        const CircuitState* state) const;
+
   std::vector<std::shared_ptr<const Component>> components_;
+  bool nonlinear_ = false;
   std::vector<Slot> slots_;
   std::vector<std::string> port_labels_;
   std::vector<int> partner_;

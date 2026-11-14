@@ -130,10 +130,26 @@ Circuit reference_xor_directed() {
   return c;
 }
 
+// Phase 8: Silizium-Ring mit Kerr-Effekt, TPA und Erwärmung (Wärmewiderstand 5 K/mW als Größenordnung,
+// Annahme). Die Erwärmung dominiert: ein Sweep der Wellenlänge zeigt auf dem Hinweg das Thermik-Dreieck, auf
+// dem Rückweg den schmalen kalten Einbruch.
+Circuit reference_ring_kerr() {
+  Circuit c;
+  c.name = "Nichtlinearer Ring (Thermik, Kerr, TPA)";
+  c.add("laser", "laser", {{"power", 2e-3}}, 1, 3);
+  c.add("ring", "ring_kerr",
+        {{"radius", 10e-6}, {"power_coupling", 0.02}, {"loss_db_per_cm", 2.0}, {"thermal_resistance", 5e3}},
+        8, 3);
+  c.add("det", "detector", {}, 15, 3);
+  c.connect("laser.out", "ring.in");
+  c.connect("ring.out", "det.in");
+  return c;
+}
+
 std::vector<std::string> reference_design_names() {
   return {"mzi",          "mzi_unbalanced",   "ring_allpass",
           "ring_adddrop", "xor_interference", "and_interference",
-          "xor_directed"};
+          "xor_directed", "ring_kerr"};
 }
 
 Circuit reference_design(std::string_view name) {
@@ -144,6 +160,7 @@ Circuit reference_design(std::string_view name) {
   if (name == "xor_interference") return reference_xor_interference();
   if (name == "and_interference") return reference_and_interference();
   if (name == "xor_directed") return reference_xor_directed();
+  if (name == "ring_kerr") return reference_ring_kerr();
   throw CircuitError("Unbekanntes Referenz-Design '" + std::string(name) + "'");
 }
 
@@ -181,6 +198,14 @@ ReferenceSetup reference_setup(std::string_view name) {
     const double order = std::round(n_eff * length / lambda0);
     setup.wavelength = n_group * length / (order - length * (n_eff - n_group) / lambda0);
     setup.monte_carlo.variations = {{ring->type, "n_eff", 1e-4, false, false}};
+    if (ring->type == "ring_kerr") {
+      // Nichtlineare Sweeps laufen der Reihe nach (hin und zurück): schmaler Bereich um die Resonanz
+      const double resonance = setup.wavelength;
+      setup.sweep = {std::round((resonance - 0.3e-9) * 1e15) / 1e15,
+                     std::round((resonance + 0.9e-9) * 1e15) / 1e15, 601};
+      setup.wavelength = std::round((resonance + 0.2e-9) * 1e15) / 1e15;
+      setup.monte_carlo.variations.clear();  // Monte-Carlo rechnet ohne Ast-Verfolgung
+    }
   }
   return setup;
 }

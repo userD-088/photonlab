@@ -1,11 +1,13 @@
 // Eingebaute Bauteile. Phase 1: Wellenleiter, Richtkoppler, Phasenschieber, Laser, Detektor.
 // Phase 2: Ringresonatoren, Y-Splitter, Bandpassfilter, Gitterkoppler.
 // Gleichungen und Annahmen: docs/physics/circuit_solver.md und docs/physics/resonators.md
+#include <algorithm>
 #include <cmath>
 #include <vector>
 
 #include "photonlab/circuit/registry.hpp"
 #include "photonlab/core/units.hpp"
+#include "photonlab/materials/material.hpp"
 
 namespace photonlab::circuit {
 namespace {
@@ -288,6 +290,188 @@ std::unique_ptr<Component> make(const ParamMap& p) {
   return std::make_unique<T>(p);
 }
 
+// --- Phase 8: nichtlineare Bauteile (docs/physics/nonlinear.md) ---
+
+// Kleinste Nullstelle in der Nähe von previous: tastet g auf [0, upper] ab, verfeinert jede
+// Vorzeichenwechsel-Stelle per Bisektion und wählt die Lösung, die previous am nächsten liegt
+// (Ast-Verfolgung).
+template <class F>
+double nearest_root(const F& g, double upper, double previous, int samples = 4000) {
+  if (!(upper > 0.0)) return 0.0;
+  double best = 0.0, best_distance = 1e300;
+  bool found = false;
+  double x_prev = 0.0, g_prev = g(0.0);
+  if (g_prev == 0.0) return 0.0;
+  for (int i = 1; i <= samples; ++i) {
+    const double x = upper * i / samples;
+    const double gx = g(x);
+    if ((g_prev < 0.0) != (gx < 0.0)) {
+      double lo = x_prev, hi = x, glo = g_prev;
+      for (int k = 0; k < 80; ++k) {
+        const double mid = 0.5 * (lo + hi);
+        const double gm = g(mid);
+        if ((gm < 0.0) == (glo < 0.0))
+          lo = mid, glo = gm;
+        else
+          hi = mid;
+      }
+      const double root = 0.5 * (lo + hi);
+      if (std::abs(root - previous) < best_distance)
+        best_distance = std::abs(root - previous), best = root, found = true;
+    }
+    x_prev = x, g_prev = gx;
+  }
+  return found ? best : 0.0;
+}
+
+// All-Pass-Ring mit Kerr-Effekt, Zwei-Photonen-Absorption und thermo-optischer Verschiebung. Zustand:
+// umlaufende Leistung im Uhrzeigersinn (gespeist von "in") und dagegen (gespeist von "out"). Die
+// Gegenrichtung wirkt mit dem Faktor 2 (Kreuzphasenmodulation). Je Umlauf: H = tuning * H_lin * sqrt(1/(1 +
+// beta I L)) * exp(i (dphi_K + dphi_T)) mit I = (P_selbst + 2 P_gegen)/A_eff, dphi_K = k0 n2 I L, dphi_T = k0
+// (dn/dT) R_th P_abs L.
+class RingKerr final : public Component {
+ public:
+  explicit RingKerr(const ParamMap& p)
+      : path_(p),
+        length_(2.0 * constants::pi * p.at("radius")),
+        t_(std::sqrt(1.0 - p.at("power_coupling"))),
+        k2_(p.at("power_coupling")),
+        tuning_(expi(p.at("tuning_phase"))),
+        n2_(p.at("n2")),
+        area_(p.at("effective_area")),
+        beta_(p.at("beta_tpa")),
+        r_th_(p.at("thermal_resistance")),
+        dn_dt_(p.at("dn_dT")) {}
+
+  int port_count() const override { return 2; }
+  int state_size() const override { return 2; }
+
+  CMatrix s_matrix(double wavelength) const override { return s_matrix_at(wavelength, {0.0, 0.0}); }
+
+  CMatrix s_matrix_at(double wavelength, const std::vector<double>& state) const override {
+    const double absorbed = absorbed_power(wavelength, state[0], state[1]);
+    const cplx h_cw = round_trip(wavelength, state[0], state[1], absorbed);
+    const cplx h_ccw = round_trip(wavelength, state[1], state[0], absorbed);
+    CMatrix s = CMatrix::Zero(2, 2);
+    s(1, 0) = (t_ - h_cw) / (1.0 - t_ * h_cw);
+    s(0, 1) = (t_ - h_ccw) / (1.0 - t_ * h_ccw);
+    return s;
+  }
+
+  std::vector<double> settle_state(double wavelength, const CVector& a,
+                                   const std::vector<double>& previous) const override {
+    std::vector<double> state = previous;
+    const double feed[2] = {k2_ * std::norm(a(0)), k2_ * std::norm(a(1))};
+    const double h0 = std::abs(path_.transmission(wavelength, length_));
+    // Obergrenze: |1 - tH| >= 1 - t|H| >= 1 - t|H_lin|
+    for (int sweep = 0; sweep < 60; ++sweep) {
+      double change = 0.0;
+      for (int dir = 0; dir < 2; ++dir) {
+        const int other = 1 - dir;
+        const double upper = 1.2 * feed[dir] / std::pow(1.0 - t_ * h0, 2);
+        auto g = [&](double p) {
+          std::vector<double> trial = state;
+          trial[static_cast<std::size_t>(dir)] = p;
+          const double absorbed = absorbed_power(wavelength, trial[0], trial[1]);
+          const cplx h = round_trip(wavelength, p, state[static_cast<std::size_t>(other)], absorbed);
+          return p * std::norm(1.0 - t_ * h) - feed[dir];
+        };
+        const double next =
+            feed[dir] > 0.0 ? nearest_root(g, upper, state[static_cast<std::size_t>(dir)]) : 0.0;
+        change = std::max(change, std::abs(next - state[static_cast<std::size_t>(dir)]) /
+                                      std::max({next, state[static_cast<std::size_t>(dir)], 1e-300}));
+        state[static_cast<std::size_t>(dir)] = next;
+      }
+      if (change < 1e-12) break;
+    }
+    return state;
+  }
+
+  std::vector<Measurement> measure_at(const CVector& /*a*/, const CVector& /*b*/,
+                                      const std::vector<double>& state) const override {
+    if (state.size() < 2) return {};
+    const double wavelength = path_.wavelength_ref;
+    // Einheit mit Zusatz: Spektrum und Kennlinie zeigen nur Messgrößen in "W" (Detektoren), nicht die
+    // Umlaufleistung
+    return {{"Umlaufleistung", state[0], "W (umlaufend)"},
+            {"Temperaturerhöhung", r_th_ * absorbed_power(wavelength, state[0], state[1]), "K"},
+            {"Kerr-Phase",
+             2.0 * constants::pi / wavelength * n2_ * (state[0] + 2.0 * state[1]) / area_ * length_, "rad"}};
+  }
+
+ private:
+  // Umlauf für eine Richtung: p_self läuft in dieser Richtung, p_other entgegen
+  cplx round_trip(double wavelength, double p_self, double p_other, double absorbed) const {
+    const double k0 = 2.0 * constants::pi / wavelength;
+    const double intensity = (p_self + 2.0 * p_other) / area_;
+    const double kerr_phase = k0 * n2_ * intensity * length_;
+    const double thermal_phase = k0 * dn_dt_ * r_th_ * absorbed * length_;
+    const double tpa = 1.0 / std::sqrt(1.0 + beta_ * intensity * length_);
+    return tuning_ * path_.transmission(wavelength, length_) * tpa * expi(kerr_phase + thermal_phase);
+  }
+  // Im Ring absorbierte Leistung (linearer Verlust und TPA beider Richtungen)
+  double absorbed_power(double wavelength, double p_cw, double p_ccw) const {
+    const double h0 = std::norm(path_.transmission(wavelength, length_));
+    auto lost = [&](double p_self, double p_other) {
+      const double intensity = (p_self + 2.0 * p_other) / area_;
+      return p_self * (1.0 - h0 / (1.0 + beta_ * intensity * length_));
+    };
+    return lost(p_cw, p_ccw) + lost(p_ccw, p_cw);
+  }
+
+  GuidedPath path_;
+  double length_, t_, k2_;
+  cplx tuning_;
+  double n2_, area_, beta_, r_th_, dn_dt_;
+};
+
+// Halbleiter-Verstärker (SOA) mit Sättigung der Verstärkung. Stationäres Modell (Saleh 1989; Agrawal,
+// Fiber-Optic Communication Systems, Kap. 7): G = G0 * exp(-(G - 1) P_in / P_sat), P_in = Summe beider
+// Richtungen. Phasenänderung über den Henry-Faktor: phi = -(alpha/2) ln(G/G0). Ohne Rauschen (ASE) und ohne
+// Dynamik.
+class Soa final : public Component {
+ public:
+  explicit Soa(const ParamMap& p)
+      : g0_(std::pow(10.0, p.at("gain_db") / 10.0)),
+        p_sat_(p.at("saturation_power")),
+        alpha_(p.at("alpha_h")) {}
+
+  int port_count() const override { return 2; }
+  int state_size() const override { return 1; }
+
+  CMatrix s_matrix(double wavelength) const override { return s_matrix_at(wavelength, {g0_}); }
+
+  CMatrix s_matrix_at(double /*wavelength*/, const std::vector<double>& state) const override {
+    const double g = state[0] > 0.0 ? state[0] : g0_;
+    return two_port(std::sqrt(g) * expi(-0.5 * alpha_ * std::log(g / g0_)));
+  }
+
+  std::vector<double> settle_state(double /*wavelength*/, const CVector& a,
+                                   const std::vector<double>& /*previous*/) const override {
+    return {saturated_gain(std::norm(a(0)) + std::norm(a(1)))};
+  }
+
+  std::vector<Measurement> measure_at(const CVector& /*a*/, const CVector& /*b*/,
+                                      const std::vector<double>& state) const override {
+    const double g = !state.empty() && state[0] > 0.0 ? state[0] : g0_;
+    return {{"Verstärkung", 10.0 * std::log10(g), "dB"}};
+  }
+
+  // Eindeutige Lösung (linke Seite steigt, rechte fällt in G): Bisektion
+  double saturated_gain(double p_in) const {
+    if (!(p_in > 0.0)) return g0_;
+    double lo = 1e-12, hi = std::max(g0_, 1.0);
+    for (int k = 0; k < 200; ++k) {
+      const double mid = 0.5 * (lo + hi);
+      (mid - g0_ * std::exp(-(mid - 1.0) * p_in / p_sat_) < 0.0 ? lo : hi) = mid;
+    }
+    return 0.5 * (lo + hi);
+  }
+
+ private:
+  double g0_, p_sat_, alpha_;
+};
+
 }  // namespace
 
 // Anzeigetexte bleiben im Latin-1-Zeichenvorrat (kein Griechisch), damit jede Schrift der Oberfläche sie
@@ -385,6 +569,42 @@ void register_builtin_components(ComponentRegistry& registry) {
     type.left_port_count = 2;
     registry.add(std::move(type));
   }
+
+  // --- Phase 8: nichtlineare Bauteile ---
+  {
+    // Silizium bei 1550 nm: n2 und beta_TPA nach Bristow, Rotter, Bachman, APL 90, 191104 (2007); dn/dT aus
+    // der Materialbibliothek. A_eff ~ 0,1 µm² ist die Größenordnung für Si-Streifen 500 x 220 nm (Annahme).
+    // Der Wärmewiderstand hängt vom Aufbau ab (Größenordnung 1e3 bis 1e4 K/W für Si-Mikroringe); 0 = ohne
+    // Thermik.
+    std::vector<ParamSpec> params = {{"radius", "Radius", 10e-6, 1e-6, 1e-2, "µm", 1e-6},
+                                     {"power_coupling", "Kopplung (Leistung)", 0.02, 0.0, 1.0, "", 1.0}};
+    params.push_back(tuning);
+    params.insert(params.end(), guided.begin(), guided.end());
+    params.push_back({"n2", "Kerr-Koeffizient n2", 4.5e-18, -1e-15, 1e-15, "1e-18 m²/W", 1e-18});
+    params.push_back({"effective_area", "Modenfläche", 0.1e-12, 1e-15, 1e-9, "µm²", 1e-12});
+    params.push_back({"beta_tpa", "TPA-Koeffizient", 8.0e-12, 0.0, 1e-8, "cm/GW", 1e-11});
+    params.push_back({"thermal_resistance", "Wärmewiderstand", 0.0, 0.0, 1e7, "K/mW", 1e3});
+    params.push_back({"dn_dT", "Thermo-optischer Koeffizient", materials::get("Si").thermo_optic, -1e-3, 1e-3,
+                      "1e-4/K", 1e-4});
+    registry.add(
+        {"ring_kerr",
+         "Ring (nichtlinear)",
+         "All-Pass-Ring mit Kerr-Effekt, Zwei-Photonen-Absorption und Erwärmung (stationär); die "
+         "umlaufende Leistung wird selbstkonsistent bestimmt, eine Rampe folgt einem Ast (Hysterese).",
+         {"in", "out"},
+         params,
+         make<RingKerr>});
+  }
+  // SOA: 20 dB Kleinsignal-Verstärkung und 10 mW Sättigungsleistung als Größenordnung (Agrawal, Fiber-Optic
+  // Communication Systems, Kap. 7); Henry-Faktor 0 = ohne Phasenkopplung (typisch 3 bis 6).
+  registry.add({"soa",
+                "Halbleiterverstärker (SOA)",
+                "Verstärkung mit Sättigung G = G0 exp(-(G-1) P/P_sat), stationär, ohne Rauschen und Dynamik.",
+                {"in", "out"},
+                {{"gain_db", "Kleinsignal-Verstärkung", 20.0, -10.0, 40.0, "dB", 1.0},
+                 {"saturation_power", "Sättigungsleistung", 10e-3, 1e-6, 1.0, "mW", 1e-3},
+                 {"alpha_h", "Henry-Faktor", 0.0, -10.0, 20.0, "", 1.0}},
+                make<Soa>});
 
   registry.add({"y_splitter",
                 "Y-Splitter",

@@ -69,7 +69,8 @@ TEST_CASE("Projekt: Beispieldateien entsprechen den Referenz-Designs") {
         std::pair{"07_phc_w1_fdtd.plab.json", "field_phc_w1"},
         std::pair{"07b_phc_knick_fdtd.plab.json", "field_phc_bend"},
         std::pair{"07c_phc_y_oder_und_fdtd.plab.json", "field_phc_y"},
-        std::pair{"07d_phc_y_xor_fdtd.plab.json", "field_phc_y_xor"}}) {
+        std::pair{"07d_phc_y_xor_fdtd.plab.json", "field_phc_y_xor"},
+        std::pair{"08_ring_nichtlinear.plab.json", "ring_kerr"}}) {
     CHECK(io::project_to_json(io::load_project(dir / file)) ==
           io::project_to_json(io::reference_project(name)));
   }

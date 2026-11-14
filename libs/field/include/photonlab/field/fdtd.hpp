@@ -114,8 +114,14 @@ class Fdtd {
     double eps_fc;    // d(eps)/dN [m^3]
     double d;         // D/eps0 [V/m]
     double n;         // Ladungsträgerdichte [m^-3]
+    double e_old;     // Feld vor dem Schritt [V/m]
   };
-  std::vector<KerrCell> kerr_cells_;
+  std::vector<KerrCell> kerr_cells_;      // Ez (Skalarfeld)
+  std::vector<KerrCell> kerr_x_cells_;    // Hz-Polarisation: Ex
+  std::vector<KerrCell> kerr_y_cells_;    // Hz-Polarisation: Ey
+  // Nichtlinearer Schritt einer Zelle: e_lin = Ergebnis des linearen Yee-Schritts, other_sq = Quadrat der
+  // anderen Komponente in der Ebene (Hz-Polarisation; Ez: 0). Rückgabe: neues E.
+  double nonlinear_update(KerrCell& cell, double e_lin, double other_sq) const;
   double source_scale_ = 1.0;
   double hbar_omega_ = 1.28e-19;   // Photonenenergie der ersten Quelle [J] (für die Paarerzeugung)
   std::vector<double> cf_;         // Update-Koeffizient des Skalarfeldes (Ez: dt/(eps0*eps_r), Hz: dt/mu0)

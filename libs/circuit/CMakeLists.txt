@@ -11,5 +11,5 @@ add_library(photonlab_circuit
   src/sweep.cpp)
 add_library(photonlab::circuit ALIAS photonlab_circuit)
 target_include_directories(photonlab_circuit PUBLIC include)
-target_link_libraries(photonlab_circuit PUBLIC photonlab::core Eigen3::Eigen)
+target_link_libraries(photonlab_circuit PUBLIC photonlab::core photonlab::materials Eigen3::Eigen)
 photonlab_warnings(photonlab_circuit)

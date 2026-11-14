@@ -52,7 +52,8 @@ void print_usage() {
       "  photonlab_cli example <name>                 Referenz-Design als .plab.json ausgeben (mzi, "
       "mzi_unbalanced,\n"
       "                                               ring_allpass, ring_adddrop, xor_interference,\n"
-      "                                               and_interference, xor_directed, field_waveguide,\n"
+      "                                               and_interference, xor_directed, ring_kerr, "
+      "field_waveguide,\n"
       "                                               field_interface, field_interference, field_ring,\n"
       "                                               field_gap, field_gap_pair, field_coupler, "
       "field_phc_w1,\n"
@@ -133,8 +134,27 @@ int cmd_run(const std::string& file, bool do_sweep, const std::string& csv_path)
     return 0;
   }
 
-  ThreadPool pool;
-  const std::vector<circuit::Solution> solutions = circuit::sweep(compiled, project.sweep, &pool);
+  // Nichtlineare Schaltungen: Rampe hin und zurück mit Ast-Verfolgung (Spalte "richtung"), sonst paralleler
+  // Sweep
+  std::vector<circuit::Solution> solutions;
+  std::vector<circuit::CircuitState> states;
+  std::vector<const char*> direction;
+  if (compiled.nonlinear()) {
+    const std::vector<double> forward = circuit::sweep_wavelengths(project.sweep);
+    const std::vector<double> backward(forward.rbegin(), forward.rend());
+    for (const auto& [w, label] : {std::pair{&forward, "hin"}, std::pair{&backward, "zurueck"}}) {
+      circuit::RampResult r = circuit::wavelength_ramp(compiled, *w);
+      for (std::size_t i = 0; i < r.solutions.size(); ++i) {
+        solutions.push_back(std::move(r.solutions[i]));
+        states.push_back(std::move(r.states[i]));
+        direction.push_back(label);
+      }
+    }
+    std::fprintf(stderr, "Nichtlineare Schaltung: Wellenlängen-Rampe hin und zurück (Hysterese)\n");
+  } else {
+    ThreadPool pool;
+    solutions = circuit::sweep(compiled, project.sweep, &pool);
+  }
   std::FILE* out = stdout;
   if (!csv_path.empty()) {
     out = std::fopen(csv_path.c_str(), "w");
@@ -144,16 +164,19 @@ int cmd_run(const std::string& file, bool do_sweep, const std::string& csv_path)
     }
   }
   bool header_written = false;
-  for (const auto& solution : solutions) {
-    const auto measurements = compiled.measurements(solution);
+  for (std::size_t i = 0; i < solutions.size(); ++i) {
+    const auto& solution = solutions[i];
+    const auto measurements =
+        states.empty() ? compiled.measurements(solution) : compiled.measurements(solution, states[i]);
     if (!header_written) {
-      std::fprintf(out, "wavelength_m");
+      std::fprintf(out, "%swavelength_m", states.empty() ? "" : "richtung,");
       for (const auto& m : measurements)
         std::fprintf(out, ",%s.%s_%s", m.instance.c_str(), m.measurement.name.c_str(),
                      m.measurement.unit.c_str());
       std::fprintf(out, "\n");
       header_written = true;
     }
+    if (!states.empty()) std::fprintf(out, "%s,", direction[i]);
     std::fprintf(out, "%.12e", solution.wavelength);
     for (const auto& m : measurements) std::fprintf(out, ",%.12e", m.measurement.value);
     std::fprintf(out, "\n");

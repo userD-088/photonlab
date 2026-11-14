@@ -28,4 +28,37 @@ std::vector<Solution> sweep(const CompiledCircuit& circuit, const SweepSettings&
   return solutions;
 }
 
+namespace {
+template <class Point>
+RampResult ramp(const CompiledCircuit& circuit, std::size_t count, const Point& point, CircuitState* state,
+                JobControl* control) {
+  RampResult result;
+  CircuitState local = state ? *state : circuit.zero_state();
+  for (std::size_t i = 0; i < count; ++i) {
+    if (control && control->cancel_requested) return {};
+    result.solutions.push_back(point(i, local));
+    result.states.push_back(local);
+    if (control) control->progress = static_cast<float>(i + 1) / static_cast<float>(count);
+  }
+  if (state) *state = local;
+  return result;
+}
+}  // namespace
+
+RampResult wavelength_ramp(const CompiledCircuit& circuit, const std::vector<double>& wavelengths,
+                           double source_scale, CircuitState* state, JobControl* control) {
+  return ramp(
+      circuit, wavelengths.size(),
+      [&](std::size_t i, CircuitState& s) { return circuit.solve(wavelengths[i], s, nullptr, source_scale); },
+      state, control);
+}
+
+RampResult power_ramp(const CompiledCircuit& circuit, double wavelength,
+                      const std::vector<double>& source_scales, CircuitState* state, JobControl* control) {
+  return ramp(
+      circuit, source_scales.size(),
+      [&](std::size_t i, CircuitState& s) { return circuit.solve(wavelength, s, nullptr, source_scales[i]); },
+      state, control);
+}
+
 }  // namespace photonlab::circuit

@@ -50,6 +50,22 @@ class Component {
 
   // Messwerte aus einlaufenden (a) und auslaufenden (b) Wellen an den eigenen Ports. Standard: keine.
   virtual std::vector<Measurement> measure(const CVector& a, const CVector& b) const;
+
+  // --- Nichtlineare Bauteile (Phase 8, docs/physics/nonlinear.md) ---
+  // Ein innerer Zustand (z. B. umlaufende Leistung im Ring, Verstärkung eines SOA) bestimmt die S-Matrix.
+  // Der Löser sucht den Zustand, der zu den einlaufenden Wellen passt (Fixpunkt), und reicht den vorigen
+  // Zustand als Startwert weiter: so folgt eine Rampe einem Ast der Lösung (Hysterese). Größe des Zustands; 0
+  // = linear (Standard).
+  virtual int state_size() const { return 0; }
+  // S-Matrix bei gegebenem Zustand. Standard: s_matrix(wavelength).
+  virtual CMatrix s_matrix_at(double wavelength, const std::vector<double>& state) const;
+  // Zustand im Gleichgewicht zu den einlaufenden Wellen a. Gibt es mehrere, wird der dem vorigen Zustand
+  // nächste gewählt. Standard: previous.
+  virtual std::vector<double> settle_state(double wavelength, const CVector& a,
+                                           const std::vector<double>& previous) const;
+  // Messwerte mit Zustand. Standard: measure(a, b).
+  virtual std::vector<Measurement> measure_at(const CVector& a, const CVector& b,
+                                              const std::vector<double>& state) const;
 };
 
 }  // namespace photonlab::circuit

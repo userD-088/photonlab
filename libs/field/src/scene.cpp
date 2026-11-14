@@ -55,9 +55,11 @@ void validate(const FieldScene& scene) {
     throw FieldError("Die Szene hat kein Rechengebiet (Breite und Höhe müssen positiv sein)");
   if (!(scene.cell_size > 0.0)) throw FieldError("Die Zellgröße muss positiv sein");
   for (const auto& shape : scene.shapes) {
-    if (shape.n2 != 0.0 && scene.polarization == Polarization::hz)
-      throw FieldError("Kerr-Effekt (n2) ist nur in der Ez-Polarisation implementiert (Form '" + shape.name +
-                       "')");
+    if (shape.beta_tpa < 0.0 || shape.carrier_lifetime < 0.0)
+      throw FieldError("TPA-Koeffizient und Ladungsträger-Lebensdauer dürfen nicht negativ sein (Form '" +
+                       shape.name + "')");
+    if (shape.carrier_lifetime > 0.0 && shape.beta_tpa == 0.0)
+      throw FieldError("Ladungsträger entstehen aus TPA: beta_tpa muss > 0 sein (Form '" + shape.name + "')");
   }
   const double nx = scene.width / scene.cell_size, ny = scene.height / scene.cell_size;
   if (nx < 8 || ny < 8) throw FieldError("Das Rechengebiet braucht mindestens 8 x 8 Zellen");
