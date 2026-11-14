@@ -23,8 +23,9 @@ add_executable(photonlab_tests
   test_photonic_crystal.cpp
   test_phc_field.cpp
   test_pwe.cpp
+  test_quantum.cpp
   test_sparameters.cpp)
-target_link_libraries(photonlab_tests PRIVATE photonlab::core photonlab::circuit photonlab::logic photonlab::field photonlab::modes photonlab::pwe photonlab::signal photonlab::io doctest::doctest)
+target_link_libraries(photonlab_tests PRIVATE photonlab::core photonlab::circuit photonlab::logic photonlab::field photonlab::modes photonlab::pwe photonlab::signal photonlab::quantum photonlab::io doctest::doctest)
 target_compile_definitions(photonlab_tests PRIVATE
   PHOTONLAB_EXAMPLES_DIR="${PROJECT_SOURCE_DIR}/examples")
 photonlab_warnings(photonlab_tests)
