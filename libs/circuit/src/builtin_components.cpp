@@ -514,7 +514,11 @@ PnSection pn_section(const ParamMap& p) {
 class PnPhaseShifter final : public Component {
  public:
   explicit PnPhaseShifter(const ParamMap& p)
-      : path_(p), pn_(pn_section(p)), length_(p.at("length")), voltage_(p.at("voltage")), r_s_(p.at("series_resistance")) {}
+      : path_(p),
+        pn_(pn_section(p)),
+        length_(p.at("length")),
+        voltage_(p.at("voltage")),
+        r_s_(p.at("series_resistance")) {}
   int port_count() const override { return 2; }
   CMatrix s_matrix(double wavelength) const override {
     const double phase = 2.0 * constants::pi / wavelength * pn_.index_change(voltage_) * length_;
@@ -523,7 +527,8 @@ class PnPhaseShifter final : public Component {
   }
   std::vector<Measurement> measure(const CVector& /*a*/, const CVector& /*b*/) const override {
     const double c = pn_.capacitance_per_length(voltage_) * length_;
-    const double dphi = 2.0 * constants::pi / path_.wavelength_ref * (pn_.index_change(voltage_) - pn_.index_change(0.0)) * length_;
+    const double dphi = 2.0 * constants::pi / path_.wavelength_ref *
+                        (pn_.index_change(voltage_) - pn_.index_change(0.0)) * length_;
     return {{"Phasenänderung gegen 0 V", dphi, "rad"},
             {"Kapazität", c, "F"},
             {"Grenzfrequenz (RC)", 1.0 / (2.0 * constants::pi * r_s_ * c), "Hz"},
@@ -564,8 +569,9 @@ class RingPn final : public Component {
   double coverage_, voltage_;
 };
 
-// Photodiode mit Rauschen: Photostrom I = R P + I_dunkel; Schrotrauschen 2 q I B, thermisches Rauschen 4 k T B / R_L
-// (Last- bzw. Verstärkerwiderstand) in der Bandbreite B; Signal-Rausch-Verhältnis (R P)^2 / (Summe der Varianzen).
+// Photodiode mit Rauschen: Photostrom I = R P + I_dunkel; Schrotrauschen 2 q I B, thermisches Rauschen 4 k T
+// B / R_L (Last- bzw. Verstärkerwiderstand) in der Bandbreite B; Signal-Rausch-Verhältnis (R P)^2 / (Summe
+// der Varianzen).
 class Photodiode final : public Component {
  public:
   explicit Photodiode(const ParamMap& p)
@@ -693,8 +699,8 @@ void register_builtin_components(ComponentRegistry& registry) {
 
   // --- Phase 9: aktive Bauteile ---
   {
-    // Heizer: Länge 61,6 µm und R_th so, dass P_pi = 24,8 mW wie gemessen bei Harris u. a., Opt. Express 22, 10487
-    // (2014) (Si-Heizer ohne Unterätzung); P_pi = lambda / (2 L dn/dT R_th).
+    // Heizer: Länge 61,6 µm und R_th so, dass P_pi = 24,8 mW wie gemessen bei Harris u. a., Opt. Express 22,
+    // 10487 (2014) (Si-Heizer ohne Unterätzung); P_pi = lambda / (2 L dn/dT R_th).
     const double dn_dT = materials::get("Si").thermo_optic;
     const double r_th = 1550e-9 / (2.0 * 61.6e-6 * dn_dT * 24.77e-3);
     std::vector<ParamSpec> params = {
@@ -703,13 +709,17 @@ void register_builtin_components(ComponentRegistry& registry) {
         {"thermal_resistance", "Wärmewiderstand", r_th, 1.0, 1e7, "K/mW", 1e3},
         {"dn_dT", "Thermo-optischer Koeffizient", dn_dT, -1e-3, 1e-3, "1e-4/K", 1e-4}};
     params.insert(params.end(), guided.begin(), guided.end());
-    registry.add({"heater", "Heizer-Phasenschieber",
+    registry.add({"heater",
+                  "Heizer-Phasenschieber",
                   "Wellenleiter mit Heizer: Phase 2 pi/lambda dn/dT R_th P L; stationär (keine thermische "
                   "Zeitkonstante), gleichmäßige Erwärmung, kein Übersprechen.",
-                  {"in", "out"}, params, make<Heater>});
+                  {"in", "out"},
+                  params,
+                  make<Heater>});
   }
   // PN-Übergang: Dotierung 5e17 cm^-3 auf beiden Seiten, Gamma = 0,8, 500 x 220 nm (übliche Werte für
-  // Verarmungs-Modulatoren, z. B. Reed u. a., Nature Photonics 4, 518 (2010)); Serienwiderstand 50 Ohm (Treiber).
+  // Verarmungs-Modulatoren, z. B. Reed u. a., Nature Photonics 4, 518 (2010)); Serienwiderstand 50 Ohm
+  // (Treiber).
   const std::vector<ParamSpec> pn_params = {
       {"voltage", "Sperrspannung", 0.0, -0.5, 20.0, "V", 1.0},
       {"acceptors", "Dotierung p (N_A)", 5e23, 1e21, 1e26, "1e17/cm³", 1e23},
@@ -722,10 +732,14 @@ void register_builtin_components(ComponentRegistry& registry) {
     params.insert(params.end(), pn_params.begin(), pn_params.end());
     params.push_back({"series_resistance", "Serienwiderstand", 50.0, 0.1, 1e6, "Ohm", 1.0});
     params.insert(params.end(), guided.begin(), guided.end());
-    registry.add({"pn_phase_shifter", "PN-Phasenschieber",
-                  "Verarmungs-Phasenschieber: Phase und Restverlust aus Soref-Bennett und Verarmungszone eines "
-                  "abrupten PN-Übergangs (vereinfachter Überlapp), RC-Grenzfrequenz aus der Sperrschichtkapazität.",
-                  {"in", "out"}, params, make<PnPhaseShifter>});
+    registry.add(
+        {"pn_phase_shifter",
+         "PN-Phasenschieber",
+         "Verarmungs-Phasenschieber: Phase und Restverlust aus Soref-Bennett und Verarmungszone eines "
+         "abrupten PN-Übergangs (vereinfachter Überlapp), RC-Grenzfrequenz aus der Sperrschichtkapazität.",
+         {"in", "out"},
+         params,
+         make<PnPhaseShifter>});
   }
   {
     std::vector<ParamSpec> params = {{"radius", "Radius", 10e-6, 1e-6, 1e-2, "µm", 1e-6},
@@ -734,22 +748,28 @@ void register_builtin_components(ComponentRegistry& registry) {
     params.push_back(tuning);
     params.insert(params.end(), pn_params.begin(), pn_params.end());
     params.insert(params.end(), guided.begin(), guided.end());
-    registry.add({"ring_pn", "Ring-Modulator (PN)",
+    registry.add({"ring_pn",
+                  "Ring-Modulator (PN)",
                   "All-Pass-Ring mit PN-Übergang auf einem Teil des Umfangs; stationär (Zeitverhalten im "
                   "Zeitbereich/Augendiagramm).",
-                  {"in", "out"}, params, make<RingPn>});
+                  {"in", "out"},
+                  params,
+                  make<RingPn>});
   }
   // Ge-Photodiode: 1 A/W bei 1550 nm, Dunkelstrom 10 nA, Bandbreite 30 GHz als Größenordnung für Ge-auf-Si
-  // (Chrostowski/Hochberg, Silicon Photonics Design, Kap. 7); Last 50 Ohm bei 300 K für das thermische Rauschen.
-  registry.add({"photodiode", "Photodiode (Ge, mit Rauschen)",
-                "I = R P + I_dunkel; Schrot- und thermisches Rauschen in der Bandbreite B, Signal-Rausch-Verhältnis.",
-                {"in"},
-                {{"responsivity", "Responsivität", 1.0, 0.0, 10.0, "A/W", 1.0},
-                 {"dark_current", "Dunkelstrom", 10e-9, 0.0, 1e-3, "nA", 1e-9},
-                 {"bandwidth", "Bandbreite", 30e9, 1e3, 1e12, "GHz", 1e9},
-                 {"load_resistance", "Lastwiderstand", 50.0, 1.0, 1e9, "Ohm", 1.0},
-                 {"temperature", "Temperatur", 300.0, 1.0, 1000.0, "K", 1.0}},
-                make<Photodiode>});
+  // (Chrostowski/Hochberg, Silicon Photonics Design, Kap. 7); Last 50 Ohm bei 300 K für das thermische
+  // Rauschen.
+  registry.add(
+      {"photodiode",
+       "Photodiode (Ge, mit Rauschen)",
+       "I = R P + I_dunkel; Schrot- und thermisches Rauschen in der Bandbreite B, Signal-Rausch-Verhältnis.",
+       {"in"},
+       {{"responsivity", "Responsivität", 1.0, 0.0, 10.0, "A/W", 1.0},
+        {"dark_current", "Dunkelstrom", 10e-9, 0.0, 1e-3, "nA", 1e-9},
+        {"bandwidth", "Bandbreite", 30e9, 1e3, 1e12, "GHz", 1e9},
+        {"load_resistance", "Lastwiderstand", 50.0, 1.0, 1e9, "Ohm", 1.0},
+        {"temperature", "Temperatur", 300.0, 1.0, 1000.0, "K", 1.0}},
+       make<Photodiode>});
 
   // --- Phase 8: nichtlineare Bauteile ---
   {

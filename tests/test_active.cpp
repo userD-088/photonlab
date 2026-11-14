@@ -1,4 +1,5 @@
-// Phase 9: aktive Bauteile (Heizer, PN-Phasenschieber, Ring-Modulator, Photodiode) gegen Formeln und Literatur.
+// Phase 9: aktive Bauteile (Heizer, PN-Phasenschieber, Ring-Modulator, Photodiode) gegen Formeln und
+// Literatur.
 #include <doctest/doctest.h>
 
 #include <cmath>
@@ -23,8 +24,10 @@ TEST_CASE("Soref-Bennett: Brechzahl- und Absorptionsänderung bei 1e18 cm^-3") {
   using materials::plasma_absorption;
   using materials::plasma_index_change;
   CHECK(plasma_index_change(1e24, 0.0) == doctest::Approx(-8.8e-4).epsilon(1e-12).scale(0.0));
-  CHECK(plasma_index_change(0.0, 1e24) == doctest::Approx(-8.5e-18 * std::pow(1e18, 0.8)).epsilon(1e-12).scale(0.0));
-  CHECK(plasma_index_change(0.0, -1e24) == doctest::Approx(8.5e-18 * std::pow(1e18, 0.8)).epsilon(1e-12).scale(0.0));
+  CHECK(plasma_index_change(0.0, 1e24) ==
+        doctest::Approx(-8.5e-18 * std::pow(1e18, 0.8)).epsilon(1e-12).scale(0.0));
+  CHECK(plasma_index_change(0.0, -1e24) ==
+        doctest::Approx(8.5e-18 * std::pow(1e18, 0.8)).epsilon(1e-12).scale(0.0));
   CHECK(plasma_absorption(1e24, 0.0) == doctest::Approx(8.5 * 100.0).epsilon(1e-12).scale(0.0));  // 8,5 /cm
   CHECK(plasma_absorption(0.0, 1e24) == doctest::Approx(6.0 * 100.0).epsilon(1e-12).scale(0.0));
 }
@@ -41,19 +44,26 @@ TEST_CASE("PN-Übergang: Diffusionsspannung, Verarmungszone und Kapazität nach 
   CHECK(pn.capacitance_per_area(2.0) == doctest::Approx(eps / w).epsilon(1e-12).scale(0.0));
   // w ~ sqrt(V_bi + V): bei 4 V etwa 2,3-mal so breit wie bei 0 V
   CHECK(pn.depletion_width(4.0) / pn.depletion_width(0.0) ==
-        doctest::Approx(std::sqrt((pn.built_in_voltage() + 4.0) / pn.built_in_voltage())).epsilon(1e-12).scale(0.0));
+        doctest::Approx(std::sqrt((pn.built_in_voltage() + 4.0) / pn.built_in_voltage()))
+            .epsilon(1e-12)
+            .scale(0.0));
 }
 
 TEST_CASE("PN-Phasenschieber: V_pi*L im Bereich gemessener Verarmungs-Modulatoren (1 bis 4 V cm)") {
-  const auto shifter = [&](double v) { return reg().create("pn_phase_shifter", {{"voltage", v}, {"length", 2e-3}}); };
+  const auto shifter = [&](double v) {
+    return reg().create("pn_phase_shifter", {{"voltage", v}, {"length", 2e-3}});
+  };
   const double phi0 = phase_of(*shifter(0.0), lambda0);
   auto dphi = [&](double v) { return std::abs(wrap(phase_of(*shifter(v), lambda0) - phi0)); };
   // Phase steigt mit der Sperrspannung (Verarmung erhöht n); V_pi über die Formel aus PnSection
   PnSection pn;
-  auto shift = [&](double v) { return 2.0 * constants::pi / lambda0 * (pn.index_change(v) - pn.index_change(0.0)) * 2e-3; };
+  auto shift = [&](double v) {
+    return 2.0 * constants::pi / lambda0 * (pn.index_change(v) - pn.index_change(0.0)) * 2e-3;
+  };
   for (const double v : {0.5, 1.0, 2.0}) CHECK(dphi(v) == doctest::Approx(shift(v)).epsilon(1e-9).scale(0.0));
   // V_pi * L: Spannung, bei der ein Phasenschieber der Länge L gerade pi erreicht; L so, dass V_pi = 4 V
-  const double per_length = (pn.index_change(4.0) - pn.index_change(0.0)) * 2.0 * constants::pi / lambda0;  // rad/m
+  const double per_length =
+      (pn.index_change(4.0) - pn.index_change(0.0)) * 2.0 * constants::pi / lambda0;  // rad/m
   const double l_pi = constants::pi / per_length;
   const double vpil_vcm = 4.0 * l_pi * 100.0;
   MESSAGE("V_pi L = " << vpil_vcm << " V cm (bei 4 V), L_pi = " << l_pi * 1e3 << " mm");
@@ -63,7 +73,8 @@ TEST_CASE("PN-Phasenschieber: V_pi*L im Bereich gemessener Verarmungs-Modulatore
   const auto m = shifter(2.0)->measure(CVector::Zero(2), CVector::Zero(2));
   CHECK(m[1].name == "Kapazität");
   CHECK(m[1].value == doctest::Approx(pn.capacitance_per_length(2.0) * 2e-3).epsilon(1e-12).scale(0.0));
-  CHECK(m[2].value == doctest::Approx(1.0 / (2.0 * constants::pi * 50.0 * m[1].value)).epsilon(1e-12).scale(0.0));
+  CHECK(m[2].value ==
+        doctest::Approx(1.0 / (2.0 * constants::pi * 50.0 * m[1].value)).epsilon(1e-12).scale(0.0));
   // Verarmung senkt den Verlust
   CHECK(pn.absorption(4.0) < pn.absorption(0.0));
 }
@@ -71,7 +82,8 @@ TEST_CASE("PN-Phasenschieber: V_pi*L im Bereich gemessener Verarmungs-Modulatore
 TEST_CASE("Heizer: P_pi = 24,8 mW für 61,6 µm (Harris 2014) und lineare Phase") {
   const auto heater = [&](double p) { return reg().create("heater", {{"power_el", p}}); };
   const double phi0 = phase_of(*heater(0.0), lambda0);
-  CHECK(std::abs(wrap(phase_of(*heater(24.77e-3), lambda0) - phi0)) == doctest::Approx(constants::pi).epsilon(1e-6).scale(0.0));
+  CHECK(std::abs(wrap(phase_of(*heater(24.77e-3), lambda0) - phi0)) ==
+        doctest::Approx(constants::pi).epsilon(1e-6).scale(0.0));
   CHECK(std::abs(wrap(phase_of(*heater(10e-3), lambda0) - phi0)) ==
         doctest::Approx(constants::pi * 10.0 / 24.77).epsilon(1e-6).scale(0.0));
   // Temperaturerhöhung bei P_pi: lambda/(2 L dn/dT) = 1550 nm / (2 * 61,6 µm * 1,8e-4) ~ 70 K

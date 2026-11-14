@@ -7,7 +7,7 @@
 namespace photonlab::circuit {
 
 double PnSection::index_change(double reverse_voltage) const {
-  const double dn_e = materials::plasma_index_change(-junction.donors, 0.0);     // Elektronen entfernt: n steigt
+  const double dn_e = materials::plasma_index_change(-junction.donors, 0.0);  // Elektronen entfernt: n steigt
   const double dn_h = materials::plasma_index_change(0.0, -junction.acceptors);  // Löcher entfernt
   const double wn = std::min(junction.width_n(reverse_voltage), 0.5 * width);
   const double wp = std::min(junction.width_p(reverse_voltage), 0.5 * width);
