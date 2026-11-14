@@ -12,9 +12,9 @@ Realistischer Photonik-Simulator in C++20 mit SDL3: vom elektromagnetischen Feld
 Der vollständige Bauplan steht in [`docs/PhotonLab_Bauplan_v2.pdf`](docs/PhotonLab_Bauplan_v2.pdf).
 Einen interaktiven Vorgeschmack gibt [`docs/prototypes/photonische_gatter.html`](docs/prototypes/photonische_gatter.html) (im Browser öffnen).
 
-**Status:** Phase 10 – Logik-Ebene: Logikblöcke mit gemessenen Pegeln, ereignisgesteuerter Simulator, der Logik und
-Physik zugleich rechnet, Addierer bis 4 Bit und Flip-Flop. Davor: aktive Photonik (Modulatoren, Augendiagramm, PCM), nichtlineare Optik (Kerr, TPA, Bistabilität), photonische Kristalle,
-S-Parameter vom Feld in die Schaltung, Modenlöser, Schaltungen und Logik-Labor. Es fehlt noch der Quanten-Modus.
+**Status:** Phase 11 – Quanten-Modus (Hong-Ou-Mandel, linear-optisches CNOT, Boson Sampling) und MZI-Gitter
+(Clements-Zerlegung, Fertigungsfehler, Kalibrierung, kleines neuronales Netz). Davor: Logik-Ebene mit Event-Simulator, aktive Photonik (Modulatoren, Augendiagramm, PCM), nichtlineare Optik (Kerr, TPA, Bistabilität), photonische Kristalle,
+S-Parameter vom Feld in die Schaltung, Modenlöser, Schaltungen und Logik-Labor.
 
 ## Voraussetzungen (Windows)
 

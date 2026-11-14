@@ -19,6 +19,7 @@
 #include "implot.h"
 #include "logic_lab.hpp"
 #include "photonlab/core/thread_pool.hpp"
+#include "quantum_view.hpp"
 
 namespace {
 
@@ -57,14 +58,6 @@ void load_font(float ui_scale) {
   }
   io.Fonts->AddFontDefault();
   io.FontGlobalScale = ui_scale;
-}
-
-void placeholder(const char* title, const char* phase, const char* text) {
-  ImGui::Begin(title);
-  ImGui::TextDisabled("%s", phase);
-  ImGui::Separator();
-  ImGui::TextWrapped("%s", text);
-  ImGui::End();
 }
 
 // Standard-Anordnung: Arbeitsbereiche als Tabs in der Mitte, Bibliothek links, Eigenschaften rechts, Plots
@@ -150,6 +143,7 @@ int main(int argc, char** argv) {
     ChipDesigner chip_designer(pool, window, ui_scale);
     photonlab::gui::LogicLab logic_lab(pool, chip_designer);
     photonlab::gui::EyeView eye_view(pool, chip_designer);
+    photonlab::gui::QuantumView quantum_view(chip_designer);
     photonlab::gui::FieldLab field_lab(pool, chip_designer, renderer, ui_scale);
     if (!project_path.empty() && !chip_designer.open_file(project_path) && automated) exit_code = 1;
 
@@ -201,9 +195,8 @@ int main(int argc, char** argv) {
       field_lab.draw();
       chip_designer.draw();
       logic_lab.draw();
-      eye_view.draw();
-      placeholder(window_quantum, "Kommt in Phase 11",
-                  "Einzelphotonen, Hong-Ou-Mandel, linear-optisches CNOT, Boson Sampling.");
+      if (chip_designer.canvas_visible()) eye_view.draw();  // gehört zum Chip-Designer
+      quantum_view.draw();
       // Beim Start liegt der Chip-Designer vorn (einziger schon nutzbarer Arbeitsbereich)
       if (frame_count == 2) ImGui::SetWindowFocus(ChipDesigner::window_curve);
       if (frame_count == 3) {

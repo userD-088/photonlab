@@ -9,8 +9,9 @@ add_executable(photonlab_gui
   logic_sim_view.cpp
   band_view.cpp
   mode_view.cpp
+  quantum_view.cpp
   sparam_view.cpp)
-target_link_libraries(photonlab_gui PRIVATE photonlab::core photonlab::circuit photonlab::logic photonlab::field photonlab::modes photonlab::pwe photonlab::signal photonlab::materials photonlab::io imgui implot)
+target_link_libraries(photonlab_gui PRIVATE photonlab::core photonlab::circuit photonlab::logic photonlab::field photonlab::modes photonlab::pwe photonlab::signal photonlab::quantum photonlab::materials photonlab::io imgui implot)
 photonlab_warnings(photonlab_gui)
 
 # Rauchtest ohne Bildschirm: ein paar Bilder mit dem Dummy-Videotreiber rendern und beenden

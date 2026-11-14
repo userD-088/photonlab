@@ -1,3 +1,3 @@
 add_executable(photonlab_cli main.cpp)
-target_link_libraries(photonlab_cli PRIVATE photonlab::core photonlab::circuit photonlab::logic photonlab::field photonlab::modes photonlab::pwe photonlab::signal photonlab::materials photonlab::io)
+target_link_libraries(photonlab_cli PRIVATE photonlab::core photonlab::circuit photonlab::logic photonlab::field photonlab::modes photonlab::pwe photonlab::signal photonlab::quantum photonlab::materials photonlab::io)
 photonlab_warnings(photonlab_cli)

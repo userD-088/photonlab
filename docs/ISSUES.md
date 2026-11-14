@@ -135,3 +135,12 @@ Offen aus Phase 6 (Folge-Issues):
 - [ ] #97 Schieberegister und Takt (Flip-Flops + Verzögerungsleitungen), Multiplexer/Router aus Ring-Weichen
 - [ ] #98 Logikblöcke direkt aus dem Zeugnis eines eigenen Gatters im Logik-Labor übernehmen (bisher: Referenz-Gatter)
 - [ ] #99 Rauschen und Phasenstabilität auf der Logik-Ebene; WDM-Kanäle unterscheiden
+
+## Phase 11 – Quanten + MZI-Gitter
+- [x] #100 Fock-Simulator mit Permanenten (Ryser), Unterscheidbarkeit, Verluste, Detektoren (Effizienz, Dunkelzählung, Schwellwert/zahlauflösend), Quellen mit Mehrphotonen-Anteil
+- [x] #101 Hong-Ou-Mandel (Sichtbarkeit 1), linear-optisches CNOT (1/9), Bell-Zustand, Boson Sampling
+- [x] #102 Übertragungsmatrix einer Schaltung des Chip-Designers (Laser -> Detektoren) für den Quanten-Modus
+- [x] #103 Clements-Zerlegung, physikalisches MZI mit Fehlern, Kalibrierung, SVD-Gitter, Netz-Demo
+- [x] #104 Arbeitsbereich Quanten-Modus in der Oberfläche
+- [ ] #105 Exakte Behandlung teilweise unterscheidbarer Photonen (n > 2, Gram-Matrix), spektrale Moden
+- [ ] #106 Hexagonale programmierbare Gitter, Reck-Zerlegung, Kalibrierung aus Messdaten (Statistik)

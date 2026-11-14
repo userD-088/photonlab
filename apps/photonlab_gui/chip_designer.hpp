@@ -52,9 +52,10 @@ class ChipDesigner {
   std::uint64_t project_generation() const {
     return generation_;
   }  // zählt bei jedem neu geladenen Projekt hoch
-  std::uint64_t revision() const { return revision_; }  // zählt bei jeder physikalischen Änderung hoch
-  void mark_dirty() { dirty_ = true; }                  // Einstellungen geändert, Physik gleich
-  void touch_circuit() { touch(); }                     // Schaltung physikalisch geändert
+  std::uint64_t revision() const { return revision_; }     // zählt bei jeder physikalischen Änderung hoch
+  bool canvas_visible() const { return canvas_visible_; }  // Chip-Designer liegt vorn (Seitenfenster zeigen)
+  void mark_dirty() { dirty_ = true; }                     // Einstellungen geändert, Physik gleich
+  void touch_circuit() { touch(); }                        // Schaltung physikalisch geändert
   void load_example(const std::string& name) { request(Pending::load_example, name); }
   void show_status(std::string text, bool is_error = false) { set_status(std::move(text), is_error); }
   SDL_Window* window() const { return window_; }
