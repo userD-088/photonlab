@@ -97,6 +97,11 @@ Offen aus Phase 6 (Folge-Issues):
 ## Phase 7 – Photonische Kristalle
 - [x] #66 PWE-Löser (Plane Wave Expansion) für 2D-Kristalle, Bandstruktur entlang Gamma-M-K-Gamma
 - [x] #67 Abnahme: Bandlücke des Dreiecksgitters stimmt mit der Literatur (Joannopoulos; Zahlen aus dem Gedächtnis, MPB-Vergleich offen, #52)
-- [x] #68 Geometrie-Generatoren: Dreiecks- und Quadratgitter, Liniendefekte (gerade, 60°-Knick, Y), Punktdefekte (Bedienung in der Oberfläche fehlt noch: Gitter per Eingabe statt per Hand)
+- [x] #68 Geometrie-Generatoren: Dreiecks- und Quadratgitter, Liniendefekte (gerade, 60°-Knick, Y), Punktdefekte (Oberfläche: Kristall mit W1/60°-Knick per Knopf in die Szene; Y-Verzweigung und Punktdefekte nur über Beispiele bzw. Code)
 - [x] #69 PhC-Gatter (NOT, AND, OR, XOR) und Halbaddierer im FDTD; Wahrheitstabelle automatisch auf Feld-Ebene
-- [ ] #70 Bandstruktur-Ansicht im Bauteil-Labor
+- [x] #70 Bandstruktur-Ansicht im Bauteil-Labor (Reiter „Bandstruktur“: Banddiagramm, Lücken in nm, W1-Superzelle, Kristall in die Szene einsetzen; Feld-Gatter im Logik-Labor)
+- [ ] #71 Fertigungstoleranz der Kristall-Gatter: Monte-Carlo über Lochradius und -lage, Wellenlängen-Sweep des Kontrasts (Zeugnis-Kriterium "Fertigungstoleranz" ist noch "nicht bewertet")
+- [ ] #72 Halbaddierer mit gemeinsamer Geometrie (Splitter für die Eingänge, 3 dB Verlust mitgerechnet) statt zweier getrennter Gatter
+- [ ] #73 Oberfläche: Y-Verzweigung, T-Verzweigung und Punktdefekt-Kavität im Generator; Liste der Löcher im Objektbaum gruppieren
+- [ ] #74 PWE-Ergebnisse gegen MPB mit identischen Parametern vergleichen (Literaturzahlen der Tests stammen aus dem Gedächtnis; siehe #52)
+- [ ] #75 Platten-Kristall: 3D-Effekte (Lichtkegel, Abstrahlungsverlust) abschätzen, z. B. über die Effektiv-Index-Methode mit Verlustabschätzung

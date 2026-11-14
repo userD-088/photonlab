@@ -70,7 +70,8 @@ bool instance_combo(const char* id, const circuit::Circuit& circuit, std::string
 
 }  // namespace
 
-LogicLab::LogicLab(ThreadPool& pool, ChipDesigner& designer) : pool_(pool), designer_(designer) {
+LogicLab::LogicLab(ThreadPool& pool, ChipDesigner& designer)
+    : pool_(pool), designer_(designer), field_gate_view_(pool, designer) {
   designer_.on_save_gate = [this](const std::string& path) {
     if (result_.key.empty() || !result_.error.empty()) {
       designer_.show_status("Kein gültiges Zeugnis zum Exportieren.", true);
@@ -135,10 +136,25 @@ void LogicLab::update() {
 void LogicLab::draw() {
   update();
   ImGui::Begin(window_name);
+  // Zwei Ansichten: Gatter aus der Schaltung des Chip-Designers und Gatter auf Feld-Ebene (Kristall)
+  if (ImGui::BeginTabBar("logik_ansichten")) {
+    if (ImGui::BeginTabItem("Schaltung")) {
+      draw_circuit_tab();
+      ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("Feld-Gatter (Kristall)")) {
+      field_gate_view_.draw();
+      ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
+  }
+  ImGui::End();
+}
+
+void LogicLab::draw_circuit_tab() {
   io::Project& project = designer_.project();
   if (project.gate.empty()) {
     draw_empty_state();
-    ImGui::End();
     return;
   }
 
@@ -154,7 +170,6 @@ void LogicLab::draw() {
   ImGui::BeginChild("zeugnis", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
   draw_report();
   ImGui::EndChild();
-  ImGui::End();
 }
 
 void LogicLab::draw_empty_state() {

@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "band_view.hpp"
 #include "chip_designer.hpp"
 #include "mode_view.hpp"
 #include "photonlab/core/thread_pool.hpp"
@@ -75,6 +76,7 @@ class FieldLab {
   ChipDesigner& designer_;
   SDL_Renderer* renderer_;
   float ui_scale_;
+  BandView band_view_;
   ModeView mode_view_;
   SParamView sparam_view_;
 

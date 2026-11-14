@@ -127,6 +127,7 @@ FieldLab::FieldLab(ThreadPool& pool, ChipDesigner& designer, SDL_Renderer* rende
       designer_(designer),
       renderer_(renderer),
       ui_scale_(ui_scale),
+      band_view_(pool, designer),
       mode_view_(pool, designer, renderer, ui_scale),
       sparam_view_(pool, designer) {}
 
@@ -350,6 +351,14 @@ void FieldLab::draw() {
     }
     if (ImGui::BeginTabItem("Querschnitt (Moden)")) {
       mode_view_.draw();
+      ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("Bandstruktur")) {
+      if (band_view_.draw()) {
+        scene_changed_ = true;
+        selected_kind_ = ObjectKind::none;
+        selected_index_ = -1;
+      }
       ImGui::EndTabItem();
     }
     if (ImGui::BeginTabItem("S-Parameter")) {
