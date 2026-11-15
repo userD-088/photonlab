@@ -1,11 +1,15 @@
 #pragma once
 // 2D-FDTD nach Yee: Leapfrog-Zeitschritt auf versetztem Gitter, CPML-Randschichten, weiche Quellen, Monitore.
-// Gleichungen, Gitterlage und Annahmen: docs/physics/fdtd.md
+// Gleichungen, Gitterlage und Annahmen: docs/physics/fdtd.md; Geschwindigkeit: docs/performance.md
+// Ein Zeitschritt rechnet in Zeilenbändern auf mehreren Threads; das Ergebnis ist bitgleich für jede Zahl
+// von Threads (jede Zelle wird unabhängig von der Aufteilung gleich gerechnet).
 #include <cstddef>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "photonlab/core/job.hpp"
+#include "photonlab/core/step_team.hpp"
 #include "photonlab/field/scene.hpp"
 
 namespace photonlab::field {
@@ -27,6 +31,11 @@ class Fdtd {
   explicit Fdtd(const FieldScene& scene);
 
   void step();
+  // Threads je Zeitschritt: 0 = automatisch (Kerne, aber mindestens etwa 32000 Zellen je Thread), 1 =
+  // seriell. Läuft die Rechnung selbst schon parallel zu anderen (S-Parameter-Ports, Wahrheitstabellen), 1
+  // setzen.
+  void set_threads(int threads);
+  int threads() const;
   // Faktor auf die Signale aller Quellen (Standard 1): erlaubt langsame Leistungsrampen, z. B. für Hysterese
   void set_source_scale(double scale) { source_scale_ = scale; }
   double source_scale() const { return source_scale_; }
@@ -87,6 +96,8 @@ class Fdtd {
     std::size_t index;
   };
 
+  template <class Body>
+  void for_rows(const Body& body);
   void step_ez();
   void step_hz();
   void record();
@@ -116,9 +127,9 @@ class Fdtd {
     double n;         // Ladungsträgerdichte [m^-3]
     double e_old;     // Feld vor dem Schritt [V/m]
   };
-  std::vector<KerrCell> kerr_cells_;      // Ez (Skalarfeld)
-  std::vector<KerrCell> kerr_x_cells_;    // Hz-Polarisation: Ex
-  std::vector<KerrCell> kerr_y_cells_;    // Hz-Polarisation: Ey
+  std::vector<KerrCell> kerr_cells_;    // Ez (Skalarfeld)
+  std::vector<KerrCell> kerr_x_cells_;  // Hz-Polarisation: Ex
+  std::vector<KerrCell> kerr_y_cells_;  // Hz-Polarisation: Ey
   // Nichtlinearer Schritt einer Zelle: e_lin = Ergebnis des linearen Yee-Schritts, other_sq = Quadrat der
   // anderen Komponente in der Ebene (Hz-Polarisation; Ez: 0). Rückgabe: neues E.
   double nonlinear_update(KerrCell& cell, double e_lin, double other_sq) const;
@@ -130,6 +141,9 @@ class Fdtd {
   std::vector<double> bxe_, cxe_, bxh_, cxh_, bye_, cye_, byh_, cyh_;
   std::vector<double> psi_fx_, psi_fy_, psi_gx_, psi_gy_;
   bool pml_x_ = false, pml_y_ = false;
+  int ix_lo_ = 0, ix_hi_ = 0;  // Spalten ohne Randschicht in x: [ix_lo_, ix_hi_)
+  int requested_threads_ = 0;
+  std::unique_ptr<StepTeam> team_;
 
   std::vector<ActiveSource> sources_;
   std::vector<MonitorData> monitors_;

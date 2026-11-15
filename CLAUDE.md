@@ -11,7 +11,7 @@ Ziel: physikalisch realistisch und ehrlich bewertet.
 Bauplan: `docs/PhotonLab_Bauplan_v2.pdf` (Roadmap = Abschnitt 15).
 Interaktiver Prototyp (JS, gleiche Physik): `docs/prototypes/photonische_gatter.html`.
 Offene Aufgaben: `docs/ISSUES.md`.
-**Aktuelle Phase: 12 (Leistung + 3D).** Umgesetzt: Phase 1 und 2 (Schaltung), Phase 3 (Logik-Labor, linear), Phase 4 (2D-FDTD), Phase 5 (Materialien, Modenlöser), Phase 6 (S-Parameter vom Feld zur Schaltung), Phase 7 (photonische Kristalle: PWE-Bandstruktur, Generatoren, Kristall-Gatter). Phase 8 (nichtlineare Optik: Kompaktmodell `kerr_cavity`, Kerr/TPA/Ladungsträger im FDTD, nichtlineare Bauteile `ring_kerr` und `soa` in der Schaltung mit Ast-Verfolgung). Phase 9 (aktive Photonik: Heizer, PN-Phasenschieber, Ring-Modulator, Photodiode mit Rauschen, Zeitbereich/Augendiagramm in `libs/signal`, PCM-Zelle). Phase 10 (Logik-Ebene: Logikblöcke, Event-Simulator mit Physik, Pegel-/Codierungs-Prüfung, Addierer, Flip-Flop). Phase 11 (Quanten-Modus mit Permanenten, HOM, CNOT, Boson Sampling; MZI-Gitter mit Clements, Fehlern, Kalibrierung).
+**Aktuelle Phase: 13 (Kür: GDSII, inverses Design, Plugins).** Umgesetzt: Phase 1 und 2 (Schaltung), Phase 3 (Logik-Labor, linear), Phase 4 (2D-FDTD), Phase 5 (Materialien, Modenlöser), Phase 6 (S-Parameter vom Feld zur Schaltung), Phase 7 (photonische Kristalle: PWE-Bandstruktur, Generatoren, Kristall-Gatter). Phase 8 (nichtlineare Optik: Kompaktmodell `kerr_cavity`, Kerr/TPA/Ladungsträger im FDTD, nichtlineare Bauteile `ring_kerr` und `soa` in der Schaltung mit Ast-Verfolgung). Phase 9 (aktive Photonik: Heizer, PN-Phasenschieber, Ring-Modulator, Photodiode mit Rauschen, Zeitbereich/Augendiagramm in `libs/signal`, PCM-Zelle). Phase 10 (Logik-Ebene: Logikblöcke, Event-Simulator mit Physik, Pegel-/Codierungs-Prüfung, Addierer, Flip-Flop). Phase 11 (Quanten-Modus mit Permanenten, HOM, CNOT, Boson Sampling; MZI-Gitter mit Clements, Fehlern, Kalibrierung). Phase 12 (Leistung: 2D-FDTD mit Threads je Zeitschritt und Randschicht nur am Rand, 5-7x schneller und bitgleich; 3D-FDTD mit Abnahme am Wellenleiter; `bench`).
 
 ## Build
 ```
@@ -22,18 +22,18 @@ ctest --test-dir build -C Release --output-on-failure
 Ohne GUI (schneller, z. B. für reine Physik-Arbeit): `-DPHOTONLAB_BUILD_GUI=OFF`
 
 ## Struktur
-- `libs/core` – Einheiten, Konstanten, komplexe Zahlen, Threadpool, JobControl, `parallel_for`
+- `libs/core` – Einheiten, Konstanten, komplexe Zahlen, Threadpool, JobControl, `parallel_for`, `StepTeam` (feste Thread-Gruppe für Zeitschritte)
 - `libs/circuit` – Component-Interface und -Registry, S-Parameter-Bauteil (`sparam:<name>`), Netzliste, linearer Löser, Sweep, Resonanz-Auswertung, Monte-Carlo, Referenz-Designs
 - `libs/materials` – Sellmeier-Gleichungen (Si, SiO2, Si3N4), Gruppenindex, dn/dT; jede Zahl mit Quelle
 - `libs/modes` – Schichtwellenleiter analytisch, 1D-Profil-Löser, semi-vektorieller Modenlöser für Querschnitte
-- `libs/field` – Feld-Szene (Formen, Quellen, Monitore, Ports), 2D-FDTD nach Yee mit CPML, Moden- und Linienquellen, Spektrum, S-Parameter-Extraktion, Kristall-Generatoren (`photonic_crystal.*`: Gitter, Liniendefekte, Punktdefekte)
+- `libs/field` – Feld-Szene (Formen, Quellen, Monitore, Ports), 2D-FDTD nach Yee mit CPML (Threads je Zeitschritt), 3D-FDTD (`fdtd3d.*`, Quader) mit Abnahme-Experiment `waveguide3d.*`, Moden- und Linienquellen, Spektrum, S-Parameter-Extraktion, Kristall-Generatoren (`photonic_crystal.*`: Gitter, Liniendefekte, Punktdefekte)
 - `libs/pwe` – PWE-Bandstruktur photonischer Kristalle (2D, ez/hz), Lücken, Pfad Gamma-M-K bzw. Gamma-X-M
 - `libs/signal` – Zeitbereich einer Übertragungsstrecke (PRBS, Treiber, Ring/MZM-Modulator, Empfänger mit Rauschen, Augendiagramm, Q, BER)
 - `libs/quantum` – Fock-Zustände, Permanenten, Detektoren, HOM, CNOT, Boson Sampling, Übertragungsmatrix einer Schaltung; MZI-Gitter (Clements, Fehler, Kalibrierung, SVD, Netz-Demo)
 - `libs/logic` – Gatter-Definition, Wahrheitstabellen-Läufer, Schwellwert-Analyse, Gatter-Zeugnis, Optimierer, Gatter auf Feld-Ebene (`field_gate.*`: Eingänge = Quellen einer FDTD-Szene), Logik-Ebene (`logic_sim.*`: Logikblöcke, Event-Simulator, Designs)
 - `libs/io` – Projektdatei `.plab.json` (mit Bauteilbibliothek), `.sparam.json`, `.gate.json` (alle Zahlen in SI); `make_registry(project)` liefert die Registry eines Projekts
-- `apps/photonlab_gui` – SDL3 + Dear ImGui (Docking) + ImPlot; Bauteil-Labor in `field_lab.cpp` (Feld), `mode_view.cpp` (Querschnitt) und `sparam_view.cpp` (S-Parameter), Bandstruktur in `band_view.cpp`, Chip-Designer in `chip_designer.cpp`, Logik-Labor in `logic_lab.cpp` (Feld-Gatter in `field_gate_view.cpp`, Logikschaltung in `logic_sim_view.cpp`), Augendiagramm in `eye_view.cpp`, Quanten-Modus in `quantum_view.cpp`
-- `apps/photonlab_cli` – Kommandozeile: `components`, `example`, `materials`, `bands`, `field-gate`, `logic-sim`, `pcm`, `quantum`, `mesh`, `bistability`, `run [--sweep | --resonances | --monte-carlo | --logic | --field | --modes | --sparam | --eye | --unitary] [--csv | --out]`, `validate`
+- `apps/photonlab_gui` – SDL3 + Dear ImGui (Docking) + ImPlot; Bauteil-Labor in `field_lab.cpp` (Feld), `mode_view.cpp` (Querschnitt) und `sparam_view.cpp` (S-Parameter), Bandstruktur in `band_view.cpp`, Chip-Designer in `chip_designer.cpp`, Logik-Labor in `logic_lab.cpp` (Feld-Gatter in `field_gate_view.cpp`, Logikschaltung in `logic_sim_view.cpp`), Augendiagramm in `eye_view.cpp`, Quanten-Modus in `quantum_view.cpp`, 3D-Wellenleiter in `wave3d_view.cpp`
+- `apps/photonlab_cli` – Kommandozeile: `components`, `example`, `materials`, `bands`, `field-gate`, `logic-sim`, `pcm`, `quantum`, `mesh`, `bistability`, `fdtd3d`, `bench`, `run [--sweep | --resonances | --monte-carlo | --logic | --field | --modes | --sparam | --eye | --unitary] [--csv | --out]`, `validate`
 - `examples` – Referenz-Designs als `.plab.json` (erzeugt mit `photonlab_cli example <name>`)
 - `tests` – doctest; Physik-Validierung gegen analytische Lösungen
 - `cmake/Dependencies.cmake` – alle externen Abhängigkeiten, Versionen gepinnt
@@ -63,10 +63,11 @@ Ohne GUI (schneller, z. B. für reine Physik-Arbeit): `-DPHOTONLAB_BUILD_GUI=OFF
 - Nichtlinearität im FDTD (Ez und Hz): Quellen nicht in nichtlinearen Formen platzieren (siehe `docs/physics/nonlinear.md`).
 - Nichtlineare Bauteile: `state_size() > 0`, `s_matrix_at`, `settle_state`; der Löser iteriert. Für Hysterese Rampen (`wavelength_ramp`, `power_ramp`) mit weitergereichtem Zustand verwenden, nie parallel unabhängig.
 - Bauteile mit gespeichertem Zustand (PCM): Zustand als Parameter, Änderungen über `ComponentType::actions` (Knöpfe im Eigenschaften-Fenster), nie Sonderfälle in der Oberfläche.
+- FDTD-Kerne: Schleifen verzweigungsfrei und zusammenhängend über i halten (Vektorisierung), Randschicht-Terme nur in den Schichtzellen; Ergebnis muss für jede Thread-Zahl bitgleich bleiben (Test in `tests/test_fdtd3d.cpp`). Mehrere FDTD-Läufe parallel: `set_threads(StepTeam::share_for(...))`. Geschwindigkeit mit `photonlab_cli bench` messen (`docs/performance.md`).
 - Code-Stil: `.clang-format`; Funktionen/Variablen snake_case, Klassen PascalCase; Kommentare auf Deutsch.
 
 ## Physik-Referenzen
-- Courant 2D: dt <= dx / (c * sqrt(2)); Yee-Dispersion: sin²(w*dt/2) = S²*(sin²(kx*dx/2) + sin²(ky*dx/2)) (Details: `docs/physics/fdtd.md`)
+- Courant 2D: dt <= dx / (c * sqrt(2)); 3D: dt <= dx / (c * sqrt(3)) (`docs/physics/fdtd3d.md`); Yee-Dispersion: sin²(w*dt/2) = S²*(sin²(kx*dx/2) + sin²(ky*dx/2)) (Details: `docs/physics/fdtd.md`)
 - Richtkoppler: S = [[t, iκ], [iκ, t]]
 - Schaltungslöser: (I - S*C) b = S a_ext + b_src (Details: `docs/physics/circuit_solver.md`)
 - Wellenleiter: n_eff(lambda) = n_eff0 + (n_eff0 - n_g) * (lambda - lambda0) / lambda0

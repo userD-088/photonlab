@@ -12,8 +12,9 @@ Realistischer Photonik-Simulator in C++20 mit SDL3: vom elektromagnetischen Feld
 Der vollständige Bauplan steht in [`docs/PhotonLab_Bauplan_v2.pdf`](docs/PhotonLab_Bauplan_v2.pdf).
 Einen interaktiven Vorgeschmack gibt [`docs/prototypes/photonische_gatter.html`](docs/prototypes/photonische_gatter.html) (im Browser öffnen).
 
-**Status:** Phase 11 – Quanten-Modus (Hong-Ou-Mandel, linear-optisches CNOT, Boson Sampling) und MZI-Gitter
-(Clements-Zerlegung, Fertigungsfehler, Kalibrierung, kleines neuronales Netz). Davor: Logik-Ebene mit Event-Simulator, aktive Photonik (Modulatoren, Augendiagramm, PCM), nichtlineare Optik (Kerr, TPA, Bistabilität), photonische Kristalle,
+**Status:** Phase 12 – Leistung und 3D: 2D-FDTD 5- bis 7-mal schneller (Threads je Zeitschritt, Randschicht nur am Rand,
+bitgleiche Ergebnisse), vollvektorielles 3D-FDTD mit Abnahme am Wellenleiter, `photonlab_cli bench`
+([`docs/performance.md`](docs/performance.md)). Davor: Quanten-Modus und MZI-Gitter, Logik-Ebene mit Event-Simulator, aktive Photonik (Modulatoren, Augendiagramm, PCM), nichtlineare Optik (Kerr, TPA, Bistabilität), photonische Kristalle,
 S-Parameter vom Feld in die Schaltung, Modenlöser, Schaltungen und Logik-Labor.
 
 ## Voraussetzungen (Windows)
@@ -39,7 +40,7 @@ Der erste Build lädt SDL3, Dear ImGui, ImPlot, Eigen, nlohmann/json und doctest
 
 Programme:
 - `build/apps/photonlab_gui/(Release/)photonlab_gui [datei.plab.json]` – Oberfläche
-- `build/apps/photonlab_cli/(Release/)photonlab_cli` – Kommandozeile
+- `build/apps/photonlab_cli/(Release/)photonlab_cli` – Kommandozeile (`photonlab_cli bench` misst die Rechengeschwindigkeit auf dem eigenen Rechner)
 
 ## Chip-Designer bedienen
 

@@ -4,6 +4,8 @@
 #include <cmath>
 #include <map>
 
+#include "cpml.hpp"
+#include "photonlab/core/step_team.hpp"
 #include "photonlab/core/units.hpp"
 #include "photonlab/modes/profile.hpp"
 
@@ -12,25 +14,7 @@ namespace {
 
 const double eta0 = constants::mu0 * constants::c0;  // Wellenwiderstand des Vakuums [Ohm]
 
-// CPML-Koeffizienten b und c an der Stelle u (in Zellen) einer Achse mit count Zellen.
-// Polynomielles Leitfähigkeitsprofil (Grad 3) nach Roden/Gedney 2000 mit kappa = 1 und alpha = 0;
-// sigma_max = 0.8*(m + 1)/(eta0*dx*n) ist der übliche Richtwert (Taflove/Hagness, Kap. 7).
-void pml_coefficient(double u, int count, int pml_cells, double dx, double dt, double index, double* b,
-                     double* c) {
-  *b = 0.0, *c = 0.0;  // außerhalb der Schicht: psi bleibt 0
-  double depth = 0.0;
-  if (u < pml_cells)
-    depth = (pml_cells - u) / pml_cells;
-  else if (u > count - pml_cells)
-    depth = (u - (count - pml_cells)) / pml_cells;
-  if (depth <= 0.0) return;
-  depth = std::min(depth, 1.0);
-  const double order = 3.0;
-  const double sigma_max = 0.8 * (order + 1.0) / (eta0 * dx * index);
-  const double sigma = sigma_max * std::pow(depth, order);
-  *b = std::exp(-sigma * dt / constants::eps0);
-  *c = *b - 1.0;
-}
+using detail::pml_coefficient;
 
 }  // namespace
 
@@ -144,6 +128,15 @@ Fdtd::Fdtd(const FieldScene& scene) : polarization_(scene.polarization) {
   fill(bxh_, cxh_, nx_, pml_x_, 0.5);
   fill(bye_, cye_, ny_, pml_y_, 0.0);
   fill(byh_, cyh_, ny_, pml_y_, 0.5);
+  // Innerer Bereich in x ohne Randschicht: [ix_lo_, ix_hi_)
+  auto inside_x = [&](int i) {
+    const auto k = static_cast<std::size_t>(i);
+    return cxe_[k] == 0.0 && cxh_[k] == 0.0;
+  };
+  ix_lo_ = 0;
+  while (ix_lo_ < nx_ && !inside_x(ix_lo_)) ++ix_lo_;
+  ix_hi_ = nx_;
+  while (ix_hi_ > ix_lo_ && !inside_x(ix_hi_ - 1)) --ix_hi_;
 
   // Quellen: Zellen und Gewichte. Eine Linienquelle der Amplitude A strahlt nach beiden Seiten eine
   // ebene Welle mit der E-Feld-Amplitude A ab (Stromschicht; Herleitung in docs/physics/fdtd.md).
@@ -297,6 +290,34 @@ void Fdtd::run(std::size_t steps, JobControl* control) {
   if (control) control->progress = 1.0f;
 }
 
+void Fdtd::set_threads(int threads) {
+  requested_threads_ = std::max(0, threads);
+  team_.reset();
+}
+
+int Fdtd::threads() const {
+  if (requested_threads_ > 0) return std::min(requested_threads_, std::max(1, ny_ / 4));
+  // automatisch: jedes Mitglied soll mindestens etwa 32000 Zellen bekommen, sonst frisst das Verteilen den
+  // Gewinn auf
+  return StepTeam::suggested_size(static_cast<std::size_t>(nx_) * static_cast<std::size_t>(ny_), 32768);
+}
+
+// Verteilt die Zeilen [0, ny) in Bändern auf die Mitglieder der Gruppe; body(j0, j1) rechnet ein Band.
+template <class Body>
+void Fdtd::for_rows(const Body& body) {
+  const int count = threads();
+  if (count <= 1) {
+    body(0, ny_);
+    return;
+  }
+  if (!team_ || team_->size() != count) team_ = std::make_unique<StepTeam>(count);
+  team_->run([&](int member) {
+    int j0 = 0, j1 = 0;
+    split_range(ny_, count, member, &j0, &j1);
+    body(j0, j1);
+  });
+}
+
 void Fdtd::step() {
   if (polarization_ == Polarization::ez)
     step_ez();
@@ -313,66 +334,107 @@ void Fdtd::step() {
   record();
 }
 
+// Die Hilfsfelder psi der CPML sind außerhalb der Randschicht exakt 0 (b = c = 0). Dort entfallen sie: Die
+// Schleifen rechnen in x-Richtung drei Abschnitte, nur die äußeren mit psi; Zeilen außerhalb der Schicht in
+// y ganz ohne. Das Ergebnis ist bitgleich mit der Rechnung mit psi überall (d + 0 = d).
+
 // Ez auf Knoten (i, j); Hx bei (i, j + 1/2); Hy bei (i + 1/2, j).
 void Fdtd::step_ez() {
   const double inv = 1.0 / dx_;
   const double cm = dt_ / constants::mu0;
   const std::size_t nx = static_cast<std::size_t>(nx_);
+  const std::size_t lo = static_cast<std::size_t>(ix_lo_), hi = static_cast<std::size_t>(ix_hi_);
 
   // H von n - 1/2 nach n + 1/2 aus Ez zur Zeit n
-  for (int j = 0; j < ny_; ++j) {
-    const std::size_t row = at(0, j);
-    const double* e = &f_[row];
-    const double* e_next_row = j + 1 < ny_ ? &f_[at(0, j + 1)] : periodic_y_ ? &f_[0] : zero_row_.data();
-    double* hx = &gx_[row];
-    double* hy = &gy_[row];
-    double* psi_x = &psi_gx_[row];
-    double* psi_y = &psi_gy_[row];
-    const double by = byh_[static_cast<std::size_t>(j)], cy = cyh_[static_cast<std::size_t>(j)];
-    for (std::size_t i = 0; i < nx; ++i) {
-      const double d = (e_next_row[i] - e[i]) * inv;  // dEz/dy bei (i, j + 1/2)
-      psi_x[i] = by * psi_x[i] + cy * d;
-      hx[i] -= cm * (d + psi_x[i]);
+  for_rows([&](int j0, int j1) {
+    for (int j = j0; j < j1; ++j) {
+      const std::size_t row = at(0, j);
+      const double* PHOTONLAB_RESTRICT e = &f_[row];
+      const double* PHOTONLAB_RESTRICT e_next_row = j + 1 < ny_   ? &f_[at(0, j + 1)]
+                                                    : periodic_y_ ? &f_[0]
+                                                                  : zero_row_.data();
+      double* PHOTONLAB_RESTRICT hx = &gx_[row];
+      double* PHOTONLAB_RESTRICT hy = &gy_[row];
+      double* PHOTONLAB_RESTRICT psi_x = &psi_gx_[row];
+      double* PHOTONLAB_RESTRICT psi_y = &psi_gy_[row];
+      const double by = byh_[static_cast<std::size_t>(j)], cy = cyh_[static_cast<std::size_t>(j)];
+      if (cy != 0.0) {
+        for (std::size_t i = 0; i < nx; ++i) {
+          const double d = (e_next_row[i] - e[i]) * inv;  // dEz/dy bei (i, j + 1/2)
+          psi_x[i] = by * psi_x[i] + cy * d;
+          hx[i] -= cm * (d + psi_x[i]);
+        }
+      } else {
+        for (std::size_t i = 0; i < nx; ++i) hx[i] -= cm * ((e_next_row[i] - e[i]) * inv);
+      }
+      auto hy_pml = [&](std::size_t from, std::size_t to) {
+        for (std::size_t i = from; i < to; ++i) {
+          const double d = (e[i + 1] - e[i]) * inv;  // dEz/dx bei (i + 1/2, j)
+          psi_y[i] = bxh_[i] * psi_y[i] + cxh_[i] * d;
+          hy[i] += cm * (d + psi_y[i]);
+        }
+      };
+      const std::size_t last = nx - 1;
+      hy_pml(0, std::min(lo, last));
+      for (std::size_t i = std::min(lo, last); i < std::min(hi, last); ++i)
+        hy[i] += cm * ((e[i + 1] - e[i]) * inv);
+      hy_pml(std::min(hi, last), last);
+      {
+        const std::size_t i = last;  // rechter Rand: Nachbar ist die Wand (Ez = 0) oder die linke Spalte
+        const double d = ((periodic_x_ ? e[0] : 0.0) - e[i]) * inv;
+        psi_y[i] = bxh_[i] * psi_y[i] + cxh_[i] * d;
+        hy[i] += cm * (d + psi_y[i]);
+      }
     }
-    for (std::size_t i = 0; i + 1 < nx; ++i) {
-      const double d = (e[i + 1] - e[i]) * inv;  // dEz/dx bei (i + 1/2, j)
-      psi_y[i] = bxh_[i] * psi_y[i] + cxh_[i] * d;
-      hy[i] += cm * (d + psi_y[i]);
-    }
-    {
-      const std::size_t i = nx - 1;  // rechter Rand: Nachbar ist die Wand (Ez = 0) oder die linke Spalte
-      const double d = ((periodic_x_ ? e[0] : 0.0) - e[i]) * inv;
-      psi_y[i] = bxh_[i] * psi_y[i] + cxh_[i] * d;
-      hy[i] += cm * (d + psi_y[i]);
-    }
-  }
+  });
 
-  // Ez von n nach n + 1; auf dem linken und oberen Rand bleibt Ez = 0 (ideal leitende Wand), außer periodisch
-  f_prev_ = f_;
-  for (int j = periodic_y_ ? 0 : 1; j < ny_; ++j) {
-    const std::size_t row = at(0, j);
-    const double* hx = &gx_[row];
-    const double* hx_prev_row = j > 0 ? &gx_[at(0, j - 1)] : &gx_[at(0, ny_ - 1)];
-    const double* hy = &gy_[row];
-    double* e = &f_[row];
-    double* psi_x = &psi_fx_[row];
-    double* psi_y = &psi_fy_[row];
-    const double* cf = &cf_[row];
-    const double by = bye_[static_cast<std::size_t>(j)], cy = cye_[static_cast<std::size_t>(j)];
-    if (periodic_x_) {
-      const double dhy = (hy[0] - hy[nx - 1]) * inv, dhx = (hx[0] - hx_prev_row[0]) * inv;
-      psi_x[0] = bxe_[0] * psi_x[0] + cxe_[0] * dhy;
-      psi_y[0] = by * psi_y[0] + cy * dhx;
-      e[0] += cf[0] * (dhy + psi_x[0] - dhx - psi_y[0]);
+  // Ez von n nach n + 1 in den anderen Puffer (f_prev_ hält danach das alte Feld); auf dem linken und oberen
+  // Rand bleibt Ez unverändert (ideal leitende Wand, Ez = 0), außer periodisch
+  std::swap(f_, f_prev_);
+  for_rows([&](int j0, int j1) {
+    for (int j = j0; j < j1; ++j) {
+      const std::size_t row = at(0, j);
+      const double* PHOTONLAB_RESTRICT e_old = &f_prev_[row];
+      double* PHOTONLAB_RESTRICT e = &f_[row];
+      if (j == 0 && !periodic_y_) {
+        std::copy(e_old, e_old + nx, e);
+        continue;
+      }
+      const double* PHOTONLAB_RESTRICT hx = &gx_[row];
+      const double* PHOTONLAB_RESTRICT hx_prev_row = j > 0 ? &gx_[at(0, j - 1)] : &gx_[at(0, ny_ - 1)];
+      const double* PHOTONLAB_RESTRICT hy = &gy_[row];
+      double* PHOTONLAB_RESTRICT psi_x = &psi_fx_[row];
+      double* PHOTONLAB_RESTRICT psi_y = &psi_fy_[row];
+      const double* PHOTONLAB_RESTRICT cf = &cf_[row];
+      const double by = bye_[static_cast<std::size_t>(j)], cy = cye_[static_cast<std::size_t>(j)];
+      if (periodic_x_) {
+        const double dhy = (hy[0] - hy[nx - 1]) * inv, dhx = (hx[0] - hx_prev_row[0]) * inv;
+        psi_x[0] = bxe_[0] * psi_x[0] + cxe_[0] * dhy;
+        psi_y[0] = by * psi_y[0] + cy * dhx;
+        e[0] = e_old[0] + cf[0] * (dhy + psi_x[0] - dhx - psi_y[0]);
+      } else {
+        e[0] = e_old[0];
+      }
+      auto full = [&](std::size_t from, std::size_t to) {
+        for (std::size_t i = from; i < to; ++i) {
+          const double dhy = (hy[i] - hy[i - 1]) * inv;       // dHy/dx bei (i, j)
+          const double dhx = (hx[i] - hx_prev_row[i]) * inv;  // dHx/dy bei (i, j)
+          psi_x[i] = bxe_[i] * psi_x[i] + cxe_[i] * dhy;
+          psi_y[i] = by * psi_y[i] + cy * dhx;
+          e[i] = e_old[i] + cf[i] * (dhy + psi_x[i] - dhx - psi_y[i]);
+        }
+      };
+      const std::size_t a = std::max<std::size_t>(1, lo), b = std::max(a, hi);
+      if (cy != 0.0) {
+        full(1, nx);
+        continue;
+      }
+      full(1, a);
+      for (std::size_t i = a; i < b; ++i)
+        e[i] = e_old[i] + cf[i] * ((hy[i] - hy[i - 1]) * inv - (hx[i] - hx_prev_row[i]) * inv);
+      full(b, nx);
     }
-    for (std::size_t i = 1; i < nx; ++i) {
-      const double dhy = (hy[i] - hy[i - 1]) * inv;       // dHy/dx bei (i, j)
-      const double dhx = (hx[i] - hx_prev_row[i]) * inv;  // dHx/dy bei (i, j)
-      psi_x[i] = bxe_[i] * psi_x[i] + cxe_[i] * dhy;
-      psi_y[i] = by * psi_y[i] + cy * dhx;
-      e[i] += cf[i] * (dhy + psi_x[i] - dhx - psi_y[i]);
-    }
-  }
+  });
 
   // Kerr-Zellen: der lineare Schritt hat den Zuwachs von D/eps0 mal 1/eps geliefert; D weiterführen und E aus
   // eps*E + chi3*E^3 = D/eps0 lösen (monotone Kubik, Newton ab dem alten Wert)
@@ -408,39 +470,52 @@ void Fdtd::step_hz() {
   const double inv = 1.0 / dx_;
   const double cm = dt_ / constants::mu0;
   const std::size_t nx = static_cast<std::size_t>(nx_);
+  const std::size_t lo = static_cast<std::size_t>(ix_lo_), hi = static_cast<std::size_t>(ix_hi_);
 
   // E von n - 1/2 nach n + 1/2 aus Hz zur Zeit n; tangentiales E auf dem linken und oberen Rand bleibt 0
   for (KerrCell& cell : kerr_x_cells_) cell.e_old = gx_[cell.index];
   for (KerrCell& cell : kerr_y_cells_) cell.e_old = gy_[cell.index];
-  for (int j = 0; j < ny_; ++j) {
-    const std::size_t row = at(0, j);
-    const double* h = &f_[row];
-    double* ex = &gx_[row];
-    double* ey = &gy_[row];
-    double* psi_x = &psi_gx_[row];
-    double* psi_y = &psi_gy_[row];
-    if (j > 0 || periodic_y_) {
-      const double* h_prev_row = j > 0 ? &f_[at(0, j - 1)] : &f_[at(0, ny_ - 1)];
-      const double by = bye_[static_cast<std::size_t>(j)], cy = cye_[static_cast<std::size_t>(j)];
-      const double* c = &cgx_[row];
-      for (std::size_t i = 0; i < nx; ++i) {
-        const double d = (h[i] - h_prev_row[i]) * inv;  // dHz/dy bei (i + 1/2, j)
-        psi_x[i] = by * psi_x[i] + cy * d;
-        ex[i] += c[i] * (d + psi_x[i]);
+  for_rows([&](int j0, int j1) {
+    for (int j = j0; j < j1; ++j) {
+      const std::size_t row = at(0, j);
+      const double* PHOTONLAB_RESTRICT h = &f_[row];
+      double* PHOTONLAB_RESTRICT ex = &gx_[row];
+      double* PHOTONLAB_RESTRICT ey = &gy_[row];
+      double* PHOTONLAB_RESTRICT psi_x = &psi_gx_[row];
+      double* PHOTONLAB_RESTRICT psi_y = &psi_gy_[row];
+      if (j > 0 || periodic_y_) {
+        const double* PHOTONLAB_RESTRICT h_prev_row = j > 0 ? &f_[at(0, j - 1)] : &f_[at(0, ny_ - 1)];
+        const double by = bye_[static_cast<std::size_t>(j)], cy = cye_[static_cast<std::size_t>(j)];
+        const double* PHOTONLAB_RESTRICT c = &cgx_[row];
+        if (cy != 0.0) {
+          for (std::size_t i = 0; i < nx; ++i) {
+            const double d = (h[i] - h_prev_row[i]) * inv;  // dHz/dy bei (i + 1/2, j)
+            psi_x[i] = by * psi_x[i] + cy * d;
+            ex[i] += c[i] * (d + psi_x[i]);
+          }
+        } else {
+          for (std::size_t i = 0; i < nx; ++i) ex[i] += c[i] * ((h[i] - h_prev_row[i]) * inv);
+        }
       }
+      const double* PHOTONLAB_RESTRICT c = &cgy_[row];
+      if (periodic_x_) {
+        const double d = (h[0] - h[nx - 1]) * inv;
+        psi_y[0] = bxe_[0] * psi_y[0] + cxe_[0] * d;
+        ey[0] -= c[0] * (d + psi_y[0]);
+      }
+      auto ey_pml = [&](std::size_t from, std::size_t to) {
+        for (std::size_t i = from; i < to; ++i) {
+          const double d = (h[i] - h[i - 1]) * inv;  // dHz/dx bei (i, j + 1/2)
+          psi_y[i] = bxe_[i] * psi_y[i] + cxe_[i] * d;
+          ey[i] -= c[i] * (d + psi_y[i]);
+        }
+      };
+      const std::size_t a = std::max<std::size_t>(1, lo), b = std::max(a, hi);
+      ey_pml(1, a);
+      for (std::size_t i = a; i < b; ++i) ey[i] -= c[i] * ((h[i] - h[i - 1]) * inv);
+      ey_pml(b, nx);
     }
-    const double* c = &cgy_[row];
-    if (periodic_x_) {
-      const double d = (h[0] - h[nx - 1]) * inv;
-      psi_y[0] = bxe_[0] * psi_y[0] + cxe_[0] * d;
-      ey[0] -= c[0] * (d + psi_y[0]);
-    }
-    for (std::size_t i = 1; i < nx; ++i) {
-      const double d = (h[i] - h[i - 1]) * inv;  // dHz/dx bei (i, j + 1/2)
-      psi_y[i] = bxe_[i] * psi_y[i] + cxe_[i] * d;
-      ey[i] -= c[i] * (d + psi_y[i]);
-    }
-  }
+  });
 
   // Nichtlineare Zellen: |E|^2 = Ex^2 + Ey^2, die andere Komponente gemittelt aus den vier Nachbarn
   // (Ex bei (i+1/2, j) hat Ey bei (i, j-+1/2) und (i+1, j-+1/2); Ey bei (i, j+1/2) hat Ex bei (i-+1/2, j) und
@@ -464,26 +539,43 @@ void Fdtd::step_hz() {
     }
   }
 
-  // Hz von n nach n + 1
-  f_prev_ = f_;
-  for (int j = 0; j < ny_; ++j) {
-    const std::size_t row = at(0, j);
-    const double* ex = &gx_[row];
-    const double* ex_next_row = j + 1 < ny_ ? &gx_[at(0, j + 1)] : periodic_y_ ? &gx_[0] : zero_row_.data();
-    const double* ey = &gy_[row];
-    double* h = &f_[row];
-    double* psi_x = &psi_fx_[row];
-    double* psi_y = &psi_fy_[row];
-    const double by = byh_[static_cast<std::size_t>(j)], cy = cyh_[static_cast<std::size_t>(j)];
-    for (std::size_t i = 0; i < nx; ++i) {
-      const double ey_next = i + 1 < nx ? ey[i + 1] : periodic_x_ ? ey[0] : 0.0;
-      const double dex = (ex_next_row[i] - ex[i]) * inv;  // dEx/dy bei (i + 1/2, j + 1/2)
-      const double dey = (ey_next - ey[i]) * inv;         // dEy/dx bei (i + 1/2, j + 1/2)
-      psi_y[i] = by * psi_y[i] + cy * dex;
-      psi_x[i] = bxh_[i] * psi_x[i] + cxh_[i] * dey;
-      h[i] += cm * (dex + psi_y[i] - dey - psi_x[i]);
+  // Hz von n nach n + 1 in den anderen Puffer (f_prev_ hält danach das alte Feld)
+  std::swap(f_, f_prev_);
+  for_rows([&](int j0, int j1) {
+    for (int j = j0; j < j1; ++j) {
+      const std::size_t row = at(0, j);
+      const double* PHOTONLAB_RESTRICT ex = &gx_[row];
+      const double* PHOTONLAB_RESTRICT ex_next_row = j + 1 < ny_   ? &gx_[at(0, j + 1)]
+                                                     : periodic_y_ ? &gx_[0]
+                                                                   : zero_row_.data();
+      const double* PHOTONLAB_RESTRICT ey = &gy_[row];
+      const double* PHOTONLAB_RESTRICT h_old = &f_prev_[row];
+      double* PHOTONLAB_RESTRICT h = &f_[row];
+      double* PHOTONLAB_RESTRICT psi_x = &psi_fx_[row];
+      double* PHOTONLAB_RESTRICT psi_y = &psi_fy_[row];
+      const double by = byh_[static_cast<std::size_t>(j)], cy = cyh_[static_cast<std::size_t>(j)];
+      auto full = [&](std::size_t from, std::size_t to) {
+        for (std::size_t i = from; i < to; ++i) {
+          const double ey_next = i + 1 < nx ? ey[i + 1] : periodic_x_ ? ey[0] : 0.0;
+          const double dex = (ex_next_row[i] - ex[i]) * inv;  // dEx/dy bei (i + 1/2, j + 1/2)
+          const double dey = (ey_next - ey[i]) * inv;         // dEy/dx bei (i + 1/2, j + 1/2)
+          psi_y[i] = by * psi_y[i] + cy * dex;
+          psi_x[i] = bxh_[i] * psi_x[i] + cxh_[i] * dey;
+          h[i] = h_old[i] + cm * (dex + psi_y[i] - dey - psi_x[i]);
+        }
+      };
+      if (cy != 0.0) {
+        full(0, nx);
+        continue;
+      }
+      const std::size_t last = nx - 1;
+      const std::size_t a = std::min(lo, last), b = std::max(a, std::min(hi, last));
+      full(0, a);
+      for (std::size_t i = a; i < b; ++i)
+        h[i] = h_old[i] + cm * ((ex_next_row[i] - ex[i]) * inv - (ey[i + 1] - ey[i]) * inv);
+      full(b, nx);
     }
-  }
+  });
 }
 
 void Fdtd::record() {

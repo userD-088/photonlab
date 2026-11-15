@@ -1,5 +1,6 @@
 // PhotonLab Kommandozeile: Projektdateien rechnen, Sweeps als CSV, Validierung gegen analytische Lösungen.
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -10,6 +11,7 @@
 #include <future>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 #include "photonlab/circuit/analysis.hpp"
@@ -21,12 +23,15 @@
 #include "photonlab/circuit/solver.hpp"
 #include "photonlab/circuit/sweep.hpp"
 #include "photonlab/core/complex.hpp"
+#include "photonlab/core/step_team.hpp"
 #include "photonlab/core/thread_pool.hpp"
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/fdtd.hpp"
+#include "photonlab/field/fdtd3d.hpp"
 #include "photonlab/field/reference_scenes.hpp"
 #include "photonlab/field/sparameters.hpp"
 #include "photonlab/field/spectrum.hpp"
+#include "photonlab/field/waveguide3d.hpp"
 #include "photonlab/io/project.hpp"
 #include "photonlab/logic/field_gate.hpp"
 #include "photonlab/logic/logic_sim.hpp"
@@ -101,6 +106,12 @@ void print_usage() {
       "Netz-Demo\n"
       "  photonlab_cli run <datei> --unitary          Übertragungsmatrix Laser -> Detektoren, "
       "Zwei-Photonen-Koinzidenzen\n"
+      "  photonlab_cli fdtd3d [--slab] [--core Si] [--width-nm 500] [--height-nm 220] [--cell-nm 20]\n"
+      "                    [--threads N] [--csv <aus.csv>]\n"
+      "                                               3D-FDTD eines geraden Wellenleiters: n_eff gegen "
+      "Modenlöser\n"
+      "  photonlab_cli bench [--size N] [--threads N] Geschwindigkeit von 2D- und 3D-FDTD (Mio. Zellen je "
+      "Sekunde)\n"
       "  photonlab_cli materials [wellenlaenge_nm]    Brechzahl und Gruppenindex der Materialbibliothek\n"
       "  photonlab_cli validate [--out <ordner>]      Validierung gegen analytische Lösungen\n");
 }
@@ -1228,6 +1239,8 @@ bool validate_xor() {
 
 // Referenzfall MZI (Bauplan Abschnitt 16): Ausgänge folgen sin²/cos² der Phasendifferenz, Energie bleibt
 // erhalten.
+bool validate_fdtd3d();  // weiter unten (Phase 12)
+
 int cmd_validate(const std::string& out_dir) {
   const auto& registry = circuit::ComponentRegistry::builtin();
   const double laser_power = 1e-3;
@@ -1275,9 +1288,190 @@ int cmd_validate(const std::string& out_dir) {
   ok = validate_active() && ok;
   ok = validate_logic_level() && ok;
   ok = validate_quantum() && ok;
+  ok = validate_fdtd3d() && ok;
   ok = validate_sparameters(out_dir) && ok;
   std::printf("%s\n", ok ? "BESTANDEN" : "NICHT BESTANDEN");
   return ok ? 0 : 1;
+}
+
+// ---- Phase 12: Geschwindigkeit und 3D ----
+
+// Referenzkern: der Ez-Zeitschritt, wie er bis Phase 11 gerechnet wurde (Hilfsfelder der Randschicht in
+// jeder Zelle, Kopie des alten Feldes, ein Thread). Dient nur als Maßstab für "bench" auf dem eigenen
+// Rechner.
+double reference_kernel_rate(int n, int steps) {
+  const auto size = static_cast<std::size_t>(n) * static_cast<std::size_t>(n);
+  std::vector<double> f(size, 0.0), f_prev(size), hx(size, 0.0), hy(size, 0.0), psi_fx(size, 0.0),
+      psi_fy(size, 0.0), psi_hx(size, 0.0), psi_hy(size, 0.0), cf(size, 1e-3),
+      zero(static_cast<std::size_t>(n), 0.0);
+  std::vector<double> b(static_cast<std::size_t>(n), 0.0), c(static_cast<std::size_t>(n), 0.0);
+  for (int i = 0; i < 20; ++i)
+    b[static_cast<std::size_t>(i)] = b[static_cast<std::size_t>(n - 1 - i)] = 0.9,
+    c[static_cast<std::size_t>(i)] = c[static_cast<std::size_t>(n - 1 - i)] = -0.1;
+  f[size / 2 + static_cast<std::size_t>(n) / 2] = 1.0;
+  const double inv = 1.0, cm = 1e-3;
+  const auto nx = static_cast<std::size_t>(n);
+  const auto start = std::chrono::steady_clock::now();
+  for (int s = 0; s < steps; ++s) {
+    for (int j = 0; j < n; ++j) {
+      const std::size_t row = static_cast<std::size_t>(j) * nx;
+      const double* e = &f[row];
+      const double* en = j + 1 < n ? &f[row + nx] : zero.data();
+      const double by = b[static_cast<std::size_t>(j)], cy = c[static_cast<std::size_t>(j)];
+      for (std::size_t i = 0; i < nx; ++i) {
+        const double d = (en[i] - e[i]) * inv;
+        psi_hx[row + i] = by * psi_hx[row + i] + cy * d;
+        hx[row + i] -= cm * (d + psi_hx[row + i]);
+      }
+      for (std::size_t i = 0; i + 1 < nx; ++i) {
+        const double d = (e[i + 1] - e[i]) * inv;
+        psi_hy[row + i] = b[i] * psi_hy[row + i] + c[i] * d;
+        hy[row + i] += cm * (d + psi_hy[row + i]);
+      }
+    }
+    f_prev = f;
+    for (int j = 1; j < n; ++j) {
+      const std::size_t row = static_cast<std::size_t>(j) * nx;
+      const double by = b[static_cast<std::size_t>(j)], cy = c[static_cast<std::size_t>(j)];
+      for (std::size_t i = 1; i < nx; ++i) {
+        const double dhy = (hy[row + i] - hy[row + i - 1]) * inv;
+        const double dhx = (hx[row + i] - hx[row - nx + i]) * inv;
+        psi_fx[row + i] = b[i] * psi_fx[row + i] + c[i] * dhy;
+        psi_fy[row + i] = by * psi_fy[row + i] + cy * dhx;
+        f[row + i] += cf[row + i] * (dhy + psi_fx[row + i] - dhx - psi_fy[row + i]);
+      }
+    }
+  }
+  const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+  volatile double sink = f[size / 2] + f_prev[0];
+  (void)sink;
+  return static_cast<double>(size) * steps / seconds;
+}
+
+int cmd_bench(const std::string& size_text, const std::string& threads_text) {
+  const int n = size_text.empty() ? 1000 : std::max(100, std::atoi(size_text.c_str()));
+  const int cores = static_cast<int>(std::max(1u, std::thread::hardware_concurrency()));
+  const int most = threads_text.empty() ? cores : std::max(1, std::atoi(threads_text.c_str()));
+  std::vector<int> counts = {1};
+  for (int t = 2; t < most; t *= 2) counts.push_back(t);
+  if (most > 1) counts.push_back(most);
+  const int steps = 200;
+  std::printf("Rechner: %d Kerne (logisch). 2D-Gitter %d x %d mit Randschicht, %d Schritte.\n", cores, n, n,
+              steps);
+  const double reference = reference_kernel_rate(n, steps);
+  std::printf("Referenz (Ez-Kern wie bis Phase 11, 1 Thread): %8.1f Mio. Zellen/s\n", reference / 1e6);
+  for (field::Polarization polarization : {field::Polarization::ez, field::Polarization::hz}) {
+    field::FieldScene scene;
+    scene.width = scene.height = n * 40e-9;
+    scene.cell_size = 40e-9;
+    scene.polarization = polarization;
+    field::Shape guide;
+    guide.x = 0.5 * scene.width, guide.y = 0.5 * scene.height, guide.width = scene.width,
+    guide.height = 0.5e-6;
+    guide.index = materials::get("Si").index(1550e-9);
+    scene.shapes = {guide};
+    field::Source source;
+    source.kind = field::SourceKind::point;
+    source.x1 = 0.2 * scene.width, source.y1 = 0.5 * scene.height;
+    scene.sources = {source};
+    for (int t : counts) {
+      field::Fdtd sim(scene);
+      sim.set_threads(t);
+      sim.run(5);
+      const auto start = std::chrono::steady_clock::now();
+      sim.run(static_cast<std::size_t>(steps));
+      const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+      const double rate = static_cast<double>(n) * n * steps / seconds;
+      std::printf("2D %s, %2d Thread(s):                       %8.1f Mio. Zellen/s  (%.1fx Referenz)\n",
+                  polarization == field::Polarization::ez ? "Ez" : "Hz", sim.threads(), rate / 1e6,
+                  rate / reference);
+    }
+  }
+  {
+    field::Scene3d scene;
+    scene.size_x = scene.size_y = scene.size_z = 120 * 20e-9;
+    scene.cell_size = 20e-9;
+    scene.background_index = materials::get("SiO2").index(1550e-9);
+    scene.blocks = {
+        {"Kern", 0.0, 2.4e-6, 0.95e-6, 1.45e-6, 1.09e-6, 1.31e-6, materials::get("Si").index(1550e-9)}};
+    for (int t : counts) {
+      field::Fdtd3d sim(scene);
+      sim.set_threads(t);
+      const int steps3 = 40;
+      sim.run(2);
+      const auto start = std::chrono::steady_clock::now();
+      sim.run(static_cast<std::size_t>(steps3));
+      const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+      std::printf("3D 120^3 mit Randschicht, %2d Thread(s):     %8.1f Mio. Zellen/s\n", sim.threads(),
+                  static_cast<double>(sim.cell_count()) * steps3 / seconds / 1e6);
+    }
+  }
+  std::printf(
+      "Hinweis: Die Rechnung ist durch die Speicherbandbreite begrenzt; mehr Threads helfen nur, solange "
+      "der Speicher mithält.\n");
+  return 0;
+}
+
+void print_waveguide3d(const field::Waveguide3dSettings& settings, const field::Waveguide3dResult& r) {
+  std::printf(
+      "Gitter %d x %d x %d Zellen zu %.0f nm, %zu Schritte, %d Threads, %.1f s (%.0f Mio. Zellen/s)\n", r.nx,
+      r.ny, r.nz, r.cell_size / units::nm, r.steps, r.threads, r.seconds, r.cells_per_second / 1e6);
+  std::printf("n_eff 3D-FDTD:            %.5f (Yee-Dispersion längs herausgerechnet: %.5f)\n", r.n_eff_fdtd,
+              r.n_eff_corrected);
+  if (settings.slab) std::printf("n_eff Schicht analytisch: %.5f\n", r.n_eff_analytic);
+  std::printf("n_eff Modenlöser:         %.5f (semi-vektoriell, gleiches Querschnittsgitter)\n",
+              r.n_eff_mode);
+  std::printf("Abweichung zur Referenz:  %.2f %% (%s)\n", 100.0 * r.relative_error,
+              settings.slab ? "analytisch" : "Modenlöser");
+  std::printf("Modenüberlapp am Messquerschnitt %.4f, Welligkeit der Amplitude %.1f %%\n", r.mode_overlap,
+              100.0 * r.amplitude_ripple);
+}
+
+int cmd_fdtd3d(bool slab, const std::string& core, const std::string& width, const std::string& height,
+               const std::string& cell, const std::string& threads, const std::string& csv_path) {
+  field::Waveguide3dSettings settings;
+  settings.slab = slab;
+  if (!core.empty()) settings.core = core;
+  if (!width.empty()) settings.width = std::atof(width.c_str()) * units::nm;
+  if (!height.empty()) settings.height = std::atof(height.c_str()) * units::nm;
+  if (!cell.empty()) settings.cell_size = std::atof(cell.c_str()) * units::nm;
+  if (!threads.empty()) settings.threads = std::atoi(threads.c_str());
+  std::printf(
+      "%s aus %s in %s, %.0f nm hoch%s, Wellenlänge %.0f nm\n", slab ? "Schicht" : "Streifen",
+      settings.core.c_str(), settings.cladding.c_str(), settings.height / units::nm,
+      slab ? ""
+           : (", " + std::to_string(static_cast<int>(std::lround(settings.width / units::nm))) + " nm breit")
+                 .c_str(),
+      settings.wavelength / units::nm);
+  const field::Waveguide3dResult r = field::run_waveguide_3d(settings);
+  print_waveguide3d(settings, r);
+  if (!csv_path.empty()) {
+    std::ofstream csv(csv_path);
+    csv.precision(10);
+    csv << "x_m,phase_rad,amplitude_V_per_m\n";
+    for (std::size_t i = 0; i < r.axis_x.size(); ++i)
+      csv << r.axis_x[i] << ',' << r.phase[i] << ',' << r.amplitude[i] << '\n';
+    std::printf("Phase und Amplitude entlang der Achse nach %s geschrieben\n", csv_path.c_str());
+  }
+  return 0;
+}
+
+// Abnahme Phase 12: 3D-Wellenleiter = Modenlöser (Schicht: analytisch; Draht: vollvektorielle Literatur)
+bool validate_fdtd3d() {
+  field::Waveguide3dSettings slab;
+  slab.slab = true;
+  const auto s = field::run_waveguide_3d(slab);
+  const auto w = field::run_waveguide_3d(field::Waveguide3dSettings{});
+  const double literature = 2.44;  // Chrostowski/Hochberg 2015, Kap. 3 (vollvektoriell)
+  const double slab_error = std::abs(s.n_eff_fdtd / s.n_eff_analytic - 1.0);
+  const double wire_error = std::abs(w.n_eff_fdtd / literature - 1.0);
+  std::printf("3D-FDTD Si-Schicht 220 nm: n_eff %.4f, analytisch %.4f (%.2f %%, gefordert < 0,2 %%)\n",
+              s.n_eff_fdtd, s.n_eff_analytic, 100.0 * slab_error);
+  std::printf(
+      "3D-FDTD Si-Draht 500 x 220 nm: n_eff %.4f, Literatur %.2f (%.2f %%, gefordert < 1 %%); "
+      "semi-vektorieller Modenlöser %.4f\n",
+      w.n_eff_fdtd, literature, 100.0 * wire_error, w.n_eff_mode);
+  return slab_error < 0.002 && wire_error < 0.01 && w.mode_overlap > 0.98;
 }
 
 }  // namespace
@@ -1288,7 +1482,7 @@ int main(int argc, char** argv) {
 #endif
   const std::vector<std::string> args(argv + 1, argv + argc);
   if (args.empty()) {
-    std::printf("PhotonLab CLI 0.12.0 (Phase 11)\n");
+    std::printf("PhotonLab CLI 0.13.0 (Phase 12)\n");
     print_usage();
     return 0;
   }
@@ -1337,6 +1531,10 @@ int main(int argc, char** argv) {
       return cmd_bands(option("--lattice"), option("--radius"), option("--eps"), option("--hole-eps"),
                        option("--pol"), option("--cutoff"), option("--a-nm"), option("--csv"));
     if (command == "validate") return cmd_validate(option("--out"));
+    if (command == "bench") return cmd_bench(option("--size"), option("--threads"));
+    if (command == "fdtd3d")
+      return cmd_fdtd3d(flag("--slab"), option("--core"), option("--width-nm"), option("--height-nm"),
+                        option("--cell-nm"), option("--threads"), option("--csv"));
     print_usage();
     return 2;
   } catch (const std::exception& e) {

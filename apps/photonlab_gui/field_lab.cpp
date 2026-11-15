@@ -129,6 +129,7 @@ FieldLab::FieldLab(ThreadPool& pool, ChipDesigner& designer, SDL_Renderer* rende
       ui_scale_(ui_scale),
       band_view_(pool, designer),
       mode_view_(pool, designer, renderer, ui_scale),
+      wave3d_view_(pool, renderer),
       sparam_view_(pool, designer) {}
 
 FieldLab::~FieldLab() {
@@ -341,7 +342,8 @@ void FieldLab::draw() {
     ImGui::End();
     return;
   }
-  // Zwei Ansichten: das Feld von oben (2D-FDTD) und der Querschnitt eines Wellenleiters (Modenlöser)
+  // Ansichten: das Feld von oben (2D-FDTD), der Querschnitt eines Wellenleiters (Modenlöser), ein gerader
+  // Wellenleiter im 3D-FDTD, Bandstruktur und S-Parameter
   if (ImGui::BeginTabBar("ansichten")) {
     if (ImGui::BeginTabItem("Feld (2D-FDTD)")) {
       draw_field_tab();
@@ -351,6 +353,10 @@ void FieldLab::draw() {
     }
     if (ImGui::BeginTabItem("Querschnitt (Moden)")) {
       mode_view_.draw();
+      ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("3D-Wellenleiter")) {
+      wave3d_view_.draw();
       ImGui::EndTabItem();
     }
     if (ImGui::BeginTabItem("Bandstruktur")) {

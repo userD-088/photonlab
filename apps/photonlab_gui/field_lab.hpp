@@ -15,6 +15,7 @@
 #include "photonlab/core/thread_pool.hpp"
 #include "photonlab/field/fdtd.hpp"
 #include "sparam_view.hpp"
+#include "wave3d_view.hpp"
 
 struct SDL_Renderer;
 struct SDL_Texture;
@@ -78,6 +79,7 @@ class FieldLab {
   float ui_scale_;
   BandView band_view_;
   ModeView mode_view_;
+  Wave3dView wave3d_view_;
   SParamView sparam_view_;
 
   std::uint64_t seen_generation_ = 0;

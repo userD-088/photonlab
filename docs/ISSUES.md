@@ -144,3 +144,14 @@ Offen aus Phase 6 (Folge-Issues):
 - [x] #104 Arbeitsbereich Quanten-Modus in der Oberfläche
 - [ ] #105 Exakte Behandlung teilweise unterscheidbarer Photonen (n > 2, Gram-Matrix), spektrale Moden
 - [ ] #106 Hexagonale programmierbare Gitter, Reck-Zerlegung, Kalibrierung aus Messdaten (Statistik)
+
+## Phase 12 – Leistung + 3D
+- [x] #107 2D-FDTD: Randschicht nur am Rand, Puffertausch, Threads je Zeitschritt (StepTeam), Vektorisierung; bitgleich zum alten Kern und für jede Thread-Zahl; Abnahme 5,5x (Ez) bzw. 7,0x (Hz) auf 4 Kernen
+- [x] #108 3D-FDTD (Yee, CPML in den Schichten, Quader, Threads) mit Tests: Hohlraum-Dispersion exakt, Randschicht -94 dB
+- [x] #109 Abnahme 3D-Wellenleiter = Modenlöser: Schicht 0,05 % zur analytischen Lösung, Si-Draht 0,2 % zum vollvektoriellen Literaturwert
+- [x] #110 `photonlab_cli bench` (mit Referenzkern von Phase 11), `photonlab_cli fdtd3d`, Reiter 3D-Wellenleiter, Option PHOTONLAB_NATIVE
+- [ ] #111 GPU-Backend (SDL3-GPU-Compute in apps/ oder CUDA/OpenCL als neue Abhängigkeit – Rückfrage)
+- [ ] #112 Zeitliches Blocken und float-Variante des FDTD (weniger Speicherverkehr, ändert Ergebnisse im letzten Bit)
+- [ ] #113 3D: Dispersion, Verluste, Nichtlinearität; geneigte und gekrümmte Formen mit Mittelung (Subpixel)
+- [ ] #114 3D-Szenen im Editor und im Dateiformat (.plab.json), Feldbilder live
+- [ ] #115 3D: Monitore, Fluss, S-Parameter-Extraktion (Brücke 1 in 3D), varFDTD/2,5D

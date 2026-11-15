@@ -5,6 +5,7 @@
 #include <limits>
 
 #include "photonlab/core/parallel_for.hpp"
+#include "photonlab/core/step_team.hpp"
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/fdtd.hpp"
 #include "photonlab/field/reference_scenes.hpp"
@@ -90,6 +91,7 @@ TruthTable run_field_truth_table(const FieldGate& gate, ThreadPool* pool, JobCon
                                            [](const field::Source& src) { return src.amplitude != 0.0; });
         if (any_light) {
           field::Fdtd solver(scene);
+          solver.set_threads(StepTeam::share_for(tasks, pool ? pool->size() : 0));
           solver.run(static_cast<std::size_t>(scene.duration / solver.time_step()), control);
           const double period = scene.sources.front().wavelength / constants::c0;
           for (std::size_t m = 0; m < solver.monitors().size(); ++m) {

@@ -8,6 +8,16 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)   # für clangd in VS Code
 
 option(PHOTONLAB_BUILD_GUI   "SDL3/ImGui-Oberfläche bauen" ON)
 option(PHOTONLAB_BUILD_TESTS "Tests bauen"                 ON)
+# Befehlssatz des eigenen Prozessors (AVX2 usw.): im 3D-FDTD etwa ein Drittel schneller, das Programm läuft
+# dann aber nur auf Prozessoren mit denselben Befehlen (docs/performance.md)
+option(PHOTONLAB_NATIVE      "Für den eigenen Prozessor optimieren" OFF)
+if(PHOTONLAB_NATIVE)
+  if(MSVC)
+    add_compile_options(/arch:AVX2)
+  else()
+    add_compile_options(-march=native)
+  endif()
+endif()
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)

@@ -9,6 +9,7 @@
 #include <numeric>
 
 #include "photonlab/core/parallel_for.hpp"
+#include "photonlab/core/step_team.hpp"
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/fdtd.hpp"
 
@@ -318,6 +319,7 @@ SParameterResult extract_sparameters(const FieldScene& scene, ThreadPool* pool, 
         source.mode_order = driven.mode_order;
         run_scene.sources = {source};
         Fdtd sim(run_scene);
+        sim.set_threads(StepTeam::share_for(port_count, pool ? pool->size() : 0));
 
         // Fourier-Summen aller Ports
         std::vector<PortDft> dft(port_count);
