@@ -125,7 +125,9 @@ TEST_CASE("Quanten-Modus: Übertragungsmatrix einer Schaltung (Koppler) und HOM 
   REQUIRE(t.u.rows() == 2);
   CHECK((t.u.adjoint() * t.u).isIdentity(1e-12));
   const auto dist = distribution(t.u, {1, 1});
-  CHECK(dist.count({1, 1}) == 0);  // HOM am Koppler aus dem Chip-Designer
+  // HOM am Koppler aus dem Chip-Designer; je nach Compiler bleibt ein Rundungsrest statt exakt 0
+  const auto coincidence = dist.find({1, 1});
+  CHECK((coincidence == dist.end() ? 0.0 : coincidence->second) < 1e-20);
 }
 
 TEST_CASE("Clements-Zerlegung: N(N-1)/2 MZIs, Rekonstruktion auf Maschinengenauigkeit (Abnahme)") {
