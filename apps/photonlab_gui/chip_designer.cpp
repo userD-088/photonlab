@@ -13,6 +13,8 @@
 #include "photonlab/circuit/reference_designs.hpp"
 #include "photonlab/circuit/sweep.hpp"
 #include "photonlab/core/units.hpp"
+#include "photonlab/layout/gds.hpp"
+#include "photonlab/layout/layout.hpp"
 #include "ui_util.hpp"
 
 // Hinweis: Alle Texte der Oberfläche bleiben im Latin-1-Zeichenvorrat, damit auch die
@@ -240,6 +242,16 @@ void ChipDesigner::handle_dialog_result() {
     if (on_save_sparam) on_save_sparam(path);
   } else if (result->kind == DialogKind::open_sparam) {
     if (on_open_sparam) on_open_sparam(result->path);
+  } else if (result->kind == DialogKind::save_gds) {
+    std::string path = result->path;
+    if (path_from_utf8(path).extension().empty()) path += ".gds";
+    if (gds_writer_) try {
+        gds_writer_(path);
+        set_status("Layout gespeichert: " + path);
+      } catch (const std::exception& e) {
+        set_status(std::string("GDSII-Export fehlgeschlagen: ") + e.what(), true);
+      }
+    gds_writer_ = nullptr;
   } else {
     std::string path = result->path;
     if (path_from_utf8(path).extension().empty()) path += ".plab.json";
@@ -606,6 +618,20 @@ void ChipDesigner::draw_file_menu() {
   ImGui::Separator();
   if (ImGui::MenuItem("Speichern", "Strg+S")) save_or_ask();
   if (ImGui::MenuItem("Speichern unter...")) show_file_dialog(DialogKind::save_project, window_);
+  ImGui::Separator();
+  if (ImGui::MenuItem("Feld-Szene als GDSII exportieren...", nullptr, false, !project_.field.empty())) {
+    request_gds_export([scene = project_.field](const std::string& path) {
+      layout::write_gds_file(layout::scene_to_layout(scene), path_from_utf8(path).string());
+    });
+  }
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled))
+    ImGui::SetTooltip(
+        "Formen der Feld-Szene als Polygone, je Brechzahl eine Lage (1 nm Raster, y nach oben).");
+}
+
+void ChipDesigner::request_gds_export(std::function<void(const std::string& path)> write) {
+  gds_writer_ = std::move(write);
+  show_file_dialog(DialogKind::save_gds, window_);
 }
 
 void ChipDesigner::draw_confirm_popup() {

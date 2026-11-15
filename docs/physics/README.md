@@ -24,7 +24,8 @@ Das hilft Menschen und Claude gleichermaßen, den Code nachzuvollziehen.
 - [`active.md`](active.md) – Heizer, PN-Modulator, Photodiode, Zeitbereich, PCM (Phase 9)
 - [`logic_level.md`](logic_level.md) – Logik-Ebene: Logikblöcke und Event-Simulator (Phase 10)
 - [`quantum.md`](quantum.md) – Quanten-Modus und MZI-Gitter (Phase 11)
+- [`inverse_design.md`](inverse_design.md) – Adjoint-Gradient aus dem Yee-Schema, Filter, Projektion, 90-Grad-Knick (Phase 13)
+- [`layout.md`](layout.md) – Polygone aus Feld-Szenen, GDSII-Format (Phase 13)
 - [`fdtd3d.md`](fdtd3d.md) – 3D-FDTD: Yee-Gitter, CPML in den Schichten, Material-Mittelung, Abnahme 3D-Wellenleiter = Modenlöser (Phase 12)
 
 ## Geplante Notizen
-- GDSII, inverses Design (Phase 13)

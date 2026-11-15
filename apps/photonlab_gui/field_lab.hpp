@@ -11,6 +11,7 @@
 
 #include "band_view.hpp"
 #include "chip_designer.hpp"
+#include "inverse_view.hpp"
 #include "mode_view.hpp"
 #include "photonlab/core/thread_pool.hpp"
 #include "photonlab/field/fdtd.hpp"
@@ -80,6 +81,7 @@ class FieldLab {
   BandView band_view_;
   ModeView mode_view_;
   Wave3dView wave3d_view_;
+  InverseView inverse_view_;
   SParamView sparam_view_;
 
   std::uint64_t seen_generation_ = 0;

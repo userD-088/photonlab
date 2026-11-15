@@ -46,13 +46,27 @@ ParamMap ComponentType::default_params() const {
   return result;
 }
 
-const ComponentRegistry& ComponentRegistry::builtin() {
-  static const ComponentRegistry registry = [] {
+namespace {
+constexpr std::size_t builtin_capacity = 512;  // Platz für Plugins, ohne dass Zeiger ungültig werden
+}  // namespace
+
+ComponentRegistry& ComponentRegistry::builtin_instance() {
+  static ComponentRegistry registry = [] {
     ComponentRegistry r;
+    r.types_.reserve(builtin_capacity);
     register_builtin_components(r);
     return r;
   }();
   return registry;
+}
+
+const ComponentRegistry& ComponentRegistry::builtin() { return builtin_instance(); }
+
+void ComponentRegistry::extend_builtin(ComponentType type) {
+  ComponentRegistry& registry = builtin_instance();
+  if (registry.types_.size() >= builtin_capacity)
+    throw CircuitError("Zu viele Bauteiltypen (Grenze " + std::to_string(builtin_capacity) + ")");
+  registry.add(std::move(type));
 }
 
 void ComponentRegistry::add(ComponentType type) {

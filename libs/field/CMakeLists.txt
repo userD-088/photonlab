@@ -1,6 +1,7 @@
 add_library(photonlab_field
   src/fdtd.cpp
   src/fdtd3d.cpp
+  src/inverse_design.cpp
   src/waveguide3d.cpp
   src/photonic_crystal.cpp
   src/reference_scenes.cpp

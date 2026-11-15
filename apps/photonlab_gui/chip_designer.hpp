@@ -59,6 +59,8 @@ class ChipDesigner {
   void load_example(const std::string& name) { request(Pending::load_example, name); }
   void show_status(std::string text, bool is_error = false) { set_status(std::move(text), is_error); }
   SDL_Window* window() const { return window_; }
+  // GDSII-Export: Dialog öffnen, danach write(pfad) aufrufen (Feld-Szene oder inverses Design)
+  void request_gds_export(std::function<void(const std::string& path)> write);
   std::function<void(const std::string& path)> on_save_gate;    // Ziel für den Dialog "Gatter exportieren"
   std::function<void(const std::string& path)> on_save_sparam;  // Ziel für "S-Parameter speichern"
   std::function<void(const std::string& path)> on_open_sparam;  // Ziel für "S-Parameter laden"
@@ -91,6 +93,7 @@ class ChipDesigner {
   void add_instance(const std::string& type, int grid_x, int grid_y);
   void rename_selected(const std::string& new_name);
   void set_status(std::string text, bool is_error = false);
+  std::function<void(const std::string& path)> gds_writer_;
 
   // Rechnen
   void update_solution();

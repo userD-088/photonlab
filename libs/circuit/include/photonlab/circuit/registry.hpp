@@ -50,6 +50,9 @@ class ComponentRegistry {
 
   // Registry mit allen eingebauten Bauteilen.
   static const ComponentRegistry& builtin();
+  // Fügt der eingebauten Registry einen Typ hinzu (nur für Plugins beim Programmstart, siehe plugin.hpp).
+  // Zeiger auf bereits angemeldete Typen bleiben gültig (Platz ist reserviert).
+  static void extend_builtin(ComponentType type);
 
   void add(ComponentType type);  // wirft CircuitError bei doppeltem Namen
   const ComponentType* find(std::string_view name) const;
@@ -60,6 +63,7 @@ class ComponentRegistry {
   std::unique_ptr<Component> create(std::string_view type_name, const ParamMap& params) const;
 
  private:
+  static ComponentRegistry& builtin_instance();
   std::vector<ComponentType> types_;
 };
 

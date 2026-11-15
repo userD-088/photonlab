@@ -13,6 +13,7 @@ std::mutex g_mutex;
 std::optional<DialogResult> g_result;
 
 const SDL_DialogFileFilter g_filters[] = {{"PhotonLab-Projekt (*.json)", "json"}, {"Alle Dateien", "*"}};
+const SDL_DialogFileFilter g_gds_filters[] = {{"GDSII-Layout (*.gds)", "gds"}, {"Alle Dateien", "*"}};
 
 void SDLCALL on_dialog_done(void* userdata, const char* const* filelist, int /*filter*/) {
   DialogResult result;
@@ -32,7 +33,8 @@ void show_file_dialog(DialogKind kind, SDL_Window* window) {
   if (kind == DialogKind::open_project || kind == DialogKind::open_sparam)
     SDL_ShowOpenFileDialog(on_dialog_done, userdata, window, g_filters, 2, nullptr, false);
   else
-    SDL_ShowSaveFileDialog(on_dialog_done, userdata, window, g_filters, 2, nullptr);
+    SDL_ShowSaveFileDialog(on_dialog_done, userdata, window,
+                           kind == DialogKind::save_gds ? g_gds_filters : g_filters, 2, nullptr);
 }
 
 std::optional<DialogResult> poll_file_dialog() {

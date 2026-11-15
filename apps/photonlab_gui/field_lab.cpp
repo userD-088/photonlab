@@ -130,6 +130,7 @@ FieldLab::FieldLab(ThreadPool& pool, ChipDesigner& designer, SDL_Renderer* rende
       band_view_(pool, designer),
       mode_view_(pool, designer, renderer, ui_scale),
       wave3d_view_(pool, renderer),
+      inverse_view_(pool, designer, renderer),
       sparam_view_(pool, designer) {}
 
 FieldLab::~FieldLab() {
@@ -357,6 +358,14 @@ void FieldLab::draw() {
     }
     if (ImGui::BeginTabItem("3D-Wellenleiter")) {
       wave3d_view_.draw();
+      ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("Inverses Design")) {
+      if (inverse_view_.draw()) {
+        scene_changed_ = true;
+        selected_kind_ = ObjectKind::none;
+        selected_index_ = -1;
+      }
       ImGui::EndTabItem();
     }
     if (ImGui::BeginTabItem("Bandstruktur")) {

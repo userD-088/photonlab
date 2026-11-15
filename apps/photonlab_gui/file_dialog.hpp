@@ -8,7 +8,7 @@ struct SDL_Window;
 
 namespace photonlab::gui {
 
-enum class DialogKind { open_project, save_project, save_gate, save_sparam, open_sparam };
+enum class DialogKind { open_project, save_project, save_gate, save_sparam, open_sparam, save_gds };
 
 struct DialogResult {
   DialogKind kind = DialogKind::open_project;

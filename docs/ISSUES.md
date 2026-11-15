@@ -155,3 +155,12 @@ Offen aus Phase 6 (Folge-Issues):
 - [ ] #113 3D: Dispersion, Verluste, Nichtlinearität; geneigte und gekrümmte Formen mit Mittelung (Subpixel)
 - [ ] #114 3D-Szenen im Editor und im Dateiformat (.plab.json), Feldbilder live
 - [ ] #115 3D: Monitore, Fluss, S-Parameter-Extraktion (Brücke 1 in 3D), varFDTD/2,5D
+
+## Phase 13 – Kür
+- [x] #116 GDSII-Export (libs/layout): Polygone aus Feld-Szenen und Pixelbildern, Stream nach Formatbeschreibung, Leser für Tests; CLI `gds`, Menü Datei
+- [x] #117 Inverses Design mit der Adjoint-Methode (2D, Ez): Gradient = finite Differenzen auf 0,4 %, 90-Grad-Knick binär 0,995; CLI `inverse-design`, Reiter, GDSII- und Szenen-Übergabe
+- [x] #118 Plugin-Schnittstelle (C, Version 1) für lineare Bauteile, Beispiel-Plugin Bragg-Gitter/MMI, Laden beim Start, Fenster Hilfe → Plugins
+- [ ] #119 Plugin-Schnittstelle Version 2: nichtlineare Bauteile (Zustand), Quellen, Messwerte, Handlungen; Feld-Plugins
+- [ ] #120 GDSII: Hierarchie, Texte, Pfade; Import; Verschmelzen überlappender Formen; Gegentest mit KLayout
+- [ ] #121 Inverses Design: Mindeststrukturgröße als Nebenbedingung, MMA/Adam, weitere Aufgaben (Teiler, Modenwandler, WDM)
+- [ ] #122 Inverses Design mit Hz (TE-artig) und im 3D-FDTD

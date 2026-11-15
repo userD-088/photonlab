@@ -28,6 +28,32 @@ double Fdtd::carrier_density_at(double x, double y) const {
   return 0.0;
 }
 
+void Fdtd::set_permittivity(std::size_t index, double eps) {
+  if (polarization_ != Polarization::ez) throw FieldError("Permittivität setzen: nur bei Ez-Polarisation");
+  if (!kerr_cells_.empty()) throw FieldError("Permittivität setzen: nicht mit nichtlinearen Formen");
+  if (index >= eps_f_.size() || !(eps >= 1.0))
+    throw FieldError("Permittivität setzen: ungültige Zelle oder Wert");
+  eps_f_[index] = eps;
+  cf_[index] = dt_ / (constants::eps0 * eps);
+}
+
+Fdtd::ModeWeights Fdtd::mode_weights(std::size_t monitor) const {
+  for (const auto& probe : mode_probes_)
+    if (probe.monitor == monitor) return {probe.cells, probe.weights};
+  throw FieldError("Monitor " + std::to_string(monitor) + " ist kein Modenmonitor");
+}
+
+void Fdtd::add_injection(const std::vector<std::size_t>& cells, const std::vector<double>& weights,
+                         const Source& signal) {
+  if (cells.size() != weights.size()) throw FieldError("Quelle: Zellen und Gewichte passen nicht zusammen");
+  ActiveSource active{signal, {}};
+  for (std::size_t k = 0; k < cells.size(); ++k) {
+    if (cells[k] >= f_.size()) throw FieldError("Quelle: Zelle außerhalb des Gitters");
+    active.cells.push_back({cells[k], weights[k] * signal.amplitude});
+  }
+  sources_.push_back(std::move(active));
+}
+
 double Fdtd::signal(const Source& source, double time) {
   const double omega = omega_from_wavelength(source.wavelength);
   if (source.signal == SignalKind::pulse) {

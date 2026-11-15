@@ -68,6 +68,20 @@ class Fdtd {
 
   const std::vector<MonitorData>& monitors() const { return monitors_; }
 
+  // --- für inverses Design (Phase 13, nur Ez-Polarisation, ohne Kerr-Zellen) ---
+  // Relative Permittivität am Knoten index ändern (vor oder während der Rechnung).
+  void set_permittivity(std::size_t index, double eps);
+  // Zellen und Gewichte eines Modenmonitors: Modenamplitude = Summe(Feld[cells[k]] * weights[k]).
+  struct ModeWeights {
+    std::vector<std::size_t> cells;
+    std::vector<double> weights;
+  };
+  ModeWeights mode_weights(std::size_t monitor) const;
+  // Zusätzliche Quelle mit beliebigem Profil: je Schritt Feld[cells[k]] += weights[k] * Signal(t).
+  // Genutzt werden signal, wavelength, phase, ramp_periods, pulse_duration und amplitude (als Faktor).
+  void add_injection(const std::vector<std::size_t>& cells, const std::vector<double>& weights,
+                     const Source& signal);
+
   // Zeitsignal einer Quelle (ohne Amplitude), öffentlich für Tests und Darstellung.
   static double signal(const Source& source, double time);
 

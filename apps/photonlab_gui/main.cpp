@@ -3,11 +3,13 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "chip_designer.hpp"
 #include "eye_view.hpp"
@@ -18,6 +20,8 @@
 #include "imgui_internal.h"  // DockBuilder für das Standard-Layout
 #include "implot.h"
 #include "logic_lab.hpp"
+#include "photonlab/circuit/plugin.hpp"
+#include "photonlab/circuit/registry.hpp"
 #include "photonlab/core/thread_pool.hpp"
 #include "quantum_view.hpp"
 
@@ -86,13 +90,44 @@ void build_default_layout(ImGuiID dock_id, ImVec2 size) {
 
 }  // namespace
 
+// Fenster "Plugins": geladene Bauteil-Plugins, ihre Bauteile und Ladefehler
+void draw_plugins_window(bool* open, const std::vector<std::string>& errors) {
+  ImGui::SetNextWindowSize(ImVec2(560, 320), ImGuiCond_FirstUseEver);
+  if (!ImGui::Begin("Plugins", open)) {
+    ImGui::End();
+    return;
+  }
+  const auto& plugins = photonlab::circuit::loaded_plugins();
+  ImGui::PushTextWrapPos(0.0f);
+  if (plugins.empty())
+    ImGui::TextDisabled(
+        "Keine Plugins geladen. Plugins (.dll/.so) in den Ordner \"plugins\" neben dem Programm "
+        "legen, mit --plugin <datei> starten oder PHOTONLAB_PLUGINS setzen. Vorlage: plugins/example.");
+  for (const auto& p : plugins) {
+    ImGui::SeparatorText((p.name + " " + p.version).c_str());
+    ImGui::TextDisabled("%s", p.path.c_str());
+    ImGui::TextUnformatted(p.description.c_str());
+    for (const auto& name : p.components) {
+      const auto* type = photonlab::circuit::ComponentRegistry::builtin().find(name);
+      ImGui::BulletText("%s (%s)", type ? type->label.c_str() : name.c_str(), name.c_str());
+    }
+    for (const auto& w : p.warnings) ImGui::TextColored(ImVec4(0.9f, 0.69f, 0.29f, 1.0f), "%s", w.c_str());
+  }
+  for (const auto& e : errors) ImGui::TextColored(ImVec4(1.0f, 0.48f, 0.42f, 1.0f), "%s", e.c_str());
+  ImGui::PopTextWrapPos();
+  ImGui::End();
+}
+
 int main(int argc, char** argv) {
-  // Optionen: [projekt.plab.json] [--frames N] [--screenshot bild.bmp]
+  // Optionen: [projekt.plab.json] [--frames N] [--screenshot bild.bmp] [--plugin datei]...
   std::string project_path, screenshot_path;
+  std::vector<std::string> plugin_files;
   int frame_limit = 0;  // 0 = unbegrenzt
   for (int i = 1; i < argc; ++i) {
     const std::string_view arg = argv[i];
-    if (arg == "--frames" && i + 1 < argc)
+    if (arg == "--plugin" && i + 1 < argc)
+      plugin_files.emplace_back(argv[++i]);
+    else if (arg == "--frames" && i + 1 < argc)
       frame_limit = std::atoi(argv[++i]);
     else if (arg == "--screenshot" && i + 1 < argc)
       screenshot_path = argv[++i];
@@ -101,6 +136,36 @@ int main(int argc, char** argv) {
   }
   if (!screenshot_path.empty() && frame_limit == 0) frame_limit = 12;
   const bool automated = frame_limit > 0;
+
+  // Plugins vor allem anderen laden (danach wird die Registry nur noch gelesen): Ordner "plugins" neben dem
+  // Programm, Umgebungsvariable PHOTONLAB_PLUGINS (Dateien oder Ordner), Option --plugin
+  std::vector<std::string> plugin_errors;
+  if (const char* base = SDL_GetBasePath())
+    photonlab::circuit::load_plugins_from(std::string(base) + "plugins", &plugin_errors);
+  if (const char* env = std::getenv("PHOTONLAB_PLUGINS")) {
+#ifdef _WIN32
+    const char separator = ';';
+#else
+    const char separator = ':';
+#endif
+    const std::string list = env;
+    for (std::size_t start = 0; start <= list.size();) {
+      const std::size_t end = std::min(list.find(separator, start), list.size());
+      const std::string item = list.substr(start, end - start);
+      start = end + 1;
+      if (item.empty()) continue;
+      if (std::filesystem::is_directory(item))
+        photonlab::circuit::load_plugins_from(item, &plugin_errors);
+      else
+        plugin_files.push_back(item);
+    }
+  }
+  for (const auto& file : plugin_files) try {
+      photonlab::circuit::load_plugin(file);
+    } catch (const std::exception& e) {
+      plugin_errors.push_back(e.what());
+    }
+  for (const auto& e : plugin_errors) std::fprintf(stderr, "Plugin: %s\n", e.c_str());
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     std::fprintf(stderr, "SDL_Init fehlgeschlagen: %s\n", SDL_GetError());
@@ -147,7 +212,7 @@ int main(int argc, char** argv) {
     photonlab::gui::FieldLab field_lab(pool, chip_designer, renderer, ui_scale);
     if (!project_path.empty() && !chip_designer.open_file(project_path) && automated) exit_code = 1;
 
-    bool running = true, show_demo = false, reset_layout = false;
+    bool running = true, show_demo = false, reset_layout = false, show_plugins = false;
     int frame_count = 0;
     while (running && !chip_designer.quit_confirmed()) {
       SDL_Event e;
@@ -186,6 +251,7 @@ int main(int argc, char** argv) {
           ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Hilfe")) {
+          ImGui::MenuItem("Plugins ...", nullptr, &show_plugins);
           ImGui::MenuItem("ImGui-Demo anzeigen", nullptr, &show_demo);
           ImGui::EndMenu();
         }
@@ -207,6 +273,7 @@ int main(int argc, char** argv) {
       }
       ++frame_count;
       if (show_demo) ImGui::ShowDemoWindow(&show_demo);
+      if (show_plugins) draw_plugins_window(&show_plugins, plugin_errors);
 
       ImGui::Render();
       SDL_SetRenderScale(renderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);

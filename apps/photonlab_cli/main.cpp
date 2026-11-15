@@ -18,6 +18,7 @@
 #include "photonlab/circuit/kerr_cavity.hpp"
 #include "photonlab/circuit/monte_carlo.hpp"
 #include "photonlab/circuit/pcm.hpp"
+#include "photonlab/circuit/plugin.hpp"
 #include "photonlab/circuit/reference_designs.hpp"
 #include "photonlab/circuit/registry.hpp"
 #include "photonlab/circuit/solver.hpp"
@@ -28,11 +29,14 @@
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/fdtd.hpp"
 #include "photonlab/field/fdtd3d.hpp"
+#include "photonlab/field/inverse_design.hpp"
 #include "photonlab/field/reference_scenes.hpp"
 #include "photonlab/field/sparameters.hpp"
 #include "photonlab/field/spectrum.hpp"
 #include "photonlab/field/waveguide3d.hpp"
 #include "photonlab/io/project.hpp"
+#include "photonlab/layout/gds.hpp"
+#include "photonlab/layout/layout.hpp"
 #include "photonlab/logic/field_gate.hpp"
 #include "photonlab/logic/logic_sim.hpp"
 #include "photonlab/logic/reference_gates.hpp"
@@ -112,6 +116,16 @@ void print_usage() {
       "Modenlöser\n"
       "  photonlab_cli bench [--size N] [--threads N] Geschwindigkeit von 2D- und 3D-FDTD (Mio. Zellen je "
       "Sekunde)\n"
+      "  photonlab_cli gds <datei.plab.json> --out <aus.gds>   Feld-Szene als GDSII-Layout (je Brechzahl "
+      "eine "
+      "Lage)\n"
+      "  photonlab_cli inverse-design [--iterations 40] [--out-gds <aus.gds>] [--csv <aus.csv>]\n"
+      "                                               90-Grad-Knick per Adjoint-Methode optimieren (2D-FDTD, "
+      "Ez)\n"
+      "  photonlab_cli plugins                        geladene Bauteil-Plugins und ihre Bauteile\n"
+      "  Option für alle Befehle: --plugin <datei>    Plugin laden (zusätzlich: Ordner plugins neben dem "
+      "Programm,\n"
+      "                                               Umgebungsvariable PHOTONLAB_PLUGINS mit Pfaden)\n"
       "  photonlab_cli materials [wellenlaenge_nm]    Brechzahl und Gruppenindex der Materialbibliothek\n"
       "  photonlab_cli validate [--out <ordner>]      Validierung gegen analytische Lösungen\n");
 }
@@ -1239,7 +1253,8 @@ bool validate_xor() {
 
 // Referenzfall MZI (Bauplan Abschnitt 16): Ausgänge folgen sin²/cos² der Phasendifferenz, Energie bleibt
 // erhalten.
-bool validate_fdtd3d();  // weiter unten (Phase 12)
+bool validate_fdtd3d();   // weiter unten (Phase 12)
+bool validate_phase13();  // weiter unten (Phase 13)
 
 int cmd_validate(const std::string& out_dir) {
   const auto& registry = circuit::ComponentRegistry::builtin();
@@ -1289,6 +1304,7 @@ int cmd_validate(const std::string& out_dir) {
   ok = validate_logic_level() && ok;
   ok = validate_quantum() && ok;
   ok = validate_fdtd3d() && ok;
+  ok = validate_phase13() && ok;
   ok = validate_sparameters(out_dir) && ok;
   std::printf("%s\n", ok ? "BESTANDEN" : "NICHT BESTANDEN");
   return ok ? 0 : 1;
@@ -1474,6 +1490,144 @@ bool validate_fdtd3d() {
   return slab_error < 0.002 && wire_error < 0.01 && w.mode_overlap > 0.98;
 }
 
+// ---- Phase 13: GDSII, inverses Design, Plugins ----
+
+// Plugins: Ordner "plugins" neben dem Programm, Umgebungsvariable PHOTONLAB_PLUGINS (Dateien oder Ordner,
+// getrennt durch ';' bzw. ':'), Option --plugin <datei> (mehrfach). Fehler werden gemeldet, brechen aber
+// nicht ab.
+void load_cli_plugins(const std::string& program, const std::vector<std::string>& args) {
+  std::vector<std::string> errors;
+  if (!program.empty()) {
+    std::error_code ec;
+    const auto dir = std::filesystem::absolute(std::filesystem::path(program), ec).parent_path() / "plugins";
+    if (!ec) circuit::load_plugins_from(dir.string(), &errors);
+  }
+  if (const char* env = std::getenv("PHOTONLAB_PLUGINS")) {
+#ifdef _WIN32
+    const char separator = ';';
+#else
+    const char separator = ':';
+#endif
+    std::string list = env, item;
+    for (std::size_t start = 0; start <= list.size();) {
+      const std::size_t end = std::min(list.find(separator, start), list.size());
+      item = list.substr(start, end - start);
+      start = end + 1;
+      if (item.empty()) continue;
+      if (std::filesystem::is_directory(item))
+        circuit::load_plugins_from(item, &errors);
+      else
+        try {
+          circuit::load_plugin(item);
+        } catch (const std::exception& e) {
+          errors.push_back(e.what());
+        }
+    }
+  }
+  for (std::size_t i = 0; i + 1 < args.size(); ++i)
+    if (args[i] == "--plugin") try {
+        circuit::load_plugin(args[i + 1]);
+      } catch (const std::exception& e) {
+        errors.push_back(e.what());
+      }
+  for (const auto& e : errors) std::fprintf(stderr, "Plugin: %s\n", e.c_str());
+}
+
+int cmd_plugins() {
+  const auto& plugins = circuit::loaded_plugins();
+  if (plugins.empty()) {
+    std::printf(
+        "Keine Plugins geladen. Laden mit --plugin <datei>, über den Ordner plugins neben dem Programm oder\n"
+        "die Umgebungsvariable PHOTONLAB_PLUGINS. Vorlage: plugins/example (wird mitgebaut).\n");
+    return 0;
+  }
+  for (const auto& p : plugins) {
+    std::printf("%s %s (%s)\n  %s\n", p.name.c_str(), p.version.c_str(), p.path.c_str(),
+                p.description.c_str());
+    for (const auto& name : p.components) {
+      const auto* type = circuit::ComponentRegistry::builtin().find(name);
+      std::printf("  - %s (%s): %s\n", name.c_str(), type ? type->label.c_str() : "?",
+                  type ? type->description.c_str() : "");
+    }
+    for (const auto& w : p.warnings) std::printf("  WARNUNG: %s\n", w.c_str());
+  }
+  return 0;
+}
+
+int cmd_gds(const std::string& file, const std::string& out) {
+  if (out.empty()) {
+    std::fprintf(stderr, "Fehler: Zieldatei fehlt (--out <aus.gds>)\n");
+    return 2;
+  }
+  const io::Project project = io::load_project(file);
+  if (project.field.empty()) {
+    std::fprintf(stderr, "Fehler: Die Datei enthält keine Feld-Szene (Abschnitt \"field\").\n");
+    return 1;
+  }
+  const layout::Layout lay = layout::scene_to_layout(project.field);
+  layout::write_gds_file(lay, out);
+  std::size_t points = 0;
+  for (const auto& p : lay.cells[0].polygons) points += p.points.size();
+  std::printf("GDSII: Zelle %s, %zu Polygone (%zu Ecken), Datenbank-Einheit 1 nm, nach %s\n",
+              lay.cells[0].name.c_str(), lay.cells[0].polygons.size(), points, out.c_str());
+  for (const auto& l : lay.layers) std::printf("  Lage %d: %s\n", l.layer, l.name.c_str());
+  std::printf("Hinweis: y zeigt im Layout nach oben; überlappende Formen werden nicht verschmolzen.\n");
+  return 0;
+}
+
+int cmd_inverse_design(const std::string& iterations, const std::string& gds, const std::string& csv_path) {
+  field::InverseDesignSettings settings;
+  if (!iterations.empty()) settings.iterations = std::max(1, std::atoi(iterations.c_str()));
+  std::printf(
+      "90-Grad-Knick, Si in SiO2, Ez-Polarisation, Designgebiet %.1f x %.1f um, Pixel %.0f nm, Ziel: "
+      "mittlere Transmission bei 1530/1550/1570 nm\n",
+      settings.design_size / units::um, settings.design_size / units::um, settings.cell_size / units::nm);
+  const auto result = field::run_inverse_design(settings, nullptr, [](const field::InverseDesignProgress& p) {
+    std::printf("  Iteration %2d: Transmission %.4f\n", p.iteration + 1, p.history->back());
+    std::fflush(stdout);
+  });
+  std::printf("Start %.4f, stetiges Design %.4f, binäres Design %.4f (leeres Gebiet %.4f)\n",
+              result.transmission_start, result.transmission_final, result.transmission_binary,
+              result.transmission_empty);
+  std::printf("Spektrum des binären Designs:");
+  for (std::size_t k = 0; k < result.spectrum_wavelengths.size(); k += 4)
+    std::printf(" %.0f nm: %.3f", result.spectrum_wavelengths[k] / units::nm, result.spectrum_binary[k]);
+  std::printf(
+      "\nHinweis: 2D-Rechnung mit Ez (E senkrecht zur Ebene); ein Chip mit 220-nm-Schicht braucht Hz und "
+      "3D.\n");
+  if (!gds.empty()) {
+    layout::write_gds_file(layout::inverse_design_layout(result), gds);
+    std::printf("Layout nach %s geschrieben\n", gds.c_str());
+  }
+  if (!csv_path.empty()) {
+    std::ofstream csv(csv_path);
+    csv << "iteration,transmission,beta\n";
+    for (std::size_t k = 0; k < result.history.size(); ++k)
+      csv << k + 1 << ',' << result.history[k] << ',' << result.beta[k] << '\n';
+    std::printf("Verlauf nach %s geschrieben\n", csv_path.c_str());
+  }
+  return 0;
+}
+
+// Abnahme Phase 13 (ohne die längere Optimierung, die der Test rechnet): Adjoint-Gradient gegen Differenzen,
+// GDSII hin und zurück
+bool validate_phase13() {
+  field::InverseDesignSettings settings;
+  const field::BendProblem problem(settings);
+  const int n = problem.nx();
+  double worst = 0.0;
+  for (const auto& s : field::check_gradient(settings, {n * n / 2 + n / 2, 5 + 7 * n}, 1e-2))
+    worst = std::max(worst, std::abs(s.adjoint / s.finite_difference - 1.0));
+  std::printf(
+      "Inverses Design: Adjoint-Gradient gegen Differenzen, größte Abweichung %.2f %% (gefordert < 1 %%)\n",
+      100.0 * worst);
+  const layout::Layout lay = layout::scene_to_layout(field::reference_scene("field_phc_w1"));
+  const bool roundtrip = layout::read_gds(layout::write_gds(lay)).cells[0].polygons == lay.cells[0].polygons;
+  std::printf("GDSII: Kristall-Szene mit %zu Polygonen geschrieben und gelesen: %s\n",
+              lay.cells[0].polygons.size(), roundtrip ? "gleich" : "VERSCHIEDEN");
+  return worst < 0.01 && roundtrip;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1482,7 +1636,7 @@ int main(int argc, char** argv) {
 #endif
   const std::vector<std::string> args(argv + 1, argv + argc);
   if (args.empty()) {
-    std::printf("PhotonLab CLI 0.13.0 (Phase 12)\n");
+    std::printf("PhotonLab CLI 0.14.0 (Phase 13)\n");
     print_usage();
     return 0;
   }
@@ -1500,6 +1654,7 @@ int main(int argc, char** argv) {
   };
 
   try {
+    load_cli_plugins(argc > 0 ? argv[0] : "", args);
     const std::string& command = args[0];
     if (command == "--info") return cmd_info();
     if (command == "components") return cmd_components();
@@ -1531,6 +1686,10 @@ int main(int argc, char** argv) {
       return cmd_bands(option("--lattice"), option("--radius"), option("--eps"), option("--hole-eps"),
                        option("--pol"), option("--cutoff"), option("--a-nm"), option("--csv"));
     if (command == "validate") return cmd_validate(option("--out"));
+    if (command == "gds" && args.size() >= 2) return cmd_gds(args[1], option("--out"));
+    if (command == "inverse-design")
+      return cmd_inverse_design(option("--iterations"), option("--out-gds"), option("--csv"));
+    if (command == "plugins") return cmd_plugins();
     if (command == "bench") return cmd_bench(option("--size"), option("--threads"));
     if (command == "fdtd3d")
       return cmd_fdtd3d(flag("--slab"), option("--core"), option("--width-nm"), option("--height-nm"),
