@@ -466,12 +466,120 @@ FieldScene lens() {
   return s;
 }
 
+// Halbaddierer auf einem Chip (Streifenwellenleiter, Hz): Eingang A kommt von links, B von rechts. Jeder
+// Eingang teilt sich in einem Y-Teiler (zwei Bögen) in einen oberen und einen unteren Arm. Oben treffen sich
+// die Arme in einem Y-Kombinierer (zwei Bögen, Ausgang nach oben): Summe = XOR, weil ein verbreitertes Stück
+// im oberen Arm von B dessen Phase um pi verschiebt. Unten ebenso, aber gleichphasig: Übertrag = UND über
+// einen Schwellwert (Pegel 1/4 gegen 1, also höchstens 6 dB Kontrast - ein besseres UND braucht
+// Nichtlinearität). Spiegelsymmetrisch, damit beide Wege gleich lang sind.
+// phase_length: Länge des verbreiterten Stücks [m]; 0 = aus der Schicht-Eigenwertgleichung (pi-Bedingung).
+FieldScene halfadder(double phase_length) {
+  const double w = 0.30 * um, w_shift = 0.45 * um;  // 0,30 um: auch für Hz einmodig (TM1 nicht geführt)
+  const double r = 2 * um;                          // Radius aller Bögen (Kernmitte)
+  const double width = 27 * um, height = 24 * um;
+  const double xc = 0.5 * width, yc = 0.5 * height;
+  const double xs = 2.5 * um;  // Teiler von A
+  const double yt = 7 * um;    // Höhe der oberen Arme: 5 um Ausgang, damit Streulicht des Kombinierers
+                               // am Monitor vorbeigeht
+  if (phase_length <= 0.0) {
+    auto n_eff = [](double core_width) {
+      return modes::slab_modes(index_core, index_cladding, index_cladding, core_width, 1550e-9,
+                               modes::SlabPolarization::tm)
+          .front()
+          .n_eff;
+    };
+    phase_length = 1550e-9 / (2.0 * (n_eff(w_shift) - n_eff(w)));
+  }
+  FieldScene s;
+  s.name = "Halbaddierer (XOR + UND auf einem Chip)";
+  s.width = width, s.height = height;
+  s.cell_size = 25e-9;
+  s.background_index = index_cladding;
+  s.polarization = Polarization::hz;
+  s.duration = 1.2e-12;
+
+  // Viertel oben links; die anderen drei entstehen durch Spiegeln an x = xc bzw. y = yc
+  auto rect = [&](const char* name, double x0, double y0, double x1, double y1) {
+    Shape sh;
+    sh.name = name, sh.x = round_pico(0.5 * (x0 + x1)), sh.y = round_pico(0.5 * (y0 + y1));
+    sh.width = round_pico(std::abs(x1 - x0)), sh.height = round_pico(std::abs(y1 - y0));
+    sh.index = index_core;
+    return sh;
+  };
+  auto arc = [&](const char* name, double cx, double cy, double start, double sweep) {
+    Shape sh;
+    sh.name = name, sh.kind = ShapeKind::arc, sh.x = cx, sh.y = cy;
+    sh.radius = r + 0.5 * w, sh.inner_radius = r - 0.5 * w;
+    sh.rotation = round_pico(start), sh.sweep = round_pico(sweep);
+    sh.index = index_core;
+    return sh;
+  };
+  const double pi = constants::pi;
+  std::vector<Shape> quarter = {
+      rect("Eingang", 0.0, yc - 0.5 * w, xs, yc + 0.5 * w),
+      arc("Teiler", xs, yc - r, 0.0, 0.5 * pi),  // nach rechts, dann nach oben
+      rect("Steigung", xs + r - 0.5 * w, yt + r, xs + r + 0.5 * w, yc - r),
+      arc("Knick", xs + 2 * r, yt + r, pi, 0.5 * pi),  // nach oben, dann nach rechts
+      rect("Arm", xs + 2 * r, yt - 0.5 * w, xc - r, yt + 0.5 * w),
+      arc("Kombinierer", xc - r, yt - r, 0.0, 0.5 * pi),  // nach rechts, dann nach oben
+      rect("Ausgang", xc - 0.5 * w, 0.0, xc + 0.5 * w, yt - r)};
+  for (int half = 0; half < 2; ++half)      // 0 = oben (Summe), 1 = unten (Übertrag)
+    for (int side = 0; side < 2; ++side) {  // 0 = links (A), 1 = rechts (B)
+      for (Shape sh : quarter) {
+        const std::string part = sh.name;
+        if (part == "Eingang" && half == 1) continue;  // jeder Eingang nur einmal
+        if (part == "Ausgang" && side == 1) continue;  // der Ausgang liegt auf der Mittellinie
+        if (side == 1) {
+          sh.x = round_pico(width - sh.x);
+          if (sh.kind == ShapeKind::arc) sh.rotation = round_pico(pi - sh.rotation - sh.sweep);
+        }
+        if (half == 1) {
+          sh.y = round_pico(height - sh.y);
+          if (sh.kind == ShapeKind::arc) sh.rotation = round_pico(-sh.rotation - sh.sweep);
+        }
+        if (part == "Eingang")
+          sh.name = side == 0 ? "Eingang A" : "Eingang B";
+        else if (part == "Ausgang")
+          sh.name = half == 0 ? "Ausgang Summe" : "Ausgang Übertrag";
+        else
+          sh.name = std::string(half == 0 ? "Summe: " : "Übertrag: ") + (side == 0 ? "A " : "B ") + part;
+        s.shapes.push_back(sh);
+      }
+    }
+  // Phasenschieber: verbreitertes Stück mittig im oberen Arm von B
+  const double arm_mid = round_pico(0.5 * ((width - xs - 2 * r) + (xc + r)));
+  Shape shifter = rect("Phasenschieber (pi)", arm_mid - 0.5 * phase_length, yt - 0.5 * w_shift,
+                       arm_mid + 0.5 * phase_length, yt + 0.5 * w_shift);
+  s.shapes.push_back(shifter);
+
+  for (const char* name : {"A", "B"}) {
+    Source source;
+    source.name = name;
+    source.kind = SourceKind::mode;
+    source.signal = SignalKind::continuous;
+    source.x1 = source.x2 = std::string(name) == "A" ? 1 * um : width - 1 * um;
+    source.y1 = yc - 1.2 * um, source.y2 = yc + 1.2 * um;
+    const bool name_is_b = std::string(name) == "B";
+    source.phase = name_is_b ? 0.0 * constants::pi : 0.0;
+    s.sources.push_back(source);
+  }
+  // Modenmonitore zählen nur das geführte Licht (Gatter-Ausgang), Flussmonitore alles, was durchläuft
+  s.monitors = {{"Mode Summe", MonitorKind::mode, xc - 1.2 * um, 1.5 * um, xc + 1.2 * um, 1.5 * um},
+                {"Mode Übertrag", MonitorKind::mode, xc - 1.2 * um, height - 1.5 * um, xc + 1.2 * um,
+                 height - 1.5 * um},
+                {"Fluss Summe", MonitorKind::flux, xc - 0.7 * um, 1.0 * um, xc + 0.7 * um, 1.0 * um},
+                {"Fluss Übertrag", MonitorKind::flux, xc - 0.7 * um, height - 1.0 * um, xc + 0.7 * um,
+                 height - 1.0 * um}};
+  return s;
+}
+
 }  // namespace
 
 std::vector<std::string> reference_scene_names() {
-  return {"field_waveguide", "field_interface", "field_interference", "field_ring",     "field_gap",
-          "field_gap_pair",  "field_coupler",   "field_phc_w1",       "field_phc_bend", "field_phc_y",
-          "field_phc_y_xor", "field_taper",     "field_bend",         "field_bragg",    "field_lens"};
+  return {"field_waveguide", "field_interface", "field_interference", "field_ring",
+          "field_gap",       "field_gap_pair",  "field_coupler",      "field_phc_w1",
+          "field_phc_bend",  "field_phc_y",     "field_phc_y_xor",    "field_taper",
+          "field_bend",      "field_bragg",     "field_lens",         "field_halfadder"};
 }
 
 FieldScene reference_scene(std::string_view name) {
@@ -490,6 +598,7 @@ FieldScene reference_scene(std::string_view name) {
   if (name == "field_bend") return bend();
   if (name == "field_bragg") return bragg();
   if (name == "field_lens") return lens();
+  if (name == "field_halfadder") return halfadder(1.75 * um);
   throw FieldError("Unbekannte Referenz-Szene '" + std::string(name) + "'");
 }
 

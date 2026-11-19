@@ -108,7 +108,8 @@ TEST_CASE("Projekt: Beispieldateien entsprechen den Referenz-Designs") {
         std::pair{"11_taper_fdtd.plab.json", "field_taper"},
         std::pair{"11b_bogen_fdtd.plab.json", "field_bend"},
         std::pair{"11c_bragg_spiegel_fdtd.plab.json", "field_bragg"},
-        std::pair{"11d_linse_fdtd.plab.json", "field_lens"}}) {
+        std::pair{"11d_linse_fdtd.plab.json", "field_lens"},
+        std::pair{"12_halbaddierer_fdtd.plab.json", "field_halfadder"}}) {
     CHECK(io::project_to_json(io::load_project(dir / file)) ==
           io::project_to_json(io::reference_project(name)));
   }

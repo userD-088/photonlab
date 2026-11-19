@@ -167,8 +167,13 @@ void LogicLab::draw_examples_menu() {
       pending_tab_ = 2;
       ImGui::SetWindowFocus(window_name);
     }
-  ImGui::SeparatorText("Gatter auf Feld-Ebene (Kristall)");
-  const char* labels[] = {"ODER / UND", "XOR", "NICHT", "Halbaddierer"};
+  ImGui::SeparatorText("Gatter auf Feld-Ebene");
+  const char* labels[] = {"ODER / UND",
+                          "XOR",
+                          "NICHT",
+                          "Halbaddierer (zwei Kristall-Gatter)",
+                          "Halbaddierer (ein Chip)",
+                          "Volladdierer (drei Chips, regeneriert)"};
   const auto names = logic::field_gate_names();
   for (int g = 0; g < static_cast<int>(names.size()) && g < IM_ARRAYSIZE(labels); ++g)
     if (ImGui::MenuItem(labels[g])) {

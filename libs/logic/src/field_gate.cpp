@@ -1,6 +1,7 @@
 #include "photonlab/logic/field_gate.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <limits>
 
@@ -34,23 +35,34 @@ void validate(const FieldGate& gate) {
     if (scene.sources.empty() || scene.sources.front().signal != field::SignalKind::continuous)
       throw FieldError("Feld-Gatter rechnen mit Dauerstrich-Quellen");
   }
+  auto in_any_scene = [&](const std::string& source) {
+    return std::any_of(gate.scenes.begin(), gate.scenes.end(),
+                       [&](const field::FieldScene& scene) { return has_source(scene, source); });
+  };
   for (const auto& input : gate.inputs)
-    for (const auto& scene : gate.scenes)
-      if (!has_source(scene, input.source))
-        throw FieldError("Eingang '" + input.name + "': Quelle '" + input.source + "' fehlt in einer Szene");
+    if (!in_any_scene(input.source))
+      throw FieldError("Eingang '" + input.name + "': Quelle '" + input.source + "' fehlt");
   for (const auto& bias : gate.bias_sources)
-    for (const auto& scene : gate.scenes)
-      if (!has_source(scene, bias))
-        throw FieldError("Vorspannungsquelle '" + bias + "' fehlt in einer Szene");
+    if (!in_any_scene(bias)) throw FieldError("Vorspannungsquelle '" + bias + "' fehlt");
+  for (const auto& link : gate.links) {
+    const auto out = std::find_if(gate.outputs.begin(), gate.outputs.end(),
+                                  [&](const FieldGateOutput& o) { return o.name == link.output; });
+    if (out == gate.outputs.end())
+      throw FieldError("Verbindung: Ausgang '" + link.output + "' gibt es nicht");
+    if (!in_any_scene(link.source)) throw FieldError("Verbindung: Quelle '" + link.source + "' fehlt");
+    for (std::size_t s = 0; s <= out->scene && s < gate.scenes.size(); ++s)
+      if (has_source(gate.scenes[s], link.source))
+        throw FieldError("Verbindung '" + link.output + "': die Quelle liegt nicht in einer späteren Szene");
+  }
   for (const auto& out : gate.outputs) {
     if (out.scene >= gate.scenes.size())
       throw FieldError("Ausgang '" + out.name + "': Szene existiert nicht");
     const auto& monitors = gate.scenes[out.scene].monitors;
     const auto it = std::find_if(monitors.begin(), monitors.end(), [&](const field::Monitor& m) {
-      return m.name == out.monitor && m.kind == field::MonitorKind::flux;
+      return m.name == out.monitor && m.kind != field::MonitorKind::point;
     });
     if (it == monitors.end())
-      throw FieldError("Ausgang '" + out.name + "': Flussmonitor '" + out.monitor + "' fehlt");
+      throw FieldError("Ausgang '" + out.name + "': Fluss- oder Modenmonitor '" + out.monitor + "' fehlt");
     if (!out.expected.empty() && out.expected.size() != gate.row_count())
       throw FieldError("Ausgang '" + out.name + "': Soll-Bits passen nicht zur Zeilenzahl");
   }
@@ -70,54 +82,99 @@ std::vector<field::FieldScene> scenes_for_row(const FieldGate& gate, std::size_t
 
 TruthTable run_field_truth_table(const FieldGate& gate, ThreadPool* pool, JobControl* control) {
   validate(gate);
-  const std::size_t rows = gate.row_count(), scene_count = gate.scenes.size();
-  // power[row][scene][monitor index]
-  std::vector<std::vector<std::vector<double>>> power(rows);
-  std::vector<std::vector<field::FieldScene>> row_scenes(rows);
-  for (std::size_t r = 0; r < rows; ++r) {
-    row_scenes[r] = scenes_for_row(gate, r);
-    power[r].resize(scene_count);
-  }
-  std::atomic<std::size_t> done{0};
-  const std::size_t tasks = rows * scene_count;
-  const bool completed = parallel_for(
-      tasks,
-      [&](std::size_t t) {
-        const std::size_t r = t / scene_count, s = t % scene_count;
-        const field::FieldScene& scene = row_scenes[r][s];
-        auto& result = power[r][s];
-        result.assign(scene.monitors.size(), 0.0);
-        const bool any_light = std::any_of(scene.sources.begin(), scene.sources.end(),
-                                           [](const field::Source& src) { return src.amplitude != 0.0; });
-        if (any_light) {
-          field::Fdtd solver(scene);
-          solver.set_threads(StepTeam::share_for(tasks, pool ? pool->size() : 0));
-          solver.run(static_cast<std::size_t>(scene.duration / solver.time_step()), control);
-          const double period = scene.sources.front().wavelength / constants::c0;
-          for (std::size_t m = 0; m < solver.monitors().size(); ++m) {
-            const auto& data = solver.monitors()[m];
-            if (data.kind == field::MonitorKind::flux)
-              result[m] = std::abs(field::average_over_periods(data.values, data.sample_interval, period, 4));
-          }
-        }
-        if (control) control->progress = static_cast<float>(++done) / static_cast<float>(tasks);
-      },
-      pool, control);
-  TruthTable table;
-  if (!completed || (control && control->cancel_requested)) return table;
+  const std::size_t rows = gate.row_count(), outputs = gate.outputs.size();
+  std::vector<std::vector<double>> out_power(rows, std::vector<double>(outputs, 0.0));
+  std::vector<std::vector<int>> out_bit(rows, std::vector<int>(outputs, 0));
+  auto input_bit = [&](std::size_t row, std::size_t k) {
+    return static_cast<int>((row >> (gate.inputs.size() - 1 - k)) & 1U);  // erster Eingang = höchstwertig
+  };
+  auto output_index = [&](const std::string& name) {
+    return static_cast<std::size_t>(std::find_if(gate.outputs.begin(), gate.outputs.end(),
+                                                 [&](const FieldGateOutput& o) { return o.name == name; }) -
+                                    gate.outputs.begin());
+  };
 
-  for (std::size_t r = 0; r < rows; ++r) {
-    TruthRow row;
-    for (std::size_t k = 0; k < gate.inputs.size(); ++k)
-      row.bits.push_back(static_cast<int>((r >> (gate.inputs.size() - 1 - k)) & 1U));
-    for (const auto& out : gate.outputs) {
-      const auto& monitors = gate.scenes[out.scene].monitors;
-      const std::size_t m = static_cast<std::size_t>(
+  for (std::size_t s = 0; s < gate.scenes.size(); ++s) {
+    // Quellenbelegung je Zeile; gleiche Belegungen werden nur einmal gerechnet
+    std::vector<field::FieldScene> configs;
+    std::vector<std::size_t> config_of_row(rows);
+    for (std::size_t r = 0; r < rows; ++r) {
+      field::FieldScene scene = gate.scenes[s];
+      for (auto& source : scene.sources) {
+        for (std::size_t k = 0; k < gate.inputs.size(); ++k)
+          if (source.name == gate.inputs[k].source && input_bit(r, k) == 0) source.amplitude = 0.0;
+        for (const auto& link : gate.links)
+          if (source.name == link.source && out_bit[r][output_index(link.output)] == 0)
+            source.amplitude = 0.0;
+      }
+      const auto found = std::find(configs.begin(), configs.end(), scene);
+      config_of_row[r] = static_cast<std::size_t>(found - configs.begin());
+      if (found == configs.end()) configs.push_back(std::move(scene));
+    }
+    std::vector<std::vector<double>> power(configs.size());  // [Belegung][Monitor]
+    std::atomic<std::size_t> done{0};
+    const bool completed = parallel_for(
+        configs.size(),
+        [&](std::size_t c) {
+          const field::FieldScene& scene = configs[c];
+          auto& result = power[c];
+          result.assign(scene.monitors.size(), 0.0);
+          const bool any_light = std::any_of(scene.sources.begin(), scene.sources.end(),
+                                             [](const field::Source& src) { return src.amplitude != 0.0; });
+          if (any_light) {
+            field::Fdtd solver(scene);
+            solver.set_threads(StepTeam::share_for(configs.size(), pool ? pool->size() : 0));
+            solver.run(static_cast<std::size_t>(scene.duration / solver.time_step()), control);
+            const double period = scene.sources.front().wavelength / constants::c0;
+            for (std::size_t m = 0; m < solver.monitors().size(); ++m) {
+              const auto& data = solver.monitors()[m];
+              if (data.kind == field::MonitorKind::flux)
+                result[m] =
+                    std::abs(field::average_over_periods(data.values, data.sample_interval, period, 4));
+              if (data.kind == field::MonitorKind::mode) {
+                // Leistung der geführten Mode ist proportional zum zeitlichen Mittel von a^2 (Streulicht
+                // im Mantel zählt nicht, wie bei einem Detektor hinter einem einmodigen Wellenleiter)
+                std::vector<double> squared(data.values.size());
+                std::transform(data.values.begin(), data.values.end(), squared.begin(),
+                               [](double a) { return a * a; });
+                result[m] = field::average_over_periods(squared, data.sample_interval, period, 4);
+              }
+            }
+          }
+          if (control)
+            control->progress =
+                (static_cast<float>(s) + static_cast<float>(++done) / static_cast<float>(configs.size())) /
+                static_cast<float>(gate.scenes.size());
+        },
+        pool, control);
+    if (!completed || (control && control->cancel_requested)) return {};
+
+    // Ausgänge dieser Szene: Leistung je Zeile, dann Bit an der Schwelle (für spätere Stufen)
+    for (std::size_t o = 0; o < outputs; ++o) {
+      const auto& out = gate.outputs[o];
+      if (out.scene != s) continue;
+      const auto& monitors = gate.scenes[s].monitors;
+      const auto m = static_cast<std::size_t>(
           std::find_if(monitors.begin(), monitors.end(),
                        [&](const field::Monitor& mon) { return mon.name == out.monitor; }) -
           monitors.begin());
-      row.power.push_back(power[r][out.scene][m]);
+      TruthTable column;
+      for (std::size_t r = 0; r < rows; ++r) {
+        out_power[r][o] = power[config_of_row[r]][m];
+        TruthRow row;
+        row.power = {out_power[r][o]};
+        column.rows.push_back(std::move(row));
+      }
+      const OutputAnalysis a = analyze_output(column, 0, out.expected);
+      for (std::size_t r = 0; r < rows; ++r) out_bit[r][o] = out_power[r][o] > a.threshold ? 1 : 0;
     }
+  }
+
+  TruthTable table;
+  for (std::size_t r = 0; r < rows; ++r) {
+    TruthRow row;
+    for (std::size_t k = 0; k < gate.inputs.size(); ++k) row.bits.push_back(input_bit(r, k));
+    row.power = out_power[r];
     table.rows.push_back(std::move(row));
   }
   return table;
@@ -159,7 +216,9 @@ FieldGateReport characterize_field_gate(const FieldGate& gate, ThreadPool* pool,
   return report;
 }
 
-std::vector<std::string> field_gate_names() { return {"phc_or_and", "phc_xor", "phc_not", "phc_halfadder"}; }
+std::vector<std::string> field_gate_names() {
+  return {"phc_or_and", "phc_xor", "phc_not", "phc_halfadder", "chip_halfadder", "chip_fulladder"};
+}
 
 FieldGate field_gate(std::string_view name) {
   const std::string monitor = "Fluss Ausgang";
@@ -201,6 +260,43 @@ FieldGate field_gate(std::string_view name) {
     g.scenes = {field::reference_scene("field_phc_y_xor"), field::reference_scene("field_phc_y")};
     g.inputs = {{"A", "A"}, {"B", "B"}};
     g.outputs = {{"Summe", 0, monitor, {0, 1, 1, 0}}, {"Übertrag", 1, monitor, {0, 0, 0, 1}}};
+  } else if (name == "chip_halfadder") {
+    g.description =
+        "Halbaddierer als ein Chip aus Streifenwellenleitern: jeder Eingang teilt sich in einem Y-Teiler auf "
+        "zwei Arme. Oben XOR (Summe; ein verbreitertes Stück verschiebt die Phase von B um pi), unten "
+        "gleichphasiges UND (Übertrag; Schwellwert auf Pegel 1/4 gegen 1, höchstens 6 dB Kontrast). Die "
+        "Aufteilung der Eingänge und das Übersprechen zwischen den Gattern sind mitgerechnet.";
+    g.scenes = {field::reference_scene("field_halfadder")};
+    g.inputs = {{"A", "A"}, {"B", "B"}};
+    g.outputs = {{"Summe", 0, "Mode Summe", {0, 1, 1, 0}}, {"Übertrag", 0, "Mode Übertrag", {0, 0, 0, 1}}};
+  } else if (name == "chip_fulladder") {
+    g.description =
+        "Volladdierer aus drei Halbaddierer-Chips mit Regeneration (Detektor + neuer Sender) zwischen den "
+        "Stufen: Stufe 1 rechnet A + B (S1, C1), Stufe 2 S1 + Cin (Summe, C2), Stufe 3 liest am "
+        "gleichphasigen Ausgang C1 ODER C2 (Übertrag). Ohne Regeneration geht es nicht: die Summe dreier "
+        "Bits "
+        "lässt sich mit linearer Interferenz an keinem Ausgang von den geraden Fällen trennen.";
+    const field::FieldScene chip = field::reference_scene("field_halfadder");
+    auto renamed = [&](const char* a, const char* b) {
+      field::FieldScene scene = chip;
+      scene.sources[0].name = a, scene.sources[1].name = b;
+      return scene;
+    };
+    g.scenes = {chip, renamed("S1", "Cin"), renamed("C1", "C2")};
+    g.inputs = {{"A", "A"}, {"B", "B"}, {"Cin", "Cin"}};
+    // Soll-Bits in Zeilenreihenfolge A B Cin = 000 ... 111
+    std::vector<int> s1, c1, sum, c2, cout;
+    for (int r = 0; r < 8; ++r) {
+      const int a = (r >> 2) & 1, b = (r >> 1) & 1, c = r & 1;
+      s1.push_back(a ^ b), c1.push_back(a & b), sum.push_back(a ^ b ^ c), c2.push_back((a ^ b) & c);
+      cout.push_back((a & b) | ((a ^ b) & c));
+    }
+    g.outputs = {{"S1", 0, "Mode Summe", s1},
+                 {"C1", 0, "Mode Übertrag", c1},
+                 {"Summe", 1, "Mode Summe", sum},
+                 {"C2", 1, "Mode Übertrag", c2},
+                 {"Übertrag", 2, "Mode Übertrag", cout}};
+    g.links = {{"S1", "S1"}, {"C1", "C1"}, {"C2", "C2"}};
   } else {
     throw FieldError("Unbekanntes Feld-Gatter '" + std::string(name) + "'");
   }

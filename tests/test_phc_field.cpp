@@ -123,3 +123,41 @@ TEST_CASE("Feld-Gatter: Y-Kombinierer liefert ODER/UND/XOR mit den erwarteten Pe
   CHECK(xor_gate.function_correct);
   CHECK(xor_gate.outputs[0].contrast_db > 20.0);
 }
+
+TEST_CASE("Feld-Gatter: Halbaddierer-Chip (Teiler, XOR, UND) mit gemessenen Pegeln") {
+  ThreadPool pool;
+  const logic::FieldGateReport r = logic::characterize_field_gate(logic::field_gate("chip_halfadder"), &pool);
+  REQUIRE(r.table.rows.size() == 4);
+  const auto& t = r.table.rows;
+  MESSAGE("Summe-CR " << r.outputs[0].contrast_db << " dB, Übertrag-CR " << r.outputs[1].contrast_db << " dB");
+  CHECK(r.function_correct);
+  CHECK(r.outputs[0].contrast_db > 15.0);  // XOR: A = B = 1 löscht im Ausgang fast vollständig aus
+  // UND gleichphasig: beide Eingänge |a+b|^2 = 4 |a|^2 gegen einen; Teiler und Kombinierer kosten je die Hälfte
+  CHECK(t[3].power[1] / t[1].power[1] == doctest::Approx(4.0).epsilon(0.15).scale(0.0));
+  CHECK(t[1].power[0] == doctest::Approx(t[2].power[0]).epsilon(0.2).scale(0.0));  // A und B ähnlich stark
+}
+
+TEST_CASE("Feld-Gatter: Stufen mit Regeneration schalten spätere Quellen mit dem entschiedenen Bit") {
+  // zwei kleine Szenen: Stufe 1 misst Quelle X, ihr Bit schaltet Quelle Y in Stufe 2
+  FieldScene s;
+  s.width = s.height = 3e-6, s.cell_size = 50e-9, s.duration = 40e-15;
+  Source x;
+  x.name = "X", x.kind = SourceKind::point, x.x1 = x.x2 = 1.0e-6, x.y1 = x.y2 = 1.5e-6;
+  s.sources = {x};
+  s.monitors = {{"Fluss", MonitorKind::flux, 2.0e-6, 0.5e-6, 2.0e-6, 2.5e-6}};
+  FieldScene second = s;
+  second.sources[0].name = "Y";
+  logic::FieldGate g;
+  g.name = "kette";
+  g.scenes = {s, second};
+  g.inputs = {{"X", "X"}};
+  g.outputs = {{"Stufe 1", 0, "Fluss", {0, 1}}, {"Stufe 2", 1, "Fluss", {0, 1}}};
+  g.links = {{"Stufe 1", "Y"}};
+  const logic::TruthTable table = logic::run_field_truth_table(g);
+  REQUIRE(table.rows.size() == 2);
+  CHECK(table.rows[0].power[1] == 0.0);  // X = 0 -> Bit 0 -> Y aus
+  CHECK(table.rows[1].power[1] == doctest::Approx(table.rows[1].power[0]).epsilon(1e-12).scale(0.0));
+  // eine Verbindung darf nur nach vorn wirken
+  g.links = {{"Stufe 1", "X"}};
+  CHECK_THROWS_AS(logic::validate(g), FieldError);
+}

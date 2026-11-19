@@ -91,6 +91,26 @@ bis 90°), bei dem jede Zeile noch richtig entschieden wird. Entsprechend die gr
 Wellenlänge (1 pm bis 20 nm). Zum Vergleich: ein Silizium-Ring driftet thermisch um etwa
 `λ·(dn/dT)/n_g ≈ 1550 nm · 1,8·10⁻⁴ K⁻¹ / 4,2 ≈ 0,07 nm/K` (dn/dT nach Bauplan 4.4).
 
+## Gatter auf Feld-Ebene: Messung und Stufen
+
+* **Ausgangsleistung:** zeitliches Mittel über die letzten 4 Perioden, entweder Poynting-Fluss durch eine
+  Linie oder Leistung der geführten Mode (Modenmonitor, Mittel von a²). Der Modenmonitor zählt nur Licht im
+  Wellenleiter, wie ein Detektor hinter einem einmodigen Wellenleiter; Streulicht eines Y-Kombinierers im
+  gegenphasigen Fall läuft sonst schräg durch die Flusslinie und füllt die logische 0 auf (gemessen beim
+  Halbaddierer-Chip: etwa 30 % Untergrund mit Fluss, 0,5 % mit Mode).
+* **Einmodig:** Der Kombinierer trennt gleich- und gegenphasige Anteile nur, wenn der Ausgang die
+  antisymmetrische Mode nicht führt. Bei Hz (TM-Schicht) gilt das für den Kern mit n = 2,85 in SiO2 erst unter
+  etwa 0,32 µm; der Halbaddierer-Chip nutzt 0,30 µm. Mit 0,45 µm addierten sich die Leistungen ohne Interferenz.
+* **Stufen (Festlegung):** Passive Interferenz-Gatter lassen sich nicht direkt hintereinanderschalten (Phase
+  und Pegel des Ausgangs hängen vom Eingang ab). Ein Feld-Gatter mit mehreren Szenen kann deshalb Verbindungen
+  (`FieldGateLink`) haben: das Bit eines früheren Ausgangs, entschieden an dessen Schwelle (mittig zwischen
+  schlechtester 0 und 1 dieses Ausgangs), schaltet eine Quelle einer späteren Szene ein. Das entspricht einer
+  idealen Regeneration (Empfänger + neuer Sender); deren Kosten (Energie, Zeit) sind nicht bewertet.
+* **Volladdierer:** Die Summe dreier Bits geht mit linearer Interferenz an einem Ausgang nicht: Gerade Fälle
+  verlangen |u_i + u_j| klein für alle Paare, das erzwingt drei Zeiger im Abstand von 120° und damit
+  |u_1 + u_2 + u_3| = 0 für den ungeraden Fall 111. Der Volladdierer besteht daher aus drei Halbaddierer-Chips
+  mit Regeneration (S1, C1 -> Summe, C2 -> Übertrag = C1 ODER C2 am gleichphasigen Ausgang).
+
 ## Was das Zeugnis nicht sagt
 
 - Alles ist stationär: keine Schaltzeiten, keine Bitrate, keine Schaltenergie. Die Latenz ist nur die

@@ -37,6 +37,7 @@ void traffic_light(logic::Rating rating) {
 
 // Beispiel-Szene (Referenz-Projekt), die zum Gatter gehört
 const char* scene_key(const std::string& gate) {
+  if (gate.rfind("chip_", 0) == 0) return "field_halfadder";  // Halb- und Volladdierer aus demselben Chip
   return gate == "phc_or_and" ? "field_phc_y" : "field_phc_y_xor";
 }
 
