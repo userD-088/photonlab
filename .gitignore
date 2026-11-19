@@ -13,3 +13,8 @@ compile_commands.json
 
 # Fensterlayout der GUI (wird beim Start neben dem Arbeitsverzeichnis abgelegt)
 imgui.ini
+
+# graphify: nur Graph/Report committen, Cache und Pfade sind maschinenabhaengig
+graphify-out/cache/
+graphify-out/.graphify_python
+graphify-out/.graphify_root
