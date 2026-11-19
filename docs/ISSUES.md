@@ -164,3 +164,38 @@ Offen aus Phase 6 (Folge-Issues):
 - [ ] #120 GDSII: Hierarchie, Texte, Pfade; Import; Verschmelzen überlappender Formen; Gegentest mit KLayout
 - [ ] #121 Inverses Design: Mindeststrukturgröße als Nebenbedingung, MMA/Adam, weitere Aufgaben (Teiler, Modenwandler, WDM)
 - [ ] #122 Inverses Design mit Hz (TE-artig) und im 3D-FDTD
+
+## Phase 14 – Rückmeldung zur Oberfläche (Nov. 2026)
+Ziel: 2D-Simulator ausbauen, 3D später gleich bedienbar; Chip-Designer, Logik-Labor, Querschnitt, Bandstruktur und S-Parameter bewerten und straffen.
+
+Bauteil-Labor, Feld (2D-FDTD):
+- [x] #123 Objekte: Mehrfachauswahl (Strg/Umschalt+Klick, Rechteck aufziehen), Rechtsklick-Menü (Deaktivieren, Duplizieren, Kopieren, Ausschneiden, Einfügen, nach vorn/hinten, Löschen), Strg+A/C/X/V/D, Entf, Esc, H; gemeinsames Verschieben per Ziehen oder Versatz
+- [x] #124 Deaktivierte Objekte (`enabled` in Form/Quelle/Monitor): bleiben in der Szene und der Datei, wirken nicht auf FDTD, Brechzahl und GDSII (`field::active_scene`)
+- [x] #125 Ansicht: Mausrad-Zoom um den Mauszeiger, Verschieben mit mittlerer Maustaste, Einpassen (F)
+- [x] #126 Seitenleiste neu geordnet: Rechnung (mit Laufzeit) - Neues Objekt - Ausgewählt - Objektliste - Rechengebiet
+- [ ] #127 Gruppen (leeres Elternobjekt mit relativer Lage, wie in Unity): Szenen-Format um Gruppen erweitern, verschachtelt verschieben/drehen
+- [ ] #128 Rückgängig/Wiederholen im Szenen-Editor (Szene als Schnappschuss je Änderung; siehe #11, #44)
+- [ ] #129 Ladebildschirm/Fortschritt beim Öffnen großer Projekte und beim Aufsetzen des Lösers (Modenquellen, große Gitter) als Job
+- [ ] #130 Weitere Materialien in `libs/materials` (Ge, InP, GaAs, LiNbO3, Al2O3, Polymere, Luft/Metalle mit Drude-Modell) - jede Zahl mit Quelle; Dispersion im FDTD (Lorentz/Drude) als eigenes Issue
+- [ ] #131 Weitere Formen: Polygon, Bogen (Wellenleiter-Kurve), Taper, Ellipse; boolesche Operationen (siehe #44)
+- [ ] #132 Größere Gebiete: Speicher- und Zeitschätzung vor dem Start anzeigen; float-Kern (#112) halbiert den Speicher. Grenze heute 200 x 200 µm, sinnvoll mit 4 Kernen etwa 50 x 50 µm bei 40 nm Zellen
+- [ ] #133 Quellen: Pulsfolgen (Bitmuster), breitbandige Quelle (Chirp, mehrere Wellenlängen), Gauß-Strahl unter Winkel
+- [ ] #134 Monitor-Plots: Schwellen für 0 und 1 einzeichnen und Bits auswerten (Brücke zum Logik-Labor), Intensität über Zeit gemittelt, Export als CSV
+- [ ] #135 Leistung: GPU-Backend (#111, braucht Rückfrage wegen Abhängigkeit), float-Kern/Zeitblöcke (#112); Mehrkern läuft schon (Phase 12)
+
+Bewertung der Reiter (Festlegung nach Rückmeldung, umsetzen je als eigenes Issue):
+- [ ] #136 Querschnitt (Moden): behalten, aber als Werkzeug zum Bauteil-Entwurf erklären - liefert n_eff und n_g eines Wellenleiter-Querschnitts (Breite, Höhe, Material) und übergibt sie an den Chip-Designer; Hilfeseite + Knopf "Werte übernehmen" sichtbarer
+- [ ] #137 Bandstruktur: behalten als Entwurfswerkzeug für photonische Kristalle (wo ist die Bandlücke -> welche Wellenlängen sperrt das Gitter); Ergebnis direkt als Kristall-Szene ins Feld legen; Hilfeseite
+- [ ] #138 S-Parameter: Brücke Feld -> Schaltung (ein im Feld gerechnetes Bauteil wird zum Bauteil im Chip-Designer); heute schwer zu finden. In den Feld-Reiter integrieren ("Als Bauteil exportieren"), eigener Reiter entfällt
+- [ ] #139 Chip-Designer: Zweck in der Oberfläche erklären (viele Bauteile auf einem Chip schnell rechnen, ohne Feld); Tooltips mit Erklärung je Bauteil beim Verweilen; Kennlinie (Ausgang über einem Parameter) und Monte-Carlo (Fertigungsstreuung -> Ausbeute) mit Hilfetext
+- [ ] #140 Logik-Labor: zusammenlegen - Schaltungs-Gatter und Feld-Gatter (Kristall) als zwei Ebenen desselben Gatters zeigen; Hilfeseite mit Ablauf Gatter wählen -> Wahrheitstabelle messen -> Zeugnis
+- [ ] #141 Quanten-Modus: enthält HOM, CNOT, Boson Sampling, MZI-Gitter, Schaltung als Interferometer; Rückmeldung "leer" klären (Bildschirmfoto), Einstieg erklären
+
+Obere Leiste, Bedienung:
+- [x] #142 Datei: Beispiele getrennt nach Feld/Schaltung; Strg+N, Strg+O, Strg+S, Strg+Umschalt+S global; Ansicht: Vollbild (F11)
+- [ ] #143 Mehr Beispiele: Halbaddierer und Volladdierer (Schaltung und Logik-Ebene), weitere Feld-Szenen
+- [ ] #144 Hilfe-Menü je Arbeitsbereich (Feld, Schaltung, Logik, Quanten) mit Bildern; ImGui-Demo nur noch für Entwickler
+- [ ] #145 Einstellungen-Fenster (Schriftgröße, Farbschema, Threads, Sprache) und Speichern der Einstellungen
+- [ ] #146 Sprachen Deutsch/Englisch: alle Oberflächentexte über eine Übersetzungstabelle (Latin-1 bleibt Pflicht)
+- [ ] #147 Design: Farbschema überarbeiten, Symbole in Werkzeugleisten
+- [ ] #148 3D-Simulator mit derselben Bedienung wie 2D (Editor, Objekte, Monitore; baut auf #114, #115 auf)

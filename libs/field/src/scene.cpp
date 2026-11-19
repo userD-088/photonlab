@@ -29,15 +29,23 @@ bool contains(const Shape& shape, double x, double y) {
   return false;
 }
 
+FieldScene active_scene(const FieldScene& scene) {
+  FieldScene active = scene;
+  std::erase_if(active.shapes, [](const Shape& s) { return !s.enabled; });
+  std::erase_if(active.sources, [](const Source& s) { return !s.enabled; });
+  std::erase_if(active.monitors, [](const Monitor& m) { return !m.enabled; });
+  return active;
+}
+
 double index_at(const FieldScene& scene, double x, double y) {
   for (auto it = scene.shapes.rbegin(); it != scene.shapes.rend(); ++it)
-    if (contains(*it, x, y)) return it->index;
+    if (it->enabled && contains(*it, x, y)) return it->index;
   return scene.background_index;
 }
 
 NonlinearParams nonlinear_at(const FieldScene& scene, double x, double y) {
   for (auto it = scene.shapes.rbegin(); it != scene.shapes.rend(); ++it)
-    if (contains(*it, x, y)) return {it->n2, it->beta_tpa, it->carrier_lifetime};
+    if (it->enabled && contains(*it, x, y)) return {it->n2, it->beta_tpa, it->carrier_lifetime};
   return {};
 }
 

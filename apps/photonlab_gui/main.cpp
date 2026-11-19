@@ -239,6 +239,8 @@ int main(int argc, char** argv) {
       }
       ImGui::DockSpaceOverViewport(dock_id, viewport);
 
+      if (ImGui::IsKeyPressed(ImGuiKey_F11, false))
+        SDL_SetWindowFullscreen(window, (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) == 0);
       if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Datei")) {
           chip_designer.draw_file_menu();
@@ -247,6 +249,8 @@ int main(int argc, char** argv) {
           ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Ansicht")) {
+          if (ImGui::MenuItem("Vollbild", "F11", (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) != 0))
+            SDL_SetWindowFullscreen(window, (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) == 0);
           if (ImGui::MenuItem("Standard-Layout wiederherstellen")) reset_layout = true;
           ImGui::EndMenu();
         }

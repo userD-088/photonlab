@@ -11,6 +11,7 @@
 
 #include "band_view.hpp"
 #include "chip_designer.hpp"
+#include "imgui.h"
 #include "inverse_view.hpp"
 #include "mode_view.hpp"
 #include "photonlab/core/thread_pool.hpp"
@@ -55,6 +56,11 @@ class FieldLab {
   };
   enum class ObjectKind { none, shape, source, monitor, port };
   enum class DisplayMode { field, intensity };
+  struct ObjectRef {
+    ObjectKind kind = ObjectKind::none;
+    int index = -1;
+    bool operator==(const ObjectRef&) const = default;
+  };
 
   void rebuild();  // Szene geändert: Löser neu aufsetzen
   void start();
@@ -69,9 +75,29 @@ class FieldLab {
   void draw_empty_state();
   void draw_controls();
   void draw_scene_settings();
+  void draw_add_toolbar();
   void draw_objects();
   void draw_selected_object();
   void draw_canvas(float height);
+  void draw_context_items();  // Inhalt des Rechtsklick-Menüs (Feld und Objektliste)
+
+  // Auswahl und Bearbeitung mehrerer Objekte
+  bool is_selected(ObjectKind kind, int index) const;
+  void select(ObjectRef ref, bool additive);  // additive: Strg/Umschalt, umschalten statt ersetzen
+  void clear_selection();
+  void select_all();
+  void delete_selection();
+  void copy_selection();
+  void paste(bool from_selection);  // false: aus der Zwischenablage, true: Auswahl duplizieren
+  void set_selection_enabled(bool enabled);
+  void move_selection(double dx, double dy);
+  bool selection_enabled() const;  // true, wenn mindestens ein ausgewähltes Objekt aktiv ist
+  void handle_shortcuts();
+  ObjectRef pick(ImVec2 mouse) const;  // Objekt unter dem Mauszeiger (Bildschirmkoordinaten)
+  ImVec2 to_screen(double x, double y) const {
+    return {canvas_origin_.x + static_cast<float>(x) * px_per_m_,
+            canvas_origin_.y + static_cast<float>(y) * px_per_m_};
+  }
   void draw_plots();
 
   ThreadPool& pool_;
@@ -114,9 +140,20 @@ class FieldLab {
   bool texture_dirty_ = true;
 
   // Auswahl
-  ObjectKind selected_kind_ = ObjectKind::none;
+  ObjectKind selected_kind_ = ObjectKind::none;  // zuletzt angeklicktes Objekt (Eigenschaften-Feld)
   int selected_index_ = -1;
+  std::vector<ObjectRef> selection_;  // alle ausgewählten Objekte, das zuletzt angeklickte am Ende
+  field::FieldScene clipboard_;       // kopierte Objekte (nur die Listen sind belegt)
   bool dragging_ = false;
+  bool drag_armed_ = false;     // Linksklick auf ein ausgewähltes Objekt: Ziehen verschiebt die Auswahl
+  bool box_selecting_ = false;  // Linksklick ins Leere: Rechteck aufziehen
+  ImVec2 box_start_{};
+
+  // Ansicht des Feldes: Zoom um die Mitte der Szene, Verschiebung in Bildpunkten
+  float zoom_ = 1.0f;
+  ImVec2 pan_{};
+  ImVec2 canvas_origin_{};  // Bildschirmort von (0, 0) im letzten Bild
+  float px_per_m_ = 1.0f;
 
   // Spektrum der Punkt-Monitore
   std::vector<double> spectrum_wavelength_nm_;

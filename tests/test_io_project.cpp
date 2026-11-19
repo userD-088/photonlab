@@ -40,6 +40,22 @@ TEST_CASE("Projekt: Speichern und Laden ist verlustfrei") {
   CHECK(before.b == after.b);
 }
 
+TEST_CASE("Projekt: deaktivierte Feld-Objekte bleiben beim Speichern deaktiviert") {
+  io::Project project;
+  project.field.width = 2e-6, project.field.height = 2e-6;
+  project.field.shapes.resize(2);
+  project.field.sources.resize(1);
+  project.field.monitors.resize(1);
+  project.field.shapes[1].enabled = false;
+  project.field.sources[0].enabled = false;
+  project.field.monitors[0].enabled = false;
+  const io::Project loaded = io::project_from_json(io::project_to_json(project));
+  CHECK(loaded.field.shapes[0].enabled);
+  CHECK_FALSE(loaded.field.shapes[1].enabled);
+  CHECK_FALSE(loaded.field.sources[0].enabled);
+  CHECK_FALSE(loaded.field.monitors[0].enabled);
+}
+
 TEST_CASE("Projekt: Datei schreiben und lesen") {
   const auto path = std::filesystem::temp_directory_path() / "photonlab_test_projekt.plab.json";
   io::Project project;

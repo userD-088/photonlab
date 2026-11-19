@@ -582,7 +582,16 @@ std::string ChipDesigner::summary(const Instance& instance, const ComponentType&
 
 void ChipDesigner::draw() {
   handle_dialog_result();
-  if (!ImGui::GetIO().WantTextInput && ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S)) save_or_ask();
+  // Tastenkürzel für Dateien gelten im ganzen Programm
+  if (!ImGui::GetIO().WantTextInput) {
+    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S, ImGuiInputFlags_RouteGlobal)) save_or_ask();
+    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_S, ImGuiInputFlags_RouteGlobal))
+      show_file_dialog(DialogKind::save_project, window_);
+    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_O, ImGuiInputFlags_RouteGlobal))
+      request(Pending::open_project);
+    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_N, ImGuiInputFlags_RouteGlobal))
+      request(Pending::new_project);
+  }
 
   update_solution();
   update_sweep();
@@ -604,20 +613,23 @@ void ChipDesigner::draw() {
 }
 
 void ChipDesigner::draw_file_menu() {
-  if (ImGui::MenuItem("Neu")) request(Pending::new_project);
-  if (ImGui::MenuItem("Öffnen...")) request(Pending::open_project);
-  if (ImGui::BeginMenu("Beispiele")) {
-    // Feld-Szenen zuerst, dann Schaltungen; der Menütext ist der Name des Projekts
+  if (ImGui::MenuItem("Neu", "Strg+N")) request(Pending::new_project);
+  if (ImGui::MenuItem("Öffnen...", "Strg+O")) request(Pending::open_project);
+  // Beispiele getrennt nach Ebene; der Menütext ist der Name des Projekts
+  for (const bool field : {true, false}) {
+    if (!ImGui::BeginMenu(field ? "Beispiele: Feld (Bauteil-Labor)" : "Beispiele: Schaltung (Chip-Designer)"))
+      continue;
     for (const auto& name : io::reference_project_names()) {
       const io::Project example = io::reference_project(name);
-      const std::string label = (example.field.empty() ? "Schaltung: " : "Feld: ") + example.circuit.name;
-      if (ImGui::MenuItem(label.c_str())) request(Pending::load_example, name);
+      if (example.field.empty() == field) continue;
+      if (ImGui::MenuItem(example.circuit.name.c_str())) request(Pending::load_example, name);
     }
     ImGui::EndMenu();
   }
   ImGui::Separator();
   if (ImGui::MenuItem("Speichern", "Strg+S")) save_or_ask();
-  if (ImGui::MenuItem("Speichern unter...")) show_file_dialog(DialogKind::save_project, window_);
+  if (ImGui::MenuItem("Speichern unter...", "Strg+Umschalt+S"))
+    show_file_dialog(DialogKind::save_project, window_);
   ImGui::Separator();
   if (ImGui::MenuItem("Feld-Szene als GDSII exportieren...", nullptr, false, !project_.field.empty())) {
     request_gds_export([scene = project_.field](const std::string& path) {

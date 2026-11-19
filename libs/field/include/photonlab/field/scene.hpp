@@ -43,6 +43,7 @@ struct Shape {
   double beta_tpa = 0.0;  // Zwei-Photonen-Absorption [m/W]: dI/dz = -beta*I^2
   double carrier_lifetime =
       0.0;  // > 0: freie Ladungsträger aus TPA mit dieser Lebensdauer [s] (Silizium-Konstanten)
+  bool enabled = true;  // false: bleibt in der Szene, wirkt aber nicht (siehe active_scene)
   bool operator==(const Shape&) const = default;
 };
 
@@ -66,6 +67,7 @@ struct Source {
   double pulse_duration = 15e-15;  // Puls: 1/e-Halbbreite der Feld-Einhüllenden [s]
   double ramp_periods = 4.0;       // Dauerstrich: sanftes Einschalten über so viele Perioden
   int mode_order = 0;              // Modenquelle: Ordnung der Mode (0 = Grundmode); Linie achsenparallel
+  bool enabled = true;
   bool operator==(const Source&) const = default;
 };
 
@@ -82,6 +84,7 @@ struct Monitor {
   double x2 = 0.0, y2 = 0.0;  // Ende der Linie [m]; muss waagerecht oder senkrecht liegen
   int mode_order = 0;         // Modenmonitor: Ordnung der Mode
   double wavelength = 0.0;    // Modenmonitor: Wellenlänge des Profils [m]; 0 = die der ersten Quelle
+  bool enabled = true;
   bool operator==(const Monitor&) const = default;
 };
 
@@ -145,6 +148,8 @@ void validate(const FieldScene& scene);
 // Gitterabmessungen, die der Löser aus der Szene ableitet.
 int grid_nx(const FieldScene& scene);
 int grid_ny(const FieldScene& scene);
+// Kopie der Szene ohne deaktivierte Formen, Quellen und Monitore; damit rechnet der Löser
+FieldScene active_scene(const FieldScene& scene);
 double time_step(const FieldScene& scene);  // dt = courant * dx / (c0 * sqrt(2))
 
 // Hinweise zur Qualität der Rechnung (Auflösung, Abstand zur Randschicht ...). Keine Fehler: die

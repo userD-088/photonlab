@@ -465,3 +465,32 @@ TEST_CASE("TPA im FDTD: Transmission folgt 1/(1 + beta*I0*L), Ladungsträger fol
           phase_tpa);  // freie Ladungsträger senken die Brechzahl (Blauverschiebung): weniger Phase
   }
 }
+
+TEST_CASE("Deaktivierte Objekte wirken nicht: gleiche Rechnung wie ohne sie") {
+  FieldScene with = periodic_box(40, 30, 50e-9, Polarization::ez);
+  Shape block;
+  block.x = 1e-6, block.y = 0.75e-6, block.width = 0.5e-6, block.height = 0.5e-6, block.index = 3.0;
+  Source source;
+  source.kind = SourceKind::point, source.x1 = source.x2 = 0.5e-6, source.y1 = source.y2 = 0.75e-6;
+  Monitor monitor;
+  monitor.name = "m", monitor.x1 = monitor.x2 = 1.5e-6, monitor.y1 = monitor.y2 = 0.75e-6;
+  with.shapes = {block}, with.sources = {source}, with.monitors = {monitor};
+  FieldScene without = with;
+  without.shapes.clear();
+  with.shapes[0].enabled = false;
+
+  Fdtd a(with), b(without);
+  CHECK(a.permittivity() == b.permittivity());
+  CHECK(index_at(with, 1e-6, 0.75e-6) == with.background_index);
+  for (int k = 0; k < 50; ++k) a.step(), b.step();
+  CHECK(a.field() == b.field());
+
+  // ohne aktive Quelle bleibt das Feld null, ohne aktiven Monitor gibt es keine Messreihe
+  with.sources[0].enabled = false;
+  with.monitors[0].enabled = false;
+  Fdtd c(with);
+  for (int k = 0; k < 50; ++k) c.step();
+  CHECK(max_abs(c.field()) == 0.0);
+  CHECK(c.monitors().empty());
+  CHECK(active_scene(with).shapes.empty());
+}

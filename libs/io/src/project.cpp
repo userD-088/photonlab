@@ -72,32 +72,39 @@ ordered_json scene_to_json(const field::FieldScene& scene) {
     if (sh.n2 != 0.0) shape["n2"] = sh.n2;
     if (sh.beta_tpa != 0.0) shape["beta_tpa"] = sh.beta_tpa;
     if (sh.carrier_lifetime != 0.0) shape["carrier_lifetime"] = sh.carrier_lifetime;
+    if (!sh.enabled) shape["enabled"] = false;
     shapes.push_back(std::move(shape));
   }
-  for (const auto& q : scene.sources)
-    sources.push_back({{"name", q.name},
-                       {"kind", std::string(field::to_string(q.kind))},
-                       {"x1", q.x1},
-                       {"y1", q.y1},
-                       {"x2", q.x2},
-                       {"y2", q.y2},
-                       {"beam_width", q.beam_width},
-                       {"signal", std::string(field::to_string(q.signal))},
-                       {"wavelength", q.wavelength},
-                       {"amplitude", q.amplitude},
-                       {"phase", q.phase},
-                       {"pulse_duration", q.pulse_duration},
-                       {"ramp_periods", q.ramp_periods},
-                       {"mode_order", q.mode_order}});
-  for (const auto& m : scene.monitors)
-    monitors.push_back({{"name", m.name},
-                        {"kind", std::string(field::to_string(m.kind))},
-                        {"x1", m.x1},
-                        {"y1", m.y1},
-                        {"x2", m.x2},
-                        {"y2", m.y2},
-                        {"mode_order", m.mode_order},
-                        {"wavelength", m.wavelength}});
+  for (const auto& q : scene.sources) {
+    ordered_json source = {{"name", q.name},
+                           {"kind", std::string(field::to_string(q.kind))},
+                           {"x1", q.x1},
+                           {"y1", q.y1},
+                           {"x2", q.x2},
+                           {"y2", q.y2},
+                           {"beam_width", q.beam_width},
+                           {"signal", std::string(field::to_string(q.signal))},
+                           {"wavelength", q.wavelength},
+                           {"amplitude", q.amplitude},
+                           {"phase", q.phase},
+                           {"pulse_duration", q.pulse_duration},
+                           {"ramp_periods", q.ramp_periods},
+                           {"mode_order", q.mode_order}};
+    if (!q.enabled) source["enabled"] = false;  // nur wenn deaktiviert: bestehende Dateien bleiben gleich
+    sources.push_back(std::move(source));
+  }
+  for (const auto& m : scene.monitors) {
+    ordered_json monitor = {{"name", m.name},
+                            {"kind", std::string(field::to_string(m.kind))},
+                            {"x1", m.x1},
+                            {"y1", m.y1},
+                            {"x2", m.x2},
+                            {"y2", m.y2},
+                            {"mode_order", m.mode_order},
+                            {"wavelength", m.wavelength}};
+    if (!m.enabled) monitor["enabled"] = false;
+    monitors.push_back(std::move(monitor));
+  }
   ordered_json ports = ordered_json::array();
   for (const auto& p : scene.ports)
     ports.push_back({{"name", p.name},
@@ -161,6 +168,7 @@ field::FieldScene scene_from_json(const ordered_json& json) {
       sh.n2 = j.value("n2", 0.0);
       sh.beta_tpa = j.value("beta_tpa", 0.0);
       sh.carrier_lifetime = j.value("carrier_lifetime", 0.0);
+      sh.enabled = j.value("enabled", true);
       scene.shapes.push_back(std::move(sh));
     }
   if (json.contains("sources"))
@@ -180,6 +188,7 @@ field::FieldScene scene_from_json(const ordered_json& json) {
       q.pulse_duration = j.value("pulse_duration", q.pulse_duration);
       q.ramp_periods = j.value("ramp_periods", q.ramp_periods);
       q.mode_order = j.value("mode_order", 0);
+      q.enabled = j.value("enabled", true);
       scene.sources.push_back(std::move(q));
     }
   if (json.contains("monitors"))
@@ -193,6 +202,7 @@ field::FieldScene scene_from_json(const ordered_json& json) {
       m.y2 = j.value("y2", m.y1);
       m.mode_order = j.value("mode_order", 0);
       m.wavelength = j.value("wavelength", 0.0);
+      m.enabled = j.value("enabled", true);
       scene.monitors.push_back(std::move(m));
     }
   if (json.contains("ports"))

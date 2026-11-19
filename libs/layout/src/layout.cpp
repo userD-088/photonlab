@@ -62,7 +62,8 @@ Layout scene_to_layout(const field::FieldScene& scene, const LayoutSettings& set
   Layout layout;
   // Lagen: je Brechzahl eine, größte zuerst
   std::vector<double> indices;
-  for (const auto& shape : scene.shapes) indices.push_back(shape.index);
+  for (const auto& shape : scene.shapes)
+    if (shape.enabled) indices.push_back(shape.index);
   std::sort(indices.begin(), indices.end(), std::greater<>());
   indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
   for (std::size_t k = 0; k < indices.size(); ++k) {
@@ -80,6 +81,7 @@ Layout scene_to_layout(const field::FieldScene& scene, const LayoutSettings& set
   cell.name = sanitize(settings.cell_name.empty() ? scene.name : settings.cell_name);
   const double unit = layout.database_unit, height = scene.height;
   for (const auto& shape : scene.shapes) {
+    if (!shape.enabled) continue;  // deaktivierte Formen gehören nicht ins Layout
     Polygon polygon;
     polygon.layer = layer_of(shape.index);
     if (shape.kind == field::ShapeKind::rectangle) {

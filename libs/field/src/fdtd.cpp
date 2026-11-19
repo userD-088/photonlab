@@ -72,7 +72,8 @@ double Fdtd::signal(const Source& source, double time) {
   return ramp * std::sin(omega * time + source.phase);
 }
 
-Fdtd::Fdtd(const FieldScene& scene) : polarization_(scene.polarization) {
+Fdtd::Fdtd(const FieldScene& input) : polarization_(input.polarization) {
+  const FieldScene scene = active_scene(input);  // deaktivierte Objekte wirken nicht
   validate(scene);
   nx_ = grid_nx(scene);
   ny_ = grid_ny(scene);

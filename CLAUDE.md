@@ -62,6 +62,7 @@ Ohne GUI (schneller, z. B. für reine Physik-Arbeit): `-DPHOTONLAB_BUILD_GUI=OFF
 - Registry: nie `ComponentRegistry::builtin()` für geladene Projekte verwenden, sondern `io::make_registry(project)` (GUI: `active_registry()`, in Jobs `active_registry_ptr()` mitnehmen), sonst fehlen die Bauteile der Bibliothek.
 - Referenz-Szenen/-Designs: berechnete Koordinaten (cos, atan2 ...) runden (`round_pico`), sonst unterscheiden sich die Beispieldateien zwischen Compilern im letzten Bit und der Beispiel-Test schlägt in der CI fehl.
 - Tests: `doctest::Approx(x).epsilon(e)` rechnet mit `scale = 1` (Toleranz e*(1+|x|)) und ist für kleine Zahlen praktisch absolut: immer `.scale(0.0)` setzen, wenn relativ verglichen werden soll.
+- Feld-Szene: deaktivierte Objekte (`enabled = false`) wirken nirgends; Löser nur über `field::active_scene` bzw. `Fdtd(scene)` füttern, nie die Listen direkt filtern.
 - Nichtlinearität im FDTD (Ez und Hz): Quellen nicht in nichtlinearen Formen platzieren (siehe `docs/physics/nonlinear.md`).
 - Nichtlineare Bauteile: `state_size() > 0`, `s_matrix_at`, `settle_state`; der Löser iteriert. Für Hysterese Rampen (`wavelength_ramp`, `power_ramp`) mit weitergereichtem Zustand verwenden, nie parallel unabhängig.
 - Bauteile mit gespeichertem Zustand (PCM): Zustand als Parameter, Änderungen über `ComponentType::actions` (Knöpfe im Eigenschaften-Fenster), nie Sonderfälle in der Oberfläche.
