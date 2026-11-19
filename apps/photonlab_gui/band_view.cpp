@@ -161,21 +161,26 @@ bool BandView::insert_crystal(int pattern) {
       field::remove_path(layout, {-2, 0}, {{0, bend + 3}, {1, rise}});
     }
     const double n_plate = std::sqrt(settings_.eps_background), n_hole = std::sqrt(settings_.eps_inclusion);
-    std::vector<field::Shape> shapes;
-    shapes.push_back({"Platte", field::ShapeKind::rectangle, 0.5 * scene.width, 0.5 * scene.height,
-                      scene.width, scene.height, 0.0, 1e-6, 0.5e-6, n_plate});
-    for (field::Shape& hole : field::crystal_shapes(layout, n_hole)) shapes.push_back(std::move(hole));
+    // alten Kristall (Platte, Löcher, Gruppe) ersetzen; die Löcher kommen gruppiert hinter die Platte
     auto generated = [](const field::Shape& s) {
       return s.name == "Platte" || s.name.rfind("loch_", 0) == 0;
     };
     scene.shapes.erase(std::remove_if(scene.shapes.begin(), scene.shapes.end(), generated),
                        scene.shapes.end());
-    scene.shapes.insert(scene.shapes.begin(), shapes.begin(), shapes.end());
+    for (int g = static_cast<int>(scene.groups.size()) - 1; g >= 0; --g)
+      if (scene.groups[static_cast<std::size_t>(g)].name == "Kristall") field::remove_group(scene, g);
+    std::vector<field::Shape> others = std::move(scene.shapes);
+    scene.shapes = {{"Platte", field::ShapeKind::rectangle, 0.5 * scene.width, 0.5 * scene.height,
+                     scene.width, scene.height, 0.0, 1e-6, 0.5e-6, n_plate}};
+    field::add_crystal(scene, layout, n_hole);
+    const std::size_t hole_count = scene.shapes.size() - 1;
+    scene.shapes.insert(scene.shapes.end(), others.begin(), others.end());
     designer_.mark_dirty();
     char text[160];
     std::snprintf(text, sizeof text,
-                  "Kristall mit %zu Löchern in die Feld-Szene gesetzt (Quelle und Monitore selbst setzen).",
-                  shapes.size() - 1);
+                  "Kristall mit %zu Löchern in die Feld-Szene gesetzt (Gruppe \"Kristall\"; Quelle und "
+                  "Monitore selbst setzen).",
+                  hole_count);
     designer_.show_status(text);
     return true;
   } catch (const std::exception& e) {

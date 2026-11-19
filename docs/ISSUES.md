@@ -199,6 +199,8 @@ Obere Leiste, Bedienung:
 - [x] #142 Datei: Beispiele getrennt nach Feld/Schaltung; Strg+N, Strg+O, Strg+S, Strg+Umschalt+S global; Ansicht: Vollbild (F11)
 - [x] #143 Beispiele: Feld-Szenen Taper, 90-Grad-Bogen, Bragg-Spiegel, Linse; Datei > Beispiele: Logik öffnet Halb-/Volladdierer, 4-Bit-Addierer, Flip-Flop und die Kristall-Gatter (inkl. Halbaddierer) im Logik-Labor
 - [x] #143b Halbaddierer als ein Chip auf Feld-Ebene (Y-Teiler, XOR mit Phasenschieber, UND; Modenmonitore): Summe 22 dB, Übertrag 5,9 dB; Volladdierer aus drei Chips mit Regeneration (`FieldGateLink`), alle 8 Zeilen richtig
+- [x] #143d Kristall-Halbaddierer als ein Chip (Summe 7,8 dB, Übertrag 5,5 dB) und Kristall-Volladdierer aus drei Chips mit Regeneration (alle 8 Zeilen richtig); Kristall-Löcher als Gruppe "Kristall" (auch aus der Bandstruktur)
+- [ ] #143e Kristall-Halbaddierer: tiefere Auslöschung der Summe (Verzweigungen weiter weg von der Bandkante entwerfen, inverses Design der Y-Verzweigung)
 - [ ] #143c Volladdierer ohne elektrische Regeneration (Kerr-Schwellwert im FDTD) und Halbaddierer-UND mit mehr als 6 dB (nichtlinear)
 - [ ] #144 Hilfe-Menü je Arbeitsbereich (Feld, Schaltung, Logik, Quanten) mit Bildern; ImGui-Demo nur noch für Entwickler
 - [ ] #145 Einstellungen-Fenster (Schriftgröße, Farbschema, Threads, Sprache) und Speichern der Einstellungen

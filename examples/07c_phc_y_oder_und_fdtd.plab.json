@@ -60,7 +60,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_-2_8",
@@ -72,7 +73,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_-1_8",
@@ -84,7 +86,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_0_8",
@@ -96,7 +99,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_1_8",
@@ -108,7 +112,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_2_8",
@@ -120,7 +125,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_3_8",
@@ -132,7 +138,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_8",
@@ -144,7 +151,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_8",
@@ -156,7 +164,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_8",
@@ -168,7 +177,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_8",
@@ -180,7 +190,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_8",
@@ -192,7 +203,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_8",
@@ -204,7 +216,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_8",
@@ -216,7 +229,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_12_8",
@@ -228,7 +242,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_8",
@@ -240,7 +255,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_8",
@@ -252,7 +268,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_8",
@@ -264,7 +281,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_8",
@@ -276,7 +294,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_8",
@@ -288,7 +307,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_8",
@@ -300,7 +320,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_8",
@@ -312,7 +333,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_-3_7",
@@ -324,7 +346,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_-2_7",
@@ -336,7 +359,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_-1_7",
@@ -348,7 +372,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_0_7",
@@ -360,7 +385,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_1_7",
@@ -372,7 +398,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_2_7",
@@ -384,7 +411,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_3_7",
@@ -396,7 +424,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_7",
@@ -408,7 +437,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_7",
@@ -420,7 +450,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_7",
@@ -432,7 +463,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_7",
@@ -444,7 +476,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_7",
@@ -456,7 +489,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_7",
@@ -468,7 +502,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_7",
@@ -480,7 +515,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_12_7",
@@ -492,7 +528,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_7",
@@ -504,7 +541,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_7",
@@ -516,7 +554,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_7",
@@ -528,7 +567,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_7",
@@ -540,7 +580,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_7",
@@ -552,7 +593,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_7",
@@ -564,7 +606,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_7",
@@ -576,7 +619,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_7",
@@ -588,7 +632,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_-2_6",
@@ -600,7 +645,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_-1_6",
@@ -612,7 +658,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_0_6",
@@ -624,7 +671,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_1_6",
@@ -636,7 +684,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_2_6",
@@ -648,7 +697,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_3_6",
@@ -660,7 +710,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_6",
@@ -672,7 +723,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_6",
@@ -684,7 +736,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_6",
@@ -696,7 +749,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_6",
@@ -708,7 +762,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_6",
@@ -720,7 +775,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_6",
@@ -732,7 +788,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_6",
@@ -744,7 +801,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_12_6",
@@ -756,7 +814,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_6",
@@ -768,7 +827,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_6",
@@ -780,7 +840,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_6",
@@ -792,7 +853,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_6",
@@ -804,7 +866,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_6",
@@ -816,7 +879,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_6",
@@ -828,7 +892,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_6",
@@ -840,7 +905,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_6",
@@ -852,7 +918,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_-2_5",
@@ -864,7 +931,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_-1_5",
@@ -876,7 +944,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_0_5",
@@ -888,7 +957,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_1_5",
@@ -900,7 +970,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_2_5",
@@ -912,7 +983,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_3_5",
@@ -924,7 +996,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_5",
@@ -936,7 +1009,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_5",
@@ -948,7 +1022,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_5",
@@ -960,7 +1035,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_5",
@@ -972,7 +1048,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_5",
@@ -984,7 +1061,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_5",
@@ -996,7 +1074,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_5",
@@ -1008,7 +1087,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_12_5",
@@ -1020,7 +1100,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_5",
@@ -1032,7 +1113,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_5",
@@ -1044,7 +1126,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_5",
@@ -1056,7 +1139,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_5",
@@ -1068,7 +1152,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_5",
@@ -1080,7 +1165,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_5",
@@ -1092,7 +1178,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_5",
@@ -1104,7 +1191,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_5",
@@ -1116,7 +1204,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_21_5",
@@ -1128,7 +1217,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_-1_4",
@@ -1140,7 +1230,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_0_4",
@@ -1152,7 +1243,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_1_4",
@@ -1164,7 +1256,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_2_4",
@@ -1176,7 +1269,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_3_4",
@@ -1188,7 +1282,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_4",
@@ -1200,7 +1295,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_4",
@@ -1212,7 +1308,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_4",
@@ -1224,7 +1321,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_4",
@@ -1236,7 +1334,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_4",
@@ -1248,7 +1347,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_4",
@@ -1260,7 +1360,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_4",
@@ -1272,7 +1373,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_12_4",
@@ -1284,7 +1386,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_4",
@@ -1296,7 +1399,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_4",
@@ -1308,7 +1412,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_4",
@@ -1320,7 +1425,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_4",
@@ -1332,7 +1438,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_4",
@@ -1344,7 +1451,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_4",
@@ -1356,7 +1464,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_4",
@@ -1368,7 +1477,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_4",
@@ -1380,7 +1490,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_21_4",
@@ -1392,7 +1503,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_-1_3",
@@ -1404,7 +1516,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_0_3",
@@ -1416,7 +1529,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_1_3",
@@ -1428,7 +1542,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_2_3",
@@ -1440,7 +1555,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_3_3",
@@ -1452,7 +1568,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_3",
@@ -1464,7 +1581,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_3",
@@ -1476,7 +1594,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_3",
@@ -1488,7 +1607,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_3",
@@ -1500,7 +1620,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_3",
@@ -1512,7 +1633,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_3",
@@ -1524,7 +1646,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_3",
@@ -1536,7 +1659,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_12_3",
@@ -1548,7 +1672,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_3",
@@ -1560,7 +1685,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_3",
@@ -1572,7 +1698,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_3",
@@ -1584,7 +1711,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_3",
@@ -1596,7 +1724,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_3",
@@ -1608,7 +1737,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_3",
@@ -1620,7 +1750,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_3",
@@ -1632,7 +1763,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_3",
@@ -1644,7 +1776,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_21_3",
@@ -1656,7 +1789,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_22_3",
@@ -1668,7 +1802,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_0_2",
@@ -1680,7 +1815,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_1_2",
@@ -1692,7 +1828,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_2_2",
@@ -1704,7 +1841,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_3_2",
@@ -1716,7 +1854,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_2",
@@ -1728,7 +1867,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_2",
@@ -1740,7 +1880,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_2",
@@ -1752,7 +1893,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_2",
@@ -1764,7 +1906,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_2",
@@ -1776,7 +1919,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_2",
@@ -1788,7 +1932,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_2",
@@ -1800,7 +1945,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_12_2",
@@ -1812,7 +1958,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_2",
@@ -1824,7 +1971,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_2",
@@ -1836,7 +1984,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_2",
@@ -1848,7 +1997,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_2",
@@ -1860,7 +2010,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_2",
@@ -1872,7 +2023,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_2",
@@ -1884,7 +2036,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_2",
@@ -1896,7 +2049,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_2",
@@ -1908,7 +2062,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_21_2",
@@ -1920,7 +2075,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_22_2",
@@ -1932,7 +2088,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_0_1",
@@ -1944,7 +2101,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_1_1",
@@ -1956,7 +2114,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_2_1",
@@ -1968,7 +2127,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_3_1",
@@ -1980,7 +2140,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_1",
@@ -1992,7 +2153,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_1",
@@ -2004,7 +2166,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_1",
@@ -2016,7 +2179,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_1",
@@ -2028,7 +2192,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_1",
@@ -2040,7 +2205,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_1",
@@ -2052,7 +2218,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_1",
@@ -2064,7 +2231,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_12_1",
@@ -2076,7 +2244,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_1",
@@ -2088,7 +2257,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_1",
@@ -2100,7 +2270,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_1",
@@ -2112,7 +2283,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_1",
@@ -2124,7 +2296,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_1",
@@ -2136,7 +2309,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_1",
@@ -2148,7 +2322,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_1",
@@ -2160,7 +2335,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_1",
@@ -2172,7 +2348,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_21_1",
@@ -2184,7 +2361,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_22_1",
@@ -2196,7 +2374,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_23_1",
@@ -2208,7 +2387,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_1_0",
@@ -2220,7 +2400,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_2_0",
@@ -2232,7 +2413,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_3_0",
@@ -2244,7 +2426,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_0",
@@ -2256,7 +2439,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_0",
@@ -2268,7 +2452,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_0",
@@ -2280,7 +2465,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_0",
@@ -2292,7 +2478,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_0",
@@ -2304,7 +2491,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_0",
@@ -2316,7 +2504,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_0",
@@ -2328,7 +2517,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_0",
@@ -2340,7 +2530,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_1_-1",
@@ -2352,7 +2543,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_2_-1",
@@ -2364,7 +2556,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_3_-1",
@@ -2376,7 +2569,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_-1",
@@ -2388,7 +2582,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_-1",
@@ -2400,7 +2595,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_-1",
@@ -2412,7 +2608,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_-1",
@@ -2424,7 +2621,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_-1",
@@ -2436,7 +2634,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_-1",
@@ -2448,7 +2647,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_-1",
@@ -2460,7 +2660,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_-1",
@@ -2472,7 +2673,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_-1",
@@ -2484,7 +2686,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_-1",
@@ -2496,7 +2699,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_-1",
@@ -2508,7 +2712,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_-1",
@@ -2520,7 +2725,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_-1",
@@ -2532,7 +2738,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_-1",
@@ -2544,7 +2751,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_-1",
@@ -2556,7 +2764,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_-1",
@@ -2568,7 +2777,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_21_-1",
@@ -2580,7 +2790,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_22_-1",
@@ -2592,7 +2803,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_23_-1",
@@ -2604,7 +2816,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_24_-1",
@@ -2616,7 +2829,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_2_-2",
@@ -2628,7 +2842,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_3_-2",
@@ -2640,7 +2855,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_-2",
@@ -2652,7 +2868,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_-2",
@@ -2664,7 +2881,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_-2",
@@ -2676,7 +2894,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_-2",
@@ -2688,7 +2907,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_-2",
@@ -2700,7 +2920,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_-2",
@@ -2712,7 +2933,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_-2",
@@ -2724,7 +2946,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_-2",
@@ -2736,7 +2959,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_-2",
@@ -2748,7 +2972,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_-2",
@@ -2760,7 +2985,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_-2",
@@ -2772,7 +2998,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_-2",
@@ -2784,7 +3011,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_-2",
@@ -2796,7 +3024,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_-2",
@@ -2808,7 +3037,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_-2",
@@ -2820,7 +3050,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_-2",
@@ -2832,7 +3063,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_21_-2",
@@ -2844,7 +3076,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_22_-2",
@@ -2856,7 +3089,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_23_-2",
@@ -2868,7 +3102,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_24_-2",
@@ -2880,7 +3115,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_2_-3",
@@ -2892,7 +3128,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_3_-3",
@@ -2904,7 +3141,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_-3",
@@ -2916,7 +3154,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_-3",
@@ -2928,7 +3167,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_-3",
@@ -2940,7 +3180,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_-3",
@@ -2952,7 +3193,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_-3",
@@ -2964,7 +3206,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_-3",
@@ -2976,7 +3219,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_-3",
@@ -2988,7 +3232,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_-3",
@@ -3000,7 +3245,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_-3",
@@ -3012,7 +3258,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_-3",
@@ -3024,7 +3271,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_-3",
@@ -3036,7 +3284,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_-3",
@@ -3048,7 +3297,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_-3",
@@ -3060,7 +3310,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_-3",
@@ -3072,7 +3323,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_-3",
@@ -3084,7 +3336,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_-3",
@@ -3096,7 +3349,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_21_-3",
@@ -3108,7 +3362,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_22_-3",
@@ -3120,7 +3375,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_23_-3",
@@ -3132,7 +3388,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_24_-3",
@@ -3144,7 +3401,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_25_-3",
@@ -3156,7 +3414,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_3_-4",
@@ -3168,7 +3427,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_-4",
@@ -3180,7 +3440,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_-4",
@@ -3192,7 +3453,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_-4",
@@ -3204,7 +3466,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_-4",
@@ -3216,7 +3479,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_-4",
@@ -3228,7 +3492,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_-4",
@@ -3240,7 +3505,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_-4",
@@ -3252,7 +3518,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_-4",
@@ -3264,7 +3531,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_-4",
@@ -3276,7 +3544,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_-4",
@@ -3288,7 +3557,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_-4",
@@ -3300,7 +3570,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_-4",
@@ -3312,7 +3583,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_-4",
@@ -3324,7 +3596,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_-4",
@@ -3336,7 +3609,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_-4",
@@ -3348,7 +3622,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_-4",
@@ -3360,7 +3635,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_21_-4",
@@ -3372,7 +3648,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_22_-4",
@@ -3384,7 +3661,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_23_-4",
@@ -3396,7 +3674,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_24_-4",
@@ -3408,7 +3687,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_25_-4",
@@ -3420,7 +3700,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_3_-5",
@@ -3432,7 +3713,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_-5",
@@ -3444,7 +3726,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_-5",
@@ -3456,7 +3739,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_-5",
@@ -3468,7 +3752,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_-5",
@@ -3480,7 +3765,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_-5",
@@ -3492,7 +3778,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_-5",
@@ -3504,7 +3791,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_-5",
@@ -3516,7 +3804,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_-5",
@@ -3528,7 +3817,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_-5",
@@ -3540,7 +3830,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_-5",
@@ -3552,7 +3843,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_-5",
@@ -3564,7 +3856,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_-5",
@@ -3576,7 +3869,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_-5",
@@ -3588,7 +3882,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_-5",
@@ -3600,7 +3895,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_-5",
@@ -3612,7 +3908,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_-5",
@@ -3624,7 +3921,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_21_-5",
@@ -3636,7 +3934,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_22_-5",
@@ -3648,7 +3947,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_23_-5",
@@ -3660,7 +3960,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_24_-5",
@@ -3672,7 +3973,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_25_-5",
@@ -3684,7 +3986,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_26_-5",
@@ -3696,7 +3999,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_-6",
@@ -3708,7 +4012,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_-6",
@@ -3720,7 +4025,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_-6",
@@ -3732,7 +4038,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_-6",
@@ -3744,7 +4051,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_-6",
@@ -3756,7 +4064,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_-6",
@@ -3768,7 +4077,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_-6",
@@ -3780,7 +4090,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_-6",
@@ -3792,7 +4103,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_-6",
@@ -3804,7 +4116,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_-6",
@@ -3816,7 +4129,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_-6",
@@ -3828,7 +4142,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_-6",
@@ -3840,7 +4155,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_-6",
@@ -3852,7 +4168,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_-6",
@@ -3864,7 +4181,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_-6",
@@ -3876,7 +4194,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_-6",
@@ -3888,7 +4207,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_21_-6",
@@ -3900,7 +4220,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_22_-6",
@@ -3912,7 +4233,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_23_-6",
@@ -3924,7 +4246,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_24_-6",
@@ -3936,7 +4259,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_25_-6",
@@ -3948,7 +4272,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_26_-6",
@@ -3960,7 +4285,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_4_-7",
@@ -3972,7 +4298,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_-7",
@@ -3984,7 +4311,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_-7",
@@ -3996,7 +4324,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_-7",
@@ -4008,7 +4337,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_-7",
@@ -4020,7 +4350,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_-7",
@@ -4032,7 +4363,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_-7",
@@ -4044,7 +4376,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_-7",
@@ -4056,7 +4389,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_-7",
@@ -4068,7 +4402,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_-7",
@@ -4080,7 +4415,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_-7",
@@ -4092,7 +4428,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_-7",
@@ -4104,7 +4441,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_-7",
@@ -4116,7 +4454,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_-7",
@@ -4128,7 +4467,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_-7",
@@ -4140,7 +4480,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_-7",
@@ -4152,7 +4493,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_21_-7",
@@ -4164,7 +4506,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_22_-7",
@@ -4176,7 +4519,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_23_-7",
@@ -4188,7 +4532,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_24_-7",
@@ -4200,7 +4545,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_25_-7",
@@ -4212,7 +4558,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_26_-7",
@@ -4224,7 +4571,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_27_-7",
@@ -4236,7 +4584,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_5_-8",
@@ -4248,7 +4597,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_6_-8",
@@ -4260,7 +4610,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_7_-8",
@@ -4272,7 +4623,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_8_-8",
@@ -4284,7 +4636,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_9_-8",
@@ -4296,7 +4649,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_10_-8",
@@ -4308,7 +4662,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_11_-8",
@@ -4320,7 +4675,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_13_-8",
@@ -4332,7 +4688,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_14_-8",
@@ -4344,7 +4701,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_15_-8",
@@ -4356,7 +4714,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_16_-8",
@@ -4368,7 +4727,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_17_-8",
@@ -4380,7 +4740,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_18_-8",
@@ -4392,7 +4753,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_19_-8",
@@ -4404,7 +4766,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_20_-8",
@@ -4416,7 +4779,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_21_-8",
@@ -4428,7 +4792,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_22_-8",
@@ -4440,7 +4805,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_23_-8",
@@ -4452,7 +4818,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_24_-8",
@@ -4464,7 +4831,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_25_-8",
@@ -4476,7 +4844,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_26_-8",
@@ -4488,7 +4857,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       },
       {
         "name": "loch_27_-8",
@@ -4500,7 +4870,8 @@
         "rotation": 0.0,
         "radius": 1.5e-07,
         "inner_radius": 5e-07,
-        "index": 1.444023621703261
+        "index": 1.444023621703261,
+        "group": 0
       }
     ],
     "sources": [
@@ -4557,7 +4928,16 @@
       "source_offset": 3e-07,
       "decay": 1e-05,
       "max_time": 5e-12
-    }
+    },
+    "groups": [
+      {
+        "name": "Kristall",
+        "x": 5.16e-06,
+        "y": 3.225e-06,
+        "rotation": 0.0,
+        "parent": -1
+      }
+    ]
   },
   "cross_section": {
     "core": "Si",

@@ -134,4 +134,16 @@ std::vector<Shape> crystal_shapes(const CrystalLayout& layout, double hole_index
   return shapes;
 }
 
+int add_crystal(FieldScene& scene, const CrystalLayout& layout, double hole_index,
+                const std::string& group_name, const std::string& prefix) {
+  const int group = static_cast<int>(scene.groups.size());
+  scene.groups.push_back({group_name, std::round(0.5 * (layout.x_min + layout.x_max) * 1e12) / 1e12,
+                          std::round(0.5 * (layout.y_min + layout.y_max) * 1e12) / 1e12, 0.0, -1});
+  for (Shape& hole : crystal_shapes(layout, hole_index, prefix)) {
+    hole.group = group;
+    scene.shapes.push_back(std::move(hole));
+  }
+  return group;
+}
+
 }  // namespace photonlab::field

@@ -173,7 +173,9 @@ void LogicLab::draw_examples_menu() {
                           "NICHT",
                           "Halbaddierer (zwei Kristall-Gatter)",
                           "Halbaddierer (ein Chip)",
-                          "Volladdierer (drei Chips, regeneriert)"};
+                          "Volladdierer (drei Chips, regeneriert)",
+                          "Halbaddierer (ein Kristall-Chip)",
+                          "Volladdierer (drei Kristall-Chips, regeneriert)"};
   const auto names = logic::field_gate_names();
   for (int g = 0; g < static_cast<int>(names.size()) && g < IM_ARRAYSIZE(labels); ++g)
     if (ImGui::MenuItem(labels[g])) {

@@ -217,7 +217,9 @@ FieldGateReport characterize_field_gate(const FieldGate& gate, ThreadPool* pool,
 }
 
 std::vector<std::string> field_gate_names() {
-  return {"phc_or_and", "phc_xor", "phc_not", "phc_halfadder", "chip_halfadder", "chip_fulladder"};
+  return {"phc_or_and",         "phc_xor",           "phc_not",
+          "phc_halfadder",      "chip_halfadder",    "chip_fulladder",
+          "phc_chip_halfadder", "phc_chip_fulladder"};
 }
 
 FieldGate field_gate(std::string_view name) {
@@ -269,14 +271,28 @@ FieldGate field_gate(std::string_view name) {
     g.scenes = {field::reference_scene("field_halfadder")};
     g.inputs = {{"A", "A"}, {"B", "B"}};
     g.outputs = {{"Summe", 0, "Mode Summe", {0, 1, 1, 0}}, {"Übertrag", 0, "Mode Übertrag", {0, 0, 0, 1}}};
-  } else if (name == "chip_fulladder") {
+  } else if (name == "phc_chip_halfadder") {
+    g.description =
+        "Halbaddierer als ein Kristall-Chip: W1-Wellenleiter mit Y-Teilern, 60°-Knicken und zwei "
+        "Y-Kombinierern. Oben XOR (Summe; veränderte Löcher neben einem Arm von B verschieben dessen Phase), "
+        "unten gleichphasiges UND (Übertrag, höchstens 6 dB).";
+    g.scenes = {field::reference_scene("field_phc_halfadder")};
+    g.inputs = {{"A", "A"}, {"B", "B"}};
+    g.outputs = {{"Summe", 0, "Fluss Summe", {0, 1, 1, 0}}, {"Übertrag", 0, "Fluss Übertrag", {0, 0, 0, 1}}};
+  } else if (name == "chip_fulladder" || name == "phc_chip_fulladder") {
     g.description =
         "Volladdierer aus drei Halbaddierer-Chips mit Regeneration (Detektor + neuer Sender) zwischen den "
         "Stufen: Stufe 1 rechnet A + B (S1, C1), Stufe 2 S1 + Cin (Summe, C2), Stufe 3 liest am "
         "gleichphasigen Ausgang C1 ODER C2 (Übertrag). Ohne Regeneration geht es nicht: die Summe dreier "
         "Bits "
         "lässt sich mit linearer Interferenz an keinem Ausgang von den geraden Fällen trennen.";
-    const field::FieldScene chip = field::reference_scene("field_halfadder");
+    const bool crystal = name == "phc_chip_fulladder";
+    if (crystal)
+      g.description.replace(g.description.find("Halbaddierer-Chips"), 18, "Kristall-Halbaddierern");
+    const field::FieldScene chip =
+        field::reference_scene(crystal ? "field_phc_halfadder" : "field_halfadder");
+    const char* sum_monitor = crystal ? "Fluss Summe" : "Mode Summe";
+    const char* carry_monitor = crystal ? "Fluss Übertrag" : "Mode Übertrag";
     auto renamed = [&](const char* a, const char* b) {
       field::FieldScene scene = chip;
       scene.sources[0].name = a, scene.sources[1].name = b;
@@ -291,11 +307,11 @@ FieldGate field_gate(std::string_view name) {
       s1.push_back(a ^ b), c1.push_back(a & b), sum.push_back(a ^ b ^ c), c2.push_back((a ^ b) & c);
       cout.push_back((a & b) | ((a ^ b) & c));
     }
-    g.outputs = {{"S1", 0, "Mode Summe", s1},
-                 {"C1", 0, "Mode Übertrag", c1},
-                 {"Summe", 1, "Mode Summe", sum},
-                 {"C2", 1, "Mode Übertrag", c2},
-                 {"Übertrag", 2, "Mode Übertrag", cout}};
+    g.outputs = {{"S1", 0, sum_monitor, s1},
+                 {"C1", 0, carry_monitor, c1},
+                 {"Summe", 1, sum_monitor, sum},
+                 {"C2", 1, carry_monitor, c2},
+                 {"Übertrag", 2, carry_monitor, cout}};
     g.links = {{"S1", "S1"}, {"C1", "C1"}, {"C2", "C2"}};
   } else {
     throw FieldError("Unbekanntes Feld-Gatter '" + std::string(name) + "'");

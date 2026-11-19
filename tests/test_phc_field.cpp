@@ -161,3 +161,18 @@ TEST_CASE("Feld-Gatter: Stufen mit Regeneration schalten spätere Quellen mit de
   g.links = {{"Stufe 1", "X"}};
   CHECK_THROWS_AS(logic::validate(g), FieldError);
 }
+
+TEST_CASE("Kristall: Löcher liegen in einer Gruppe, die Szene bleibt gültig") {
+  const FieldScene s = reference_scene("field_phc_halfadder");
+  REQUIRE(s.groups.size() == 1);
+  CHECK(s.groups[0].name == "Kristall");
+  int holes = 0;
+  for (const auto& sh : s.shapes)
+    if (sh.name.rfind("loch_", 0) == 0) {
+      ++holes;
+      CHECK(sh.group == 0);
+    }
+  CHECK(holes > 300);
+  CHECK(s.shapes.front().group == -1);  // die Platte gehört nicht zur Gruppe
+  CHECK_NOTHROW(validate(s));
+}

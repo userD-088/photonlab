@@ -251,7 +251,7 @@ FieldScene phc_waveguide(PhcDevice device) {
   }
   s.shapes.push_back({"Platte", ShapeKind::rectangle, round_pico(0.5 * s.width), round_pico(0.5 * s.height),
                       s.width, s.height, 0.0, 1e-6, 0.5e-6, index_core});
-  for (Shape& hole : crystal_shapes(layout, index_cladding)) s.shapes.push_back(std::move(hole));
+  add_crystal(s, layout, index_cladding);
 
   const double yc = layout.origin_y;
   Source source;
@@ -303,7 +303,7 @@ FieldScene phc_y(bool antiphase) {
   remove_line(layout, node, 4, 9);   // Eingangsarm B: nach links unten (240°)
   s.shapes.push_back({"Platte", ShapeKind::rectangle, round_pico(0.5 * s.width), round_pico(0.5 * s.height),
                       s.width, s.height, 0.0, 1e-6, 0.5e-6, index_core});
-  for (Shape& hole : crystal_shapes(layout, index_cladding)) s.shapes.push_back(std::move(hole));
+  add_crystal(s, layout, index_cladding);
 
   Source source;
   source.kind = SourceKind::point;
@@ -573,6 +573,69 @@ FieldScene halfadder(double phase_length) {
   return s;
 }
 
+// Halbaddierer als ein Kristall-Chip (W1-Wellenleiter im Dreiecksgitter, Hz, 1580 nm): A kommt von links und
+// teilt sich am Knoten SA in Arme nach oben rechts (60°) und unten rechts (300°); B kommt von rechts, teilt
+// sich am Knoten SB nach oben links und unten links und biegt mit einem 60°-Knick in die Waagerechte. Oben
+// treffen sich die Arme in einer 3-zähligen Y-Verzweigung, Ausgang schräg nach oben links (Summe); unten
+// gespiegelt (Übertrag). Unten ist der Arm von A länger: das verschiebt dort die Phase gegenüber oben, so
+// dass oben gegenphasig (Summe = XOR) und unten gleichphasig (Übertrag = UND, höchstens 6 dB) addiert wird.
+// extra_steps: zusätzliche Gitterschritte des unteren A-Arms; b_phase: Phase der Quelle B; a_amplitude:
+// Amplitude von A relativ zu B (Abgleich der Pegel: der Weg von A verliert mehr als der von B).
+FieldScene phc_halfadder(int extra_steps, double b_phase, double a_amplitude, double wavelength) {
+  const double a = phc_a;
+  FieldScene s;
+  s.name = "Photonischer Kristall: Halbaddierer auf einem Chip";
+  s.width = round_pico(30 * a), s.height = round_pico(20 * a);
+  s.cell_size = round_pico(a / 20.0);
+  s.background_index = index_cladding;
+  s.polarization = Polarization::hz;
+  s.duration = 4.8e-12;
+
+  CrystalLayout layout;
+  layout.a = a, layout.radius = phc_radius;
+  layout.origin_x = round_pico(9 * a), layout.origin_y = round_pico(0.5 * s.height);
+  layout.x_min = 0.0, layout.x_max = s.width, layout.y_min = 0.0, layout.y_max = s.height;
+  // oben n = 6 Schritte je Arm; unten ist der Arm von A um extra_steps länger (Phasenhebel: ein Schritt
+  // entspricht der Bloch-Phase k*a der W1-Mode), B gleicht das mit dem waagerechten Stück aus
+  const int n_top = 6, n_bottom = 6 + extra_steps, m = 14;
+  const Site sa{0, 0}, sb{m, 0}, top{0, n_top}, bottom{n_bottom, -n_bottom};
+  remove_line(layout, {-14, 0}, 0, 15);                             // Eingang A bis SA
+  remove_line(layout, sa, 1, n_top + 1);                            // A nach oben rechts bis top
+  remove_line(layout, sa, 5, n_bottom + 1);                         // A nach unten rechts bis bottom
+  remove_line(layout, sb, 0, 14);                                   // Eingang B von rechts bis SB
+  remove_path(layout, sb, {{2, n_top + 1}, {3, m - n_top}});        // B nach oben links, dann waagerecht
+  remove_path(layout, sb, {{4, n_bottom + 1}, {3, m - n_bottom}});  // B nach unten links, dann waagerecht
+  remove_line(layout, top, 2, 12);                                  // Ausgang Summe schräg nach oben links
+  remove_line(layout, bottom, 4, 12);  // Ausgang Übertrag schräg nach unten links
+  s.shapes.push_back({"Platte", ShapeKind::rectangle, round_pico(0.5 * s.width), round_pico(0.5 * s.height),
+                      s.width, s.height, 0.0, 1e-6, 0.5e-6, index_core});
+  add_crystal(s, layout, index_cladding);
+
+  Source source;
+  source.kind = SourceKind::point;
+  source.signal = SignalKind::continuous;
+  source.wavelength = wavelength;
+  source.name = "A";
+  std::tie(source.x1, source.y1) = site_position(layout, {-6, 0});
+  source.x2 = source.x1, source.y2 = source.y1;
+  source.amplitude = a_amplitude;
+  s.sources.push_back(source);
+  source.name = "B";
+  source.amplitude = 1.0;
+  std::tie(source.x1, source.y1) = site_position(layout, {20, 0});
+  source.x2 = source.x1, source.y2 = source.y1;
+  source.phase = round_pico(b_phase);
+  s.sources.push_back(source);
+
+  // Flussmonitore waagerecht über den schrägen Ausgängen, kurz vor dem Rand
+  const auto [tx, ty] = site_position(layout, {top.i - 3, top.j + 3});
+  const auto [bx, by] = site_position(layout, {bottom.i, bottom.j - 3});
+  s.monitors = {
+      {"Fluss Summe", MonitorKind::flux, round_pico(tx - 1.0e-6), ty, round_pico(tx + 1.0e-6), ty},
+      {"Fluss Übertrag", MonitorKind::flux, round_pico(bx - 1.0e-6), by, round_pico(bx + 1.0e-6), by}};
+  return s;
+}
+
 }  // namespace
 
 std::vector<std::string> reference_scene_names() {
@@ -599,6 +662,7 @@ FieldScene reference_scene(std::string_view name) {
   if (name == "field_bragg") return bragg();
   if (name == "field_lens") return lens();
   if (name == "field_halfadder") return halfadder(1.75 * um);
+  if (name == "field_phc_halfadder") return phc_halfadder(1, 0.25, 1.3, phc_wavelength);
   throw FieldError("Unbekannte Referenz-Szene '" + std::string(name) + "'");
 }
 

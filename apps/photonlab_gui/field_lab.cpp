@@ -819,9 +819,14 @@ void FieldLab::draw_objects() {
     ImGui::PushStyleColor(ImGuiCol_Text, enabled ? color : ImGui::GetColorU32(ImGuiCol_TextDisabled));
     const std::string label =
         std::string(prefix) + (name.empty() ? "(ohne Namen)" : name) + (enabled ? "" : "  (aus)");
-    ImGuiTreeNodeFlags flags =
-        ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen;
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_OpenOnArrow;
     if (!has_children) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+    if (ref.kind == ObjectKind::group) {
+      // große Gruppen (Kristalle mit Hunderten Löchern) starten eingeklappt
+      int members = 0;
+      for (const auto& sh : scene.shapes) members += sh.group == ref.index;
+      if (members <= 30) flags |= ImGuiTreeNodeFlags_DefaultOpen;
+    }
     if (is_selected(ref.kind, ref.index)) flags |= ImGuiTreeNodeFlags_Selected;
     const bool open = ImGui::TreeNodeEx("##knoten", flags, "%s", label.c_str());
     ImGui::PopStyleColor();

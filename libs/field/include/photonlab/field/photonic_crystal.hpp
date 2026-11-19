@@ -69,5 +69,9 @@ std::vector<Hole> holes(const CrystalLayout& layout);
 // Löcher als Kreis-Formen (Namen "<prefix>_<i>_<j>") mit der Brechzahl hole_index.
 std::vector<Shape> crystal_shapes(const CrystalLayout& layout, double hole_index,
                                   const std::string& prefix = "loch");
+// Hängt die Löcher an die Szene an, zusammengefasst in einer neuen Gruppe (Bezugspunkt = Mitte des Gebiets),
+// damit sie im Editor als ein Objekt bewegt und eingeklappt werden können. Rückgabe: Index der Gruppe.
+int add_crystal(FieldScene& scene, const CrystalLayout& layout, double hole_index,
+                const std::string& group_name = "Kristall", const std::string& prefix = "loch");
 
 }  // namespace photonlab::field

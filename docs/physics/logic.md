@@ -111,6 +111,17 @@ Wellenlänge (1 pm bis 20 nm). Zum Vergleich: ein Silizium-Ring driftet thermisc
   |u_1 + u_2 + u_3| = 0 für den ungeraden Fall 111. Der Volladdierer besteht daher aus drei Halbaddierer-Chips
   mit Regeneration (S1, C1 -> Summe, C2 -> Übertrag = C1 ODER C2 am gleichphasigen Ausgang).
 
+* **Kristall-Halbaddierer (ein Chip, `field_phc_halfadder`):** W1-Wellenleiter im Dreiecksgitter, nur
+  60°-Richtungen; Teiler und Kombinierer sind 3-zählige Y-Verzweigungen, B biegt mit einem 60°-Knick in die
+  Waagerechte. Phasenhebel: der untere Arm von A ist einen Gitterschritt länger (Bloch-Phase k·a der W1-Mode).
+  Veränderte Lochradien als Phasenschieber änderten auch die Transmission stark (kleine Kavität) und wurden
+  verworfen. Abgleich gemessen: B-Phase 0,25 rad, A-Amplitude 1,3 (A verliert auf seinem Weg mehr), 1580 nm,
+  4,8 ps (nahe der Bandkante ist das Licht langsam; nach 2,4 ps waren die Pegel noch nicht stationär).
+  Ergebnis: Summe 7,8 dB, Übertrag 5,5 dB. Die Auslöschung der Summe bleibt bei etwa 15 % der Einzelpegel,
+  unabhängig von der Phase: die Felder von A und B kommen nicht in exakt derselben Verteilung an (nahe der
+  Grenze zur zweiten Defektmode); bei 1560 nm interferierte der Übertrag gar nicht mehr. Der Streifen-Chip
+  ist deutlich besser (22 dB).
+
 ## Was das Zeugnis nicht sagt
 
 - Alles ist stationär: keine Schaltzeiten, keine Bitrate, keine Schaltenergie. Die Latenz ist nur die
