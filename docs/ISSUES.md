@@ -194,9 +194,11 @@ Bewertung der Reiter (Festlegung nach Rückmeldung, umsetzen je als eigenes Issu
 
 Obere Leiste, Bedienung:
 - [x] #149 Seitenleiste: alle Bereiche einklappbar, Hinweise eingeklappt (schwere bleiben sichtbar); Leertaste = Start/Pause, R = Zurücksetzen; ein Tempo-Regler statt Schritte je Bild + volle Geschwindigkeit; Energie als Erklärung im Tooltip
+- [x] #151 Neue Objekte landen in der gewählten Gruppe; Objekte in der Liste in Gruppen ziehen; Kürzel für alle Operationen (Rücktaste, Umschalt+Buchstabe für neue Objekte, Pfeiltasten, Q/E drehen, Bild auf/ab, +/-), Übersicht "Tastenkürzel"; Objektliste mit fester Höhe vor den Eigenschaften (springt nicht mehr)
 - [x] #150 Objektliste: Strg+Klick einzeln, Umschalt+Klick Bereich; Flussdiagramm über eine Periode gemittelt (abschaltbar), Legende außerhalb
 - [x] #142 Datei: Beispiele getrennt nach Feld/Schaltung; Strg+N, Strg+O, Strg+S, Strg+Umschalt+S global; Ansicht: Vollbild (F11)
-- [ ] #143 Mehr Beispiele: Halbaddierer und Volladdierer (Schaltung und Logik-Ebene), weitere Feld-Szenen
+- [x] #143 Beispiele: Feld-Szenen Taper, 90-Grad-Bogen, Bragg-Spiegel, Linse; Datei > Beispiele: Logik öffnet Halb-/Volladdierer, 4-Bit-Addierer, Flip-Flop und die Kristall-Gatter (inkl. Halbaddierer) im Logik-Labor
+- [ ] #143b Halbaddierer als eine zusammenhängende Feld-Szene (Teiler + XOR + UND in einem Chip, Phase über Weglänge)
 - [ ] #144 Hilfe-Menü je Arbeitsbereich (Feld, Schaltung, Logik, Quanten) mit Bildern; ImGui-Demo nur noch für Entwickler
 - [ ] #145 Einstellungen-Fenster (Schriftgröße, Farbschema, Threads, Sprache) und Speichern der Einstellungen
 - [ ] #146 Sprachen Deutsch/Englisch: alle Oberflächentexte über eine Übersetzungstabelle (Latin-1 bleibt Pflicht)

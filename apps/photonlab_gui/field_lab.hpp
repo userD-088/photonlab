@@ -56,6 +56,7 @@ class FieldLab {
   };
   enum class ObjectKind { none, shape, source, monitor, port, group };
   enum class DisplayMode { field, intensity };
+  enum class NewObject { rectangle, circle, ring, taper, arc, group, source, monitor, port };
   struct ObjectRef {
     ObjectKind kind = ObjectKind::none;
     int index = -1;
@@ -78,6 +79,11 @@ class FieldLab {
   void reset_run();       // Zurücksetzen (auch Taste R)
   void draw_scene_settings();
   void draw_add_toolbar();
+  void add_new(NewObject what);  // neues Objekt in target_group(), ausgewählt
+  int target_group() const;
+  void move_selection_to_group(int group);  // -1 = oberste Ebene
+  void shape_to_end(bool front);
+  void rotate_selection(double angle);
   void draw_objects();
   void list_click(ObjectRef ref);  // Klick in der Objektliste: Strg einzeln, Umschalt Bereich
   bool group_combo(const char* label, int* group, int exclude = -1);

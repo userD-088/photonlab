@@ -619,7 +619,7 @@ bool ChipDesigner::show_side_window(const char* name) const {
   return side && canvas && side->DockId != 0 && side->DockId == canvas->DockId;
 }
 
-void ChipDesigner::draw_file_menu() {
+void ChipDesigner::draw_file_menu(const std::function<void()>& more_examples) {
   if (ImGui::MenuItem("Neu", "Strg+N")) request(Pending::new_project);
   if (ImGui::MenuItem("Öffnen...", "Strg+O")) request(Pending::open_project);
   // Beispiele getrennt nach Ebene; der Menütext ist der Name des Projekts
@@ -633,6 +633,7 @@ void ChipDesigner::draw_file_menu() {
     }
     ImGui::EndMenu();
   }
+  if (more_examples) more_examples();
   ImGui::Separator();
   if (ImGui::MenuItem("Speichern", "Strg+S")) save_or_ask();
   if (ImGui::MenuItem("Speichern unter...", "Strg+Umschalt+S"))

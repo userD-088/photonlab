@@ -243,7 +243,7 @@ int main(int argc, char** argv) {
         SDL_SetWindowFullscreen(window, (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) == 0);
       if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Datei")) {
-          chip_designer.draw_file_menu();
+          chip_designer.draw_file_menu([&] { logic_lab.draw_examples_menu(); });
           ImGui::Separator();
           if (ImGui::MenuItem("Beenden")) chip_designer.request_quit();
           ImGui::EndMenu();

@@ -323,12 +323,155 @@ FieldScene phc_y(bool antiphase) {
   return s;
 }
 
+// Taper: einmodiger Wellenleiter (0,45 um) weitet sich über 10 um auf 3 um auf. Langsam genug (adiabatisch),
+// bleibt das Licht in der Grundmode; die Flussmonitore vor und hinter dem Taper zeigen den Durchsatz
+// (gemessen: hinten 100 % des Flusses vorn).
+FieldScene taper() {
+  FieldScene s;
+  s.name = "Taper 0,45 auf 3 um";
+  s.width = 20 * um, s.height = 6 * um;
+  s.cell_size = 25e-9;
+  s.background_index = index_cladding;
+  s.polarization = Polarization::hz;
+  s.duration = 400e-15;
+  Shape narrow, wide, cone;
+  narrow.name = "schmal", narrow.x = 2.5 * um, narrow.y = 3 * um, narrow.width = 5 * um,
+  narrow.height = 0.45 * um;
+  wide.name = "breit", wide.x = 17.5 * um, wide.y = 3 * um, wide.width = 5 * um, wide.height = 3 * um;
+  cone.name = "Taper", cone.kind = ShapeKind::taper, cone.x = 10 * um, cone.y = 3 * um;
+  cone.width = 10 * um, cone.height = 0.45 * um, cone.width2 = 3 * um;
+  for (Shape* sh : {&narrow, &wide, &cone}) sh->index = index_core;
+  s.shapes = {narrow, cone, wide};
+  Source source;
+  source.name = "Modenquelle";
+  source.kind = SourceKind::mode;
+  source.x1 = source.x2 = 1.5 * um;
+  source.y1 = 1.5 * um, source.y2 = 4.5 * um;
+  s.sources = {source};
+  s.monitors = {{"Fluss vorn", MonitorKind::flux, 3.5 * um, 1.5 * um, 3.5 * um, 4.5 * um},
+                {"Fluss hinten", MonitorKind::flux, 18.5 * um, 0.8 * um, 18.5 * um, 5.2 * um}};
+  return s;
+}
+
+// 90-Grad-Bogen mit 2,5 um Radius (Mitte des Kerns): bei diesem Brechzahlunterschied verliert der Bogen
+// kaum Licht (gemessen: 98,8 % kommen hinten an); mit kleinerem Radius steigt die Abstrahlung sichtbar.
+FieldScene bend() {
+  const double radius = 2.5 * um, y0 = 2 * um, x0 = 4 * um, w = 0.45 * um;
+  FieldScene s;
+  s.name = "90-Grad-Bogen";
+  s.width = 9 * um, s.height = 9 * um;
+  s.cell_size = 25e-9;
+  s.background_index = index_cladding;
+  s.polarization = Polarization::hz;
+  s.duration = 400e-15;
+  Shape in, arc, out;
+  in.name = "Zuleitung", in.x = 0.5 * x0, in.y = y0, in.width = x0, in.height = w;
+  arc.name = "Bogen", arc.kind = ShapeKind::arc, arc.x = x0, arc.y = y0 + radius;
+  arc.radius = radius + 0.5 * w, arc.inner_radius = radius - 0.5 * w;
+  arc.rotation = round_pico(-0.5 * constants::pi), arc.sweep = round_pico(0.5 * constants::pi);
+  out.name = "Ableitung", out.x = x0 + radius, out.y = 0.5 * (y0 + radius + s.height);
+  out.width = w, out.height = s.height - y0 - radius;
+  for (Shape* sh : {&in, &arc, &out}) sh->index = index_core;
+  s.shapes = {in, arc, out};
+  Source source;
+  source.name = "Modenquelle";
+  source.kind = SourceKind::mode;
+  source.x1 = source.x2 = 1.2 * um;
+  source.y1 = 0.6 * um, source.y2 = 3.4 * um;
+  s.sources = {source};
+  s.monitors = {{"Fluss vorn", MonitorKind::flux, 2.5 * um, 0.6 * um, 2.5 * um, 3.4 * um},
+                {"Fluss hinten", MonitorKind::flux, x0 + radius - 1.4 * um, 7.6 * um, x0 + radius + 1.4 * um,
+                 7.6 * um}};
+  return s;
+}
+
+// Bragg-Spiegel: 30 Verbreiterungen (0,45 -> 0,65 um, je eine halbe Periode) auf einem einmodigen
+// Wellenleiter. Ein kurzer Puls deckt viele Wellenlängen ab: hinter dem Spiegel fehlt im Spektrum ein Band um
+// 1550 nm (gemessen: etwa zwei Drittel reflektiert, 1530-1580 nm), davor kommt es zurück. Periode aus der
+// Bragg-Bedingung lambda = 2 n_mittel Lambda mit dem Mittel der effektiven Indizes beider Breiten
+// (Schicht-Eigenwertgleichung). Ez-Polarisation: mit Hz koppelt diese Zahnform die Grundmode kaum in sich
+// zurück (gemessen: keine Sperrbande, nur Umwandlung in höhere Moden um 1,3 um).
+FieldScene bragg() {
+  auto n_eff = [](double width) {
+    return modes::slab_modes(index_core, index_cladding, index_cladding, width, 1550e-9,
+                             modes::SlabPolarization::te)
+        .front()
+        .n_eff;
+  };
+  const double period = round_pico(1550e-9 / (n_eff(0.45 * um) + n_eff(0.65 * um)));
+  const int teeth = 30;
+  FieldScene s;
+  s.name = "Bragg-Spiegel im Wellenleiter";
+  s.width = round_pico(10 * um + teeth * period), s.height = 4 * um;
+  s.cell_size = 20e-9;
+  s.background_index = index_cladding;
+  s.polarization = Polarization::ez;
+  s.duration = 1.2e-12;
+  Shape core;
+  core.name = "Kern", core.x = 0.5 * s.width, core.y = 2 * um, core.width = s.width, core.height = 0.45 * um;
+  core.index = index_core;
+  s.shapes = {core};
+  for (int k = 0; k < teeth; ++k) {
+    Shape tooth = core;
+    tooth.name = "Zahn " + std::to_string(k + 1);
+    tooth.x = round_pico(5 * um + (k + 0.25) * period), tooth.width = round_pico(0.5 * period);
+    tooth.height = 0.65 * um;
+    tooth.group = 0;
+    s.shapes.push_back(tooth);
+  }
+  s.groups = {{"Gitter", round_pico(5 * um + 0.5 * teeth * period), 2 * um, 0.0, -1}};
+  Source source;
+  source.name = "Puls";
+  source.kind = SourceKind::mode;
+  source.signal = SignalKind::pulse;
+  source.pulse_duration = 8e-15;
+  source.x1 = source.x2 = 2 * um;
+  source.y1 = 0.6 * um, source.y2 = 3.4 * um;
+  s.sources = {source};
+  const double behind = s.width - 2.5 * um;
+  s.monitors = {{"Fluss vorn", MonitorKind::flux, 3.5 * um, 0.6 * um, 3.5 * um, 3.4 * um},
+                {"Fluss hinten", MonitorKind::flux, behind, 0.6 * um, behind, 3.4 * um},
+                {"Feld vorn", MonitorKind::point, 3 * um, 2 * um, 0, 0},
+                {"Feld hinten", MonitorKind::point, behind, 2 * um, 0, 0}};
+  return s;
+}
+
+// Kugellinse (in 2D: Zylinder) aus Glas im Vakuum: ein breiter Gauß-Strahl wird gebündelt. Brennweite einer
+// Kugellinse vom Mittelpunkt aus: f = n R / (2 (n - 1)); hier etwa 6,5 um, der Monitor sitzt dort (gemessen:
+// Feldspitze dort 15-mal größer als 2 um daneben).
+FieldScene lens() {
+  const double n = index_cladding, radius = 4 * um, center = 7 * um;
+  FieldScene s;
+  s.name = "Linse: Strahl bündeln";
+  s.width = 20 * um, s.height = 14 * um;
+  s.cell_size = 40e-9;
+  s.background_index = 1.0;
+  s.polarization = Polarization::ez;
+  s.duration = 250e-15;
+  Shape glass;
+  glass.name = "Linse", glass.kind = ShapeKind::circle, glass.x = center, glass.y = 7 * um;
+  glass.radius = radius, glass.index = n;
+  s.shapes = {glass};
+  Source source;
+  source.name = "Strahl";
+  source.kind = SourceKind::line;
+  source.x1 = source.x2 = 1.5 * um;
+  source.y1 = 1 * um, source.y2 = 13 * um;
+  source.beam_width = 3.5 * um;
+  s.sources = {source};
+  const double focus = round_pico(center + n * radius / (2.0 * (n - 1.0)));
+  s.monitors = {{"Brennpunkt", MonitorKind::point, focus, 7 * um, 0, 0},
+                {"neben dem Brennpunkt", MonitorKind::point, focus, 9 * um, 0, 0},
+                {"Fluss durch den Fokus", MonitorKind::flux, focus, 5 * um, focus, 9 * um}};
+  return s;
+}
+
 }  // namespace
 
 std::vector<std::string> reference_scene_names() {
-  return {"field_waveguide", "field_interface", "field_interference", "field_ring",
-          "field_gap",       "field_gap_pair",  "field_coupler",      "field_phc_w1",
-          "field_phc_bend",  "field_phc_y",     "field_phc_y_xor"};
+  return {"field_waveguide", "field_interface", "field_interference", "field_ring",     "field_gap",
+          "field_gap_pair",  "field_coupler",   "field_phc_w1",       "field_phc_bend", "field_phc_y",
+          "field_phc_y_xor", "field_taper",     "field_bend",         "field_bragg",    "field_lens"};
 }
 
 FieldScene reference_scene(std::string_view name) {
@@ -343,6 +486,10 @@ FieldScene reference_scene(std::string_view name) {
   if (name == "field_phc_bend") return phc_waveguide(PhcDevice::bend);
   if (name == "field_phc_y") return phc_y(false);
   if (name == "field_phc_y_xor") return phc_y(true);
+  if (name == "field_taper") return taper();
+  if (name == "field_bend") return bend();
+  if (name == "field_bragg") return bragg();
+  if (name == "field_lens") return lens();
   throw FieldError("Unbekannte Referenz-Szene '" + std::string(name) + "'");
 }
 

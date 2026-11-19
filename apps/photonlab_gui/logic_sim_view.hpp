@@ -20,6 +20,9 @@ class LogicSimView {
   LogicSimView(const LogicSimView&) = delete;
   LogicSimView& operator=(const LogicSimView&) = delete;
   void draw();
+  static int design_count();
+  static const char* design_label(int design);
+  void select_design(int design) { design_ = design; }  // rechnet im nächsten Bild neu
 
  private:
   struct Result {

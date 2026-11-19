@@ -22,6 +22,7 @@ class FieldGateView {
   FieldGateView& operator=(const FieldGateView&) = delete;
 
   void draw();
+  void select_gate(int index) { selected_ = index; }  // Index in logic::field_gate_names()
 
  private:
   struct Result {

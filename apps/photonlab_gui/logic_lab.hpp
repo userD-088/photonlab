@@ -23,6 +23,7 @@ class LogicLab {
   ~LogicLab();
 
   void draw();
+  void draw_examples_menu();  // Datei > Beispiele: Logik (Addierer, Feld-Gatter)
 
  private:
   struct Result {
@@ -57,6 +58,7 @@ class LogicLab {
   std::string optimize_result_owner_;
   std::string optimize_error_;
   bool fit_optimizer_ = true;
+  int pending_tab_ = 0;  // aus dem Menü gewählter Reiter: 2 Logikschaltung, 3 Feld-Gatter
 };
 
 }  // namespace photonlab::gui

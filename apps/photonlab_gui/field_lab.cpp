@@ -405,11 +405,12 @@ void FieldLab::draw_field_tab() {
 
   const float side_width = ImGui::GetFontSize() * 19.0f;
   ImGui::BeginChild("seite", ImVec2(side_width, 0.0f), ImGuiChildFlags_Borders);
-  // Reihenfolge: Rechnung, neue Objekte, Eigenschaften der Auswahl, Objektliste, Rechengebiet
+  // Reihenfolge: Rechnung, neue Objekte, Objektliste (feste Höhe), Eigenschaften der Auswahl, Rechengebiet.
+  // Die Eigenschaften stehen unter der Liste: wechselt ihre Höhe, verschiebt sich darüber nichts.
   draw_controls();
   draw_add_toolbar();
-  draw_selected_object();
   draw_objects();
+  draw_selected_object();
   draw_scene_settings();
   ImGui::EndChild();
   handle_shortcuts();
@@ -619,114 +620,170 @@ void FieldLab::draw_scene_settings() {
   }
 }
 
-void FieldLab::draw_add_toolbar() {
+int FieldLab::target_group() const {
+  // neue Objekte landen in der ausgewählten Gruppe bzw. in der Gruppe des ausgewählten Objekts
+  const FieldScene& scene = designer_.project().field;
+  const auto i = static_cast<std::size_t>(selected_index_);
+  switch (selected_kind_) {
+    case ObjectKind::group:
+      return i < scene.groups.size() ? selected_index_ : -1;
+    case ObjectKind::shape:
+      return i < scene.shapes.size() ? scene.shapes[i].group : -1;
+    case ObjectKind::source:
+      return i < scene.sources.size() ? scene.sources[i].group : -1;
+    case ObjectKind::monitor:
+      return i < scene.monitors.size() ? scene.monitors[i].group : -1;
+    case ObjectKind::port:
+      return i < scene.ports.size() ? scene.ports[i].group : -1;
+    case ObjectKind::none:
+      return -1;
+  }
+  return -1;
+}
+
+void FieldLab::add_new(NewObject what) {
   FieldScene& scene = designer_.project().field;
-  if (!ImGui::CollapsingHeader("Neues Objekt", ImGuiTreeNodeFlags_DefaultOpen)) return;
-  bool changed = false;
-  const double cx = scene.width / 2, cy = scene.height / 2;
-  if (ImGui::SmallButton("+ Rechteck")) {
-    field::Shape s;
-    s.name = "Rechteck " + std::to_string(scene.shapes.size() + 1);
-    s.x = cx, s.y = cy, s.width = scene.width / 4, s.height = 0.45 * um;
-    s.index = 2.85;
-    scene.shapes.push_back(s);
-    select({ObjectKind::shape, static_cast<int>(scene.shapes.size()) - 1}, false);
-    changed = true;
+  const int group = target_group();
+  // in der Mitte der Gruppe bzw. der Szene
+  double cx = scene.width / 2, cy = scene.height / 2;
+  if (group >= 0) {
+    cx = scene.groups[static_cast<std::size_t>(group)].x;
+    cy = scene.groups[static_cast<std::size_t>(group)].y;
   }
-  ImGui::SameLine();
-  if (ImGui::SmallButton("+ Kreis")) {
+  cx = std::clamp(cx, 0.0, scene.width), cy = std::clamp(cy, 0.0, scene.height);
+  const double small = std::min(scene.width, scene.height);
+  auto add_shape = [&](field::ShapeKind kind, const char* name) {
     field::Shape s;
-    s.name = "Kreis " + std::to_string(scene.shapes.size() + 1);
-    s.kind = field::ShapeKind::circle;
-    s.x = cx, s.y = cy, s.radius = std::min(scene.width, scene.height) / 10;
-    s.index = 2.85;
-    scene.shapes.push_back(s);
-    select({ObjectKind::shape, static_cast<int>(scene.shapes.size()) - 1}, false);
-    changed = true;
-  }
-  ImGui::SameLine();
-  if (ImGui::SmallButton("+ Ring")) {
-    field::Shape s;
-    s.name = "Ring " + std::to_string(scene.shapes.size() + 1);
-    s.kind = field::ShapeKind::ring;
-    s.x = cx, s.y = cy, s.radius = std::min(scene.width, scene.height) / 5;
+    s.name = name + std::string(" ") + std::to_string(scene.shapes.size() + 1);
+    s.kind = kind;
+    s.x = cx, s.y = cy, s.index = 2.85, s.group = group;
+    s.width = kind == field::ShapeKind::taper ? scene.width / 5 : scene.width / 4;
+    s.height = 0.45 * um, s.width2 = 1.5 * um;
+    s.radius = kind == field::ShapeKind::circle ? small / 10 : small / 5;
     s.inner_radius = s.radius - 0.45 * um > 0.0 ? s.radius - 0.45 * um : s.radius / 2;
-    s.index = 2.85;
     scene.shapes.push_back(s);
     select({ObjectKind::shape, static_cast<int>(scene.shapes.size()) - 1}, false);
-    changed = true;
-  }
-  if (ImGui::SmallButton("+ Taper")) {
-    field::Shape s;
-    s.name = "Taper " + std::to_string(scene.shapes.size() + 1);
-    s.kind = field::ShapeKind::taper;
-    s.x = cx, s.y = cy, s.width = scene.width / 5, s.height = 0.45 * um, s.width2 = 1.5 * um;
-    s.index = 2.85;
-    scene.shapes.push_back(s);
-    select({ObjectKind::shape, static_cast<int>(scene.shapes.size()) - 1}, false);
-    changed = true;
-  }
-  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-    ImGui::SetTooltip("Wellenleiter, der sich gleichmäßig verbreitert (z. B. zum Gitterkoppler).");
-  ImGui::SameLine();
-  if (ImGui::SmallButton("+ Bogen")) {
-    field::Shape s;
-    s.name = "Bogen " + std::to_string(scene.shapes.size() + 1);
-    s.kind = field::ShapeKind::arc;
-    s.x = cx, s.y = cy, s.radius = std::min(scene.width, scene.height) / 5;
-    s.inner_radius = s.radius - 0.45 * um > 0.0 ? s.radius - 0.45 * um : s.radius / 2;
-    s.index = 2.85;
-    scene.shapes.push_back(s);
-    select({ObjectKind::shape, static_cast<int>(scene.shapes.size()) - 1}, false);
-    changed = true;
-  }
-  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-    ImGui::SetTooltip("Gekrümmter Wellenleiter (Ringausschnitt), Standard 90 Grad.");
-  ImGui::SameLine();
-  if (ImGui::SmallButton("+ Gruppe")) {
-    // leeres Objekt: nur Lage und Drehung; Mitglieder per Strg+G oder im Feld "Gruppe"
-    scene.groups.push_back({"Gruppe " + std::to_string(scene.groups.size() + 1), cx, cy, 0.0, -1});
-    select({ObjectKind::group, static_cast<int>(scene.groups.size()) - 1}, false);
-    designer_.mark_dirty();
-  }
-  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-    ImGui::SetTooltip(
-        "Leeres Objekt mit Lage und Drehung. Objekte darin bewegen und drehen\nsich mit. Schneller: "
-        "Objekte auswählen und Strg+G.");
-  if (ImGui::SmallButton("+ Quelle")) {
-    field::Source s;
-    s.name = "Quelle " + std::to_string(scene.sources.size() + 1);
-    s.kind = field::SourceKind::point;
-    s.x1 = s.x2 = scene.width / 4, s.y1 = s.y2 = cy;
-    if (!scene.sources.empty()) s.wavelength = scene.sources.front().wavelength;
-    scene.sources.push_back(s);
-    select({ObjectKind::source, static_cast<int>(scene.sources.size()) - 1}, false);
-    changed = true;
-  }
-  ImGui::SameLine();
-  if (ImGui::SmallButton("+ Monitor")) {
-    field::Monitor m;
-    m.name = "Monitor " + std::to_string(scene.monitors.size() + 1);
-    m.x1 = m.x2 = 0.75 * scene.width, m.y1 = m.y2 = cy;
-    scene.monitors.push_back(m);
-    select({ObjectKind::monitor, static_cast<int>(scene.monitors.size()) - 1}, false);
-    changed = true;
-  }
-  ImGui::SameLine();
-  if (ImGui::SmallButton("+ Port")) {
-    // neuer Port senkrecht über die Mitte der linken bzw. rechten Hälfte; Ports ändern die Rechnung nicht
-    field::Port p;
-    p.name = "p" + std::to_string(scene.ports.size() + 1);
-    const bool right = scene.ports.size() % 2 == 1;
-    p.x1 = p.x2 = right ? 0.8 * scene.width : 0.2 * scene.width;
-    p.y1 = std::max(0.0, cy - 1 * um), p.y2 = std::min(scene.height, cy + 1 * um);
-    scene.ports.push_back(p);
-    select({ObjectKind::port, static_cast<int>(scene.ports.size()) - 1}, false);
-    designer_.mark_dirty();
-  }
-  if (changed) {
     scene_changed_ = true;
-    designer_.mark_dirty();
+  };
+  switch (what) {
+    case NewObject::rectangle:
+      add_shape(field::ShapeKind::rectangle, "Rechteck");
+      break;
+    case NewObject::circle:
+      add_shape(field::ShapeKind::circle, "Kreis");
+      break;
+    case NewObject::ring:
+      add_shape(field::ShapeKind::ring, "Ring");
+      break;
+    case NewObject::taper:
+      add_shape(field::ShapeKind::taper, "Taper");
+      break;
+    case NewObject::arc:
+      add_shape(field::ShapeKind::arc, "Bogen");
+      break;
+    case NewObject::group:
+      scene.groups.push_back({"Gruppe " + std::to_string(scene.groups.size() + 1), cx, cy, 0.0, group});
+      select({ObjectKind::group, static_cast<int>(scene.groups.size()) - 1}, false);
+      break;
+    case NewObject::source: {
+      field::Source s;
+      s.name = "Quelle " + std::to_string(scene.sources.size() + 1);
+      s.kind = field::SourceKind::point;
+      s.x1 = s.x2 = group >= 0 ? cx : scene.width / 4, s.y1 = s.y2 = cy;
+      if (!scene.sources.empty()) s.wavelength = scene.sources.front().wavelength;
+      s.group = group;
+      scene.sources.push_back(s);
+      select({ObjectKind::source, static_cast<int>(scene.sources.size()) - 1}, false);
+      scene_changed_ = true;
+      break;
+    }
+    case NewObject::monitor: {
+      field::Monitor m;
+      m.name = "Monitor " + std::to_string(scene.monitors.size() + 1);
+      m.x1 = m.x2 = group >= 0 ? cx : 0.75 * scene.width, m.y1 = m.y2 = cy;
+      m.group = group;
+      scene.monitors.push_back(m);
+      select({ObjectKind::monitor, static_cast<int>(scene.monitors.size()) - 1}, false);
+      scene_changed_ = true;
+      break;
+    }
+    case NewObject::port: {
+      // senkrecht über die Mitte der linken bzw. rechten Hälfte; Ports ändern die Rechnung nicht
+      field::Port p;
+      p.name = "p" + std::to_string(scene.ports.size() + 1);
+      const bool right = scene.ports.size() % 2 == 1;
+      p.x1 = p.x2 = group >= 0 ? cx : right ? 0.8 * scene.width : 0.2 * scene.width;
+      p.y1 = std::max(0.0, cy - 1 * um), p.y2 = std::min(scene.height, cy + 1 * um);
+      p.group = group;
+      scene.ports.push_back(p);
+      select({ObjectKind::port, static_cast<int>(scene.ports.size()) - 1}, false);
+      break;
+    }
+  }
+  designer_.mark_dirty();
+}
+
+void FieldLab::draw_add_toolbar() {
+  if (!ImGui::CollapsingHeader("Neues Objekt", ImGuiTreeNodeFlags_DefaultOpen)) return;
+  struct Entry {
+    NewObject what;
+    const char* label;
+    const char* tip;
+  };
+  static const Entry entries[] = {
+      {NewObject::rectangle, "+ Rechteck", "Umschalt+R"},
+      {NewObject::circle, "+ Kreis", "Umschalt+K"},
+      {NewObject::ring, "+ Ring", "Umschalt+I"},
+      {NewObject::taper, "+ Taper", "Umschalt+T\nWellenleiter, der sich gleichmäßig verbreitert."},
+      {NewObject::arc, "+ Bogen", "Umschalt+B\nGekrümmter Wellenleiter (Ringausschnitt)."},
+      {NewObject::group, "+ Gruppe",
+       "Umschalt+G\nLeeres Objekt mit Lage und Drehung; was darin liegt, bewegt und dreht sich mit.\n"
+       "Schneller: Objekte auswählen und Strg+G."},
+      {NewObject::source, "+ Quelle", "Umschalt+Q"},
+      {NewObject::monitor, "+ Monitor", "Umschalt+M"},
+      {NewObject::port, "+ Port", "Umschalt+P"},
+  };
+  for (int k = 0; k < IM_ARRAYSIZE(entries); ++k) {
+    if (k % 3 != 0) ImGui::SameLine();
+    if (ImGui::SmallButton(entries[k].label)) add_new(entries[k].what);
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) ImGui::SetTooltip("%s", entries[k].tip);
+  }
+  if (ImGui::SmallButton("Tastenkürzel")) ImGui::OpenPopup("kuerzel");
+  const int group = target_group();
+  if (group >= 0) {
+    ImGui::SameLine();
+    ImGui::TextDisabled("neu in \"%s\"",
+                        designer_.project().field.groups[static_cast<std::size_t>(group)].name.c_str());
+  }
+  if (ImGui::BeginPopup("kuerzel")) {
+    static const char* rows[][2] = {
+        {"Leertaste", "Start / Pause"},
+        {"R", "Zurücksetzen"},
+        {"Umschalt+R/K/I/T/B", "neues Rechteck, Kreis, Ring, Taper, Bogen"},
+        {"Umschalt+G/Q/M/P", "neue Gruppe, Quelle, Monitor, Port (in der gewählten Gruppe)"},
+        {"Entf, Rücktaste", "Löschen"},
+        {"Strg+C / X / V / D", "Kopieren, Ausschneiden, Einfügen, Duplizieren"},
+        {"Strg+A, Esc", "alles auswählen, Auswahl aufheben"},
+        {"Strg+G, Strg+Umschalt+G", "gruppieren, aus Gruppe lösen"},
+        {"Pfeiltasten", "verschieben um eine Zelle (Umschalt: 10 Zellen)"},
+        {"Q / E", "drehen um -15 / +15 Grad (Alt: 1 Grad)"},
+        {"Bild auf / Bild ab", "Form ganz nach vorn / hinten"},
+        {"H", "aktivieren / deaktivieren"},
+        {"F, + / -", "Ansicht einpassen, zoomen"},
+        {"Strg+Klick / Umschalt+Klick", "einzeln / Bereich auswählen (Liste)"},
+        {"Ziehen in der Liste", "Auswahl in eine Gruppe legen (unten frei: heraus)"},
+    };
+    if (ImGui::BeginTable("kuerzel_tabelle", 2, ImGuiTableFlags_RowBg)) {
+      for (const auto& row : rows) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextUnformatted(row[0]);
+        ImGui::TableNextColumn();
+        ImGui::TextDisabled("%s", row[1]);
+      }
+      ImGui::EndTable();
+    }
+    ImGui::EndPopup();
   }
 }
 
@@ -750,7 +807,10 @@ void FieldLab::list_click(ObjectRef ref) {
 void FieldLab::draw_objects() {
   FieldScene& scene = designer_.project().field;
   if (!ImGui::CollapsingHeader("Objekte", ImGuiTreeNodeFlags_DefaultOpen)) return;
-  ImGui::TextDisabled("Strg: einzeln, Umschalt: Bereich, Rechtsklick: Menü");
+  ImGui::TextDisabled("Strg: einzeln, Umschalt: Bereich, Ziehen: in Gruppe");
+  // feste, mit der Maus veränderbare Höhe: die Liste springt beim Auswählen nicht
+  ImGui::BeginChild("liste", ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 12.0f),
+                    ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeY);
   std::vector<ObjectRef> order;  // sichtbare Reihenfolge für Umschalt-Klicks im nächsten Bild
   auto row = [&](ObjectRef ref, const std::string& name, bool enabled, const char* prefix, ImU32 color,
                  bool has_children) {
@@ -766,6 +826,16 @@ void FieldLab::draw_objects() {
     const bool open = ImGui::TreeNodeEx("##knoten", flags, "%s", label.c_str());
     ImGui::PopStyleColor();
     if (ImGui::IsItemClicked(ImGuiMouseButton_Left) && !ImGui::IsItemToggledOpen()) list_click(ref);
+    if (ImGui::BeginDragDropSource()) {
+      if (!is_selected(ref.kind, ref.index)) select(ref, false);
+      ImGui::SetDragDropPayload("photonlab_objekte", nullptr, 0);
+      ImGui::Text("%zu Objekt(e) verschieben", selection_.size());
+      ImGui::EndDragDropSource();
+    }
+    if (ref.kind == ObjectKind::group && ImGui::BeginDragDropTarget()) {
+      if (ImGui::AcceptDragDropPayload("photonlab_objekte")) move_selection_to_group(ref.index);
+      ImGui::EndDragDropTarget();
+    }
     if (ImGui::BeginPopupContextItem("kontext")) {
       if (!is_selected(ref.kind, ref.index)) select(ref, false);
       draw_context_items();
@@ -799,7 +869,30 @@ void FieldLab::draw_objects() {
         row({ObjectKind::port, i}, o.name, true, "Port: ", color_port, false);
   };
   draw_level(draw_level, -1, 0);
+  // freie Fläche unter der Liste: hierher gezogene Objekte verlassen ihre Gruppe
+  const ImVec2 rest = ImGui::GetContentRegionAvail();
+  ImGui::InvisibleButton("##oberste_ebene", ImVec2(std::max(rest.x, 1.0f), std::max(rest.y, 4.0f)));
+  if (ImGui::BeginDragDropTarget()) {
+    if (ImGui::AcceptDragDropPayload("photonlab_objekte")) move_selection_to_group(-1);
+    ImGui::EndDragDropTarget();
+  }
+  ImGui::EndChild();
   list_order_ = std::move(order);
+}
+
+void FieldLab::move_selection_to_group(int group) {
+  FieldScene& scene = designer_.project().field;
+  for (const ObjectRef& r : selection_) {
+    const auto i = static_cast<std::size_t>(r.index);
+    if (r.kind == ObjectKind::shape && i < scene.shapes.size()) scene.shapes[i].group = group;
+    if (r.kind == ObjectKind::source && i < scene.sources.size()) scene.sources[i].group = group;
+    if (r.kind == ObjectKind::monitor && i < scene.monitors.size()) scene.monitors[i].group = group;
+    if (r.kind == ObjectKind::port && i < scene.ports.size()) scene.ports[i].group = group;
+    // eine Gruppe nicht in sich selbst oder in eine ihrer Untergruppen legen
+    if (r.kind == ObjectKind::group && i < scene.groups.size() && !field::in_group(scene, group, r.index))
+      scene.groups[i].parent = group;
+  }
+  designer_.mark_dirty();
 }
 
 bool FieldLab::group_combo(const char* label, int* group, int exclude) {
@@ -1675,30 +1768,54 @@ void FieldLab::draw_context_items() {
                            clipboard_.monitors.empty() && clipboard_.ports.empty());
   if (ImGui::MenuItem("Einfügen", "Strg+V", false, can_paste)) paste(false);
   if (any && ImGui::MenuItem("Gruppieren", "Strg+G")) group_selection();
-  if (any && ImGui::MenuItem("Aus Gruppe lösen")) ungroup_selection();
+  if (any && ImGui::MenuItem("Aus Gruppe lösen", "Strg+Umschalt+G")) ungroup_selection();
   if (ImGui::MenuItem("Alles auswählen", "Strg+A")) select_all();
   if (any && selected_kind_ == ObjectKind::shape) {
     // Formen überdecken einander in Listenreihenfolge
     FieldScene& scene = designer_.project().field;
     const int i = selected_index_;
     const int last = static_cast<int>(scene.shapes.size()) - 1;
-    if (ImGui::MenuItem("Ganz nach vorn", nullptr, false, selection_.size() == 1 && i < last)) {
-      std::rotate(scene.shapes.begin() + i, scene.shapes.begin() + i + 1, scene.shapes.end());
-      select({ObjectKind::shape, last}, false);
-      scene_changed_ = true;
-      designer_.mark_dirty();
-    }
-    if (ImGui::MenuItem("Ganz nach hinten", nullptr, false, selection_.size() == 1 && i > 0)) {
-      std::rotate(scene.shapes.begin(), scene.shapes.begin() + i, scene.shapes.begin() + i + 1);
-      select({ObjectKind::shape, 0}, false);
-      scene_changed_ = true;
-      designer_.mark_dirty();
-    }
+    if (ImGui::MenuItem("Ganz nach vorn", "Bild auf", false, selection_.size() == 1 && i < last))
+      shape_to_end(true);
+    if (ImGui::MenuItem("Ganz nach hinten", "Bild ab", false, selection_.size() == 1 && i > 0))
+      shape_to_end(false);
   }
   if (any) {
     ImGui::Separator();
+    if (ImGui::MenuItem("Drehen +15 Grad", "E")) rotate_selection(constants::pi / 12);
+    if (ImGui::MenuItem("Drehen -15 Grad", "Q")) rotate_selection(-constants::pi / 12);
+    ImGui::Separator();
     if (ImGui::MenuItem("Löschen", "Entf")) delete_selection();
   }
+}
+
+void FieldLab::shape_to_end(bool front) {
+  // Formen überdecken einander in Listenreihenfolge: vorn = am Ende der Liste
+  FieldScene& scene = designer_.project().field;
+  if (selection_.size() != 1 || selected_kind_ != ObjectKind::shape) return;
+  const int i = selected_index_, last = static_cast<int>(scene.shapes.size()) - 1;
+  if (i < 0 || i > last) return;
+  if (front)
+    std::rotate(scene.shapes.begin() + i, scene.shapes.begin() + i + 1, scene.shapes.end());
+  else
+    std::rotate(scene.shapes.begin(), scene.shapes.begin() + i, scene.shapes.begin() + i + 1);
+  select({ObjectKind::shape, front ? last : 0}, false);
+  scene_changed_ = true;
+  designer_.mark_dirty();
+}
+
+void FieldLab::rotate_selection(double angle) {
+  // Formen drehen um ihren Mittelpunkt, Gruppen um ihren Bezugspunkt (mit Inhalt); Linien bleiben
+  FieldScene& scene = designer_.project().field;
+  if (selection_.empty()) return;
+  for (const ObjectRef& r : selection_) {
+    const auto i = static_cast<std::size_t>(r.index);
+    if (r.kind == ObjectKind::shape && i < scene.shapes.size()) scene.shapes[i].rotation += angle;
+    if (r.kind == ObjectKind::group && i < scene.groups.size())
+      field::transform_group(scene, r.index, 0.0, 0.0, angle);
+  }
+  scene_changed_ = true;
+  designer_.mark_dirty();
 }
 
 void FieldLab::group_selection() {
@@ -1757,8 +1874,9 @@ void FieldLab::handle_shortcuts() {
   // nur, wenn das Bauteil-Labor den Fokus hat und kein Textfeld bearbeitet wird
   const ImGuiID space_owner = ImGui::GetID("leertaste");
   if (ImGui::GetIO().WantTextInput || !ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
-    if (ImGui::GetKeyOwner(ImGuiKey_Space) == space_owner)
-      ImGui::SetKeyOwner(ImGuiKey_Space, ImGuiKeyOwner_NoOwner);
+    for (ImGuiKey key :
+         {ImGuiKey_Space, ImGuiKey_LeftArrow, ImGuiKey_RightArrow, ImGuiKey_UpArrow, ImGuiKey_DownArrow})
+      if (ImGui::GetKeyOwner(key) == space_owner) ImGui::SetKeyOwner(key, ImGuiKeyOwner_NoOwner);
     return;
   }
   // Leertaste gehört hier Start/Pause: Besitz anmelden, damit sie keinen fokussierten Knopf mehr auslöst
@@ -1766,6 +1884,39 @@ void FieldLab::handle_shortcuts() {
   if (ImGui::IsKeyPressed(ImGuiKey_Space, ImGuiInputFlags_None, space_owner) && sim_) toggle_running();
   if (ImGui::IsKeyChordPressed(ImGuiKey_R)) reset_run();
   if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_G)) group_selection();
+  if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_G)) ungroup_selection();
+  if (ImGui::IsKeyPressed(ImGuiKey_Backspace, false)) delete_selection();
+  static const std::pair<ImGuiKey, NewObject> new_keys[] = {
+      {ImGuiKey_R, NewObject::rectangle}, {ImGuiKey_K, NewObject::circle},  {ImGuiKey_I, NewObject::ring},
+      {ImGuiKey_T, NewObject::taper},     {ImGuiKey_B, NewObject::arc},     {ImGuiKey_G, NewObject::group},
+      {ImGuiKey_Q, NewObject::source},    {ImGuiKey_M, NewObject::monitor}, {ImGuiKey_P, NewObject::port}};
+  for (const auto& [key, what] : new_keys)
+    if (ImGui::IsKeyChordPressed(ImGuiMod_Shift | key)) add_new(what);
+  // Drehen: Q/E 15 Grad, mit Alt 1 Grad (Umschalt+Q legt schon eine Quelle an)
+  if (ImGui::IsKeyChordPressed(ImGuiKey_E)) rotate_selection(constants::pi / 12);
+  if (ImGui::IsKeyChordPressed(ImGuiKey_Q)) rotate_selection(-constants::pi / 12);
+  if (ImGui::IsKeyChordPressed(ImGuiMod_Alt | ImGuiKey_E)) rotate_selection(constants::pi / 180);
+  if (ImGui::IsKeyChordPressed(ImGuiMod_Alt | ImGuiKey_Q)) rotate_selection(-constants::pi / 180);
+  if (ImGui::IsKeyChordPressed(ImGuiKey_PageUp)) shape_to_end(true);
+  if (ImGui::IsKeyChordPressed(ImGuiKey_PageDown)) shape_to_end(false);
+  // Zoom mit + und - (Hauptfeld und Ziffernblock)
+  if (ImGui::IsKeyPressed(ImGuiKey_KeypadAdd) || ImGui::IsKeyChordPressed(ImGuiKey_Equal) ||
+      ImGui::IsKeyChordPressed(ImGuiMod_Shift | ImGuiKey_Equal))
+    zoom_ = std::min(zoom_ * 1.25f, 50.0f);
+  if (ImGui::IsKeyPressed(ImGuiKey_KeypadSubtract) || ImGui::IsKeyChordPressed(ImGuiKey_Minus))
+    zoom_ = std::max(zoom_ / 1.25f, 0.25f);
+  // Pfeiltasten verschieben die Auswahl um eine Zelle (Umschalt: 10); Besitz wie bei der Leertaste,
+  // damit sie nicht zugleich den Tastaturfokus der Oberfläche bewegen
+  if (!selection_.empty()) {
+    const double step = designer_.project().field.cell_size * (ImGui::GetIO().KeyShift ? 10.0 : 1.0);
+    const ImGuiKey arrows[] = {ImGuiKey_LeftArrow, ImGuiKey_RightArrow, ImGuiKey_UpArrow, ImGuiKey_DownArrow};
+    const double dx[] = {-step, step, 0.0, 0.0}, dy[] = {0.0, 0.0, -step, step};
+    for (int k = 0; k < 4; ++k) {
+      ImGui::SetKeyOwner(arrows[k], space_owner);
+      if (ImGui::IsKeyPressed(arrows[k], ImGuiInputFlags_Repeat, space_owner)) move_selection(dx[k], dy[k]);
+    }
+  }
+
   if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_A)) select_all();
   if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_C)) copy_selection();
   if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_X)) copy_selection(), delete_selection();

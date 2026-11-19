@@ -137,6 +137,9 @@ void LogicSimView::draw_timing(const Result& r) {
   ImPlot::EndPlot();
 }
 
+int LogicSimView::design_count() { return IM_ARRAYSIZE(design_labels); }
+const char* LogicSimView::design_label(int design) { return design_labels[design]; }
+
 void LogicSimView::draw() {
   update();
   ImGui::PushTextWrapPos(ImGui::GetFontSize() * 48.0f);

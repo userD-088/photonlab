@@ -41,7 +41,7 @@ class ChipDesigner {
   ~ChipDesigner();
 
   void draw();            // alle Fenster des Arbeitsbereichs
-  void draw_file_menu();  // Einträge im Menü "Datei"
+  void draw_file_menu(const std::function<void()>& more_examples = {});  // more_examples: weitere Beispiel-Menüs
 
   bool open_file(const std::string& path);
   void request_quit();  // fragt bei ungespeicherten Änderungen nach

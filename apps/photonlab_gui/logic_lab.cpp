@@ -142,17 +142,41 @@ void LogicLab::draw() {
       draw_circuit_tab();
       ImGui::EndTabItem();
     }
-    if (ImGui::BeginTabItem("Logikschaltung")) {
+    if (ImGui::BeginTabItem("Logikschaltung", nullptr,
+                            pending_tab_ == 2 ? ImGuiTabItemFlags_SetSelected : 0)) {
       logic_sim_view_.draw();
       ImGui::EndTabItem();
     }
-    if (ImGui::BeginTabItem("Feld-Gatter (Kristall)")) {
+    if (ImGui::BeginTabItem("Feld-Gatter (Kristall)", nullptr,
+                            pending_tab_ == 3 ? ImGuiTabItemFlags_SetSelected : 0)) {
       field_gate_view_.draw();
       ImGui::EndTabItem();
     }
     ImGui::EndTabBar();
+    pending_tab_ = 0;
   }
   ImGui::End();
+}
+
+void LogicLab::draw_examples_menu() {
+  if (!ImGui::BeginMenu("Beispiele: Logik (Logik-Labor)")) return;
+  ImGui::SeparatorText("Logikschaltung");
+  for (int d = 0; d < LogicSimView::design_count(); ++d)
+    if (ImGui::MenuItem(LogicSimView::design_label(d))) {
+      logic_sim_view_.select_design(d);
+      pending_tab_ = 2;
+      ImGui::SetWindowFocus(window_name);
+    }
+  ImGui::SeparatorText("Gatter auf Feld-Ebene (Kristall)");
+  const char* labels[] = {"ODER / UND", "XOR", "NICHT", "Halbaddierer"};
+  const auto names = logic::field_gate_names();
+  for (int g = 0; g < static_cast<int>(names.size()) && g < IM_ARRAYSIZE(labels); ++g)
+    if (ImGui::MenuItem(labels[g])) {
+      field_gate_view_.select_gate(g);
+      pending_tab_ = 3;
+      ImGui::SetWindowFocus(window_name);
+    }
+  ImGui::EndMenu();
 }
 
 void LogicLab::draw_circuit_tab() {
