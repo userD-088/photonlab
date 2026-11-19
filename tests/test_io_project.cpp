@@ -56,6 +56,21 @@ TEST_CASE("Projekt: deaktivierte Feld-Objekte bleiben beim Speichern deaktiviert
   CHECK_FALSE(loaded.field.monitors[0].enabled);
 }
 
+TEST_CASE("Projekt: Gruppen, Taper und Bogen überstehen Speichern und Laden") {
+  io::Project project;
+  project.field.width = 4e-6, project.field.height = 4e-6;
+  project.field.groups = {{"g", 1e-6, 2e-6, 0.3, -1}, {"h", 0.5e-6, 0.5e-6, 0.0, 0}};
+  project.field.shapes.resize(2);
+  project.field.shapes[0].kind = field::ShapeKind::taper;
+  project.field.shapes[0].width2 = 0.123e-6;
+  project.field.shapes[0].group = 1;
+  project.field.shapes[1].kind = field::ShapeKind::arc;
+  project.field.shapes[1].sweep = 1.234;
+  project.field.ports.push_back({"p", 0.0, 0.0, 0.0, 1e-6, 0, 0});
+  const io::Project loaded = io::project_from_json(io::project_to_json(project));
+  CHECK(loaded.field == project.field);
+}
+
 TEST_CASE("Projekt: Datei schreiben und lesen") {
   const auto path = std::filesystem::temp_directory_path() / "photonlab_test_projekt.plab.json";
   io::Project project;

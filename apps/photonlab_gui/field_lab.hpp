@@ -54,7 +54,7 @@ class FieldLab {
     double energy = 0.0;
     bool fresh = false;
   };
-  enum class ObjectKind { none, shape, source, monitor, port };
+  enum class ObjectKind { none, shape, source, monitor, port, group };
   enum class DisplayMode { field, intensity };
   struct ObjectRef {
     ObjectKind kind = ObjectKind::none;
@@ -74,9 +74,15 @@ class FieldLab {
   void draw_field_tab();
   void draw_empty_state();
   void draw_controls();
+  void toggle_running();  // Start/Pause (auch Leertaste)
+  void reset_run();       // Zurücksetzen (auch Taste R)
   void draw_scene_settings();
   void draw_add_toolbar();
   void draw_objects();
+  void list_click(ObjectRef ref);  // Klick in der Objektliste: Strg einzeln, Umschalt Bereich
+  bool group_combo(const char* label, int* group, int exclude = -1);
+  void group_selection();  // Strg+G: neue Gruppe um die Auswahl
+  void ungroup_selection();
   void draw_selected_object();
   void draw_canvas(float height);
   void draw_context_items();  // Inhalt des Rechtsklick-Menüs (Feld und Objektliste)
@@ -136,14 +142,17 @@ class FieldLab {
   bool show_geometry_ = true;
   bool fixed_scale_ = false;
   bool boost_weak_ = true;
-  float scale_ = 1.0f;  // Feldwert, der der vollen Farbe entspricht
+  bool flux_average_ = true;  // Flussdiagramm: gleitender Mittelwert über eine Periode
+  float scale_ = 1.0f;        // Feldwert, der der vollen Farbe entspricht
   bool texture_dirty_ = true;
 
   // Auswahl
   ObjectKind selected_kind_ = ObjectKind::none;  // zuletzt angeklicktes Objekt (Eigenschaften-Feld)
   int selected_index_ = -1;
-  std::vector<ObjectRef> selection_;  // alle ausgewählten Objekte, das zuletzt angeklickte am Ende
-  field::FieldScene clipboard_;       // kopierte Objekte (nur die Listen sind belegt)
+  std::vector<ObjectRef> selection_;   // alle ausgewählten Objekte, das zuletzt angeklickte am Ende
+  std::vector<ObjectRef> list_order_;  // Reihenfolge der Objektliste im letzten Bild (Umschalt-Klick)
+  ObjectRef list_anchor_;              // Anfang eines Umschalt-Bereichs
+  field::FieldScene clipboard_;        // kopierte Objekte (nur die Listen sind belegt)
   bool dragging_ = false;
   bool drag_armed_ = false;     // Linksklick auf ein ausgewähltes Objekt: Ziehen verschiebt die Auswahl
   bool box_selecting_ = false;  // Linksklick ins Leere: Rechteck aufziehen

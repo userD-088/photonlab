@@ -9,6 +9,7 @@
 #include <exception>
 #include <thread>
 
+#include "imgui_internal.h"  // SetKeyOwner (Leertaste)
 #include "implot.h"
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/reference_scenes.hpp"
@@ -30,6 +31,7 @@ const ImU32 field_lab_color_monitor = IM_COL32(93, 220, 140, 255);
 const ImU32 color_source = field_lab_color_source;
 const ImU32 color_monitor = field_lab_color_monitor;
 const ImU32 color_disabled = IM_COL32(150, 150, 150, 90);  // deaktivierte Objekte
+const ImU32 color_group = IM_COL32(120, 190, 255, 255);
 const ImU32 color_port = IM_COL32(214, 132, 255, 255);
 const ImU32 color_outline = IM_COL32(227, 232, 239, 110);
 const ImU32 color_selected = IM_COL32(255, 255, 255, 255);
@@ -453,96 +455,116 @@ void FieldLab::draw_empty_state() {
   }
 }
 
+void FieldLab::toggle_running() {
+  if (running()) {
+    pause();
+    want_running_ = false;
+  } else {
+    if (control_ && control_->finished) rebuild();  // am Ende der Laufzeit beginnt Start von vorn
+    want_running_ = true;
+  }
+}
+
+void FieldLab::reset_run() {
+  const bool wanted = want_running_;
+  rebuild();
+  want_running_ = wanted;
+}
+
 void FieldLab::draw_controls() {
   FieldScene& scene = designer_.project().field;
-  ImGui::SeparatorText("Rechnung");
   if (!error_.empty()) {
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextColored(ui_color_bad, "%s", error_.c_str());
     ImGui::PopTextWrapPos();
-    return;
   }
-  if (ImGui::Button(want_running_ && running() ? "Pause" : "Start")) {
-    if (running()) {
-      pause();
-      want_running_ = false;
-    } else {
-      // am Ende der Laufzeit beginnt Start von vorn
-      if (control_ && control_->finished) rebuild();
-      want_running_ = true;
-    }
-  }
-  ImGui::SameLine();
-  if (ImGui::Button("Zurücksetzen")) {
-    const bool wanted = want_running_;
-    rebuild();
-    want_running_ = wanted;
-  }
-  ImGui::SameLine();
-  ImGui::Text("%.1f fs", time_ / units::fs);
-
-  ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
-  ImGui::SliderInt("Schritte je Bild", &steps_per_frame_, 1, 60);
-  ImGui::Checkbox("volle Geschwindigkeit", &full_speed_);
-  if (control_) {
-    control_->steps_per_frame = steps_per_frame_;
-    control_->full_speed = full_speed_;
-  }
-  double duration_fs = scene.duration / units::fs;
-  const double zero = 0.0, long_time = 1e5;
-  ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
-  if (ImGui::DragScalar("Laufzeit", ImGuiDataType_Double, &duration_fs, 1.0f, &zero, &long_time, "%.0f fs",
-                        ImGuiSliderFlags_AlwaysClamp)) {
-    scene.duration = duration_fs * units::fs;
-    designer_.mark_dirty();  // ändert die Physik nicht, nur wann die Rechnung endet
-  }
-  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-    ImGui::SetTooltip("Simulierte Zeit, nach der die Rechnung anhält; 0 = läuft, bis Pause gedrückt wird.");
-  if (scene.duration > 0.0) {
+  if (ImGui::CollapsingHeader("Rechnung", ImGuiTreeNodeFlags_DefaultOpen) && error_.empty()) {
+    if (ImGui::Button(want_running_ && running() ? "Pause" : "Start")) toggle_running();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) ImGui::SetTooltip("Leertaste");
     ImGui::SameLine();
-    if (ImGui::Checkbox("anhalten", &stop_at_duration_) && running()) {
-      pause();  // neu starten, damit die Grenze gilt
+    if (ImGui::Button("Zurücksetzen")) reset_run();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) ImGui::SetTooltip("Taste R");
+    ImGui::SameLine();
+    ImGui::Text("%.1f fs", time_ / units::fs);
+    if (ImGui::IsItemHovered() && sim_)
+      ImGui::SetTooltip(
+          "Simulierte Zeit. Schritt %zu, dt = %.4f fs\n\nEnergie im Gebiet: %.3e J/m (je Meter "
+          "Bauteilhöhe).\n"
+          "Prüfgröße: sie steigt, solange die Quelle einspeist, und darf ohne Quelle\nnicht wachsen - "
+          "wächst sie trotzdem, ist die Rechnung instabil.",
+          step_, sim_->time_step() / units::fs, energy_);
+
+    // Ein Regler für das Tempo: Schritte je Bild, ganz rechts "max" = rechnen, so schnell es geht
+    int tempo = full_speed_ ? 61 : steps_per_frame_;
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
+    if (ImGui::SliderInt("Tempo", &tempo, 1, 61, tempo == 61 ? "max" : "%d Schritte/Bild")) {
+      full_speed_ = tempo == 61;
+      steps_per_frame_ = std::min(tempo, 60);
+    }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+      ImGui::SetTooltip(
+          "Zeitschritte je angezeigtem Bild. \"max\": die Rechnung wartet nicht auf die\nAnzeige und läuft "
+          "so schnell, wie der Prozessor kann (Bild ruckelt).");
+    if (control_) {
+      control_->steps_per_frame = steps_per_frame_;
+      control_->full_speed = full_speed_;
+    }
+    double duration_fs = scene.duration / units::fs;
+    const double zero = 0.0, long_time = 1e5;
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
+    if (ImGui::DragScalar("Laufzeit", ImGuiDataType_Double, &duration_fs, 1.0f, &zero, &long_time, "%.0f fs",
+                          ImGuiSliderFlags_AlwaysClamp)) {
+      scene.duration = duration_fs * units::fs;
+      designer_.mark_dirty();  // ändert die Physik nicht, nur wann die Rechnung endet
+    }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+      ImGui::SetTooltip("Simulierte Zeit, nach der die Rechnung anhält; 0 = läuft, bis Pause gedrückt wird.");
+    if (scene.duration > 0.0) {
+      ImGui::SameLine();
+      if (ImGui::Checkbox("anhalten", &stop_at_duration_) && running()) pause();  // neu starten: Grenze gilt
     }
   }
-  if (sim_) {
-    ImGui::TextDisabled("Schritt %zu, dt = %.4f fs", step_, sim_->time_step() / units::fs);
-    ImGui::TextDisabled("Energie %.3e J/m", energy_);
-  }
 
-  ImGui::SeparatorText("Darstellung");
-  int mode = display_mode_ == DisplayMode::field ? 0 : 1;
-  const char* field_name = scene.polarization == field::Polarization::ez ? "Feld Ez" : "Feld Hz";
-  const char* modes[] = {field_name, "Intensität (Feld²)"};
-  ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
-  if (ImGui::Combo("##modus", &mode, modes, 2)) {
-    display_mode_ = mode == 0 ? DisplayMode::field : DisplayMode::intensity;
-    texture_dirty_ = true;
-  }
-  if (ImGui::Checkbox("Geometrie zeigen", &show_geometry_)) texture_dirty_ = true;
-  if (ImGui::Checkbox("schwache Felder anheben", &boost_weak_)) texture_dirty_ = true;
-  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-    ImGui::SetTooltip(
-        "Nichtlineare Farbskala (Betrag hoch 0,6): macht Streulicht und\nschwache Wellen sichtbar. Die "
-        "Farben sind dann nicht mehr proportional zum Feld.");
-  if (ImGui::Checkbox("Farbskala fest", &fixed_scale_)) texture_dirty_ = true;
-  if (fixed_scale_) {
-    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
-    if (ImGui::DragFloat("Vollausschlag", &scale_, std::max(scale_ * 0.01f, 1e-9f), 0.0f, 1e9f, "%.3g"))
+  if (ImGui::CollapsingHeader("Darstellung", ImGuiTreeNodeFlags_DefaultOpen)) {
+    int mode = display_mode_ == DisplayMode::field ? 0 : 1;
+    const char* field_name = scene.polarization == field::Polarization::ez ? "Feld Ez" : "Feld Hz";
+    const char* modes[] = {field_name, "Intensität (Feld²)"};
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
+    if (ImGui::Combo("##modus", &mode, modes, 2)) {
+      display_mode_ = mode == 0 ? DisplayMode::field : DisplayMode::intensity;
       texture_dirty_ = true;
-  } else {
-    ImGui::TextDisabled("Vollausschlag %.3g %s", static_cast<double>(scale_),
-                        scene.polarization == field::Polarization::ez ? "V/m" : "A/m");
+    }
+    if (ImGui::Checkbox("Geometrie zeigen", &show_geometry_)) texture_dirty_ = true;
+    if (ImGui::Checkbox("schwache Felder anheben", &boost_weak_)) texture_dirty_ = true;
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+      ImGui::SetTooltip(
+          "Nichtlineare Farbskala (Betrag hoch 0,6): macht Streulicht und\nschwache Wellen sichtbar. Die "
+          "Farben sind dann nicht mehr proportional zum Feld.");
+    if (ImGui::Checkbox("Farbskala fest", &fixed_scale_)) texture_dirty_ = true;
+    if (fixed_scale_) {
+      ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
+      if (ImGui::DragFloat("Vollausschlag", &scale_, std::max(scale_ * 0.01f, 1e-9f), 0.0f, 1e9f, "%.3g"))
+        texture_dirty_ = true;
+    } else {
+      ImGui::TextDisabled("Vollausschlag %.3g %s", static_cast<double>(scale_),
+                          scene.polarization == field::Polarization::ez ? "V/m" : "A/m");
+    }
   }
 
-  // Hinweise zur Qualität der Rechnung
+  // Hinweise zur Qualität der Rechnung: eingeklappt; schwere stehen immer sichtbar darüber
   const auto warnings = field::check(scene);
-  ImGui::SeparatorText("Hinweise");
   ImGui::PushTextWrapPos(0.0f);
   for (const auto& w : warnings)
-    ImGui::TextColored(w.severe ? ui_color_bad : ui_color_limited, "%s", w.text.c_str());
-  ImGui::TextDisabled(
-      "2D statt 3D: Abstrahlung nach oben und unten fehlt, Brechzahlen ohne Dispersion, "
-      "Kanten in Treppenstufen. Flüsse gelten je Meter Bauteilhöhe.");
+    if (w.severe) ImGui::TextColored(ui_color_bad, "%s", w.text.c_str());
+  char header[48];
+  std::snprintf(header, sizeof header, "Hinweise (%zu)###hinweise", warnings.size() + 1);
+  if (ImGui::CollapsingHeader(header)) {
+    for (const auto& w : warnings)
+      if (!w.severe) ImGui::TextColored(ui_color_limited, "%s", w.text.c_str());
+    ImGui::TextDisabled(
+        "2D statt 3D: Abstrahlung nach oben und unten fehlt, Brechzahlen ohne Dispersion, "
+        "Kanten in Treppenstufen. Flüsse gelten je Meter Bauteilhöhe.");
+  }
   ImGui::PopTextWrapPos();
 }
 
@@ -599,7 +621,7 @@ void FieldLab::draw_scene_settings() {
 
 void FieldLab::draw_add_toolbar() {
   FieldScene& scene = designer_.project().field;
-  ImGui::SeparatorText("Neues Objekt");
+  if (!ImGui::CollapsingHeader("Neues Objekt", ImGuiTreeNodeFlags_DefaultOpen)) return;
   bool changed = false;
   const double cx = scene.width / 2, cy = scene.height / 2;
   if (ImGui::SmallButton("+ Rechteck")) {
@@ -634,6 +656,43 @@ void FieldLab::draw_add_toolbar() {
     select({ObjectKind::shape, static_cast<int>(scene.shapes.size()) - 1}, false);
     changed = true;
   }
+  if (ImGui::SmallButton("+ Taper")) {
+    field::Shape s;
+    s.name = "Taper " + std::to_string(scene.shapes.size() + 1);
+    s.kind = field::ShapeKind::taper;
+    s.x = cx, s.y = cy, s.width = scene.width / 5, s.height = 0.45 * um, s.width2 = 1.5 * um;
+    s.index = 2.85;
+    scene.shapes.push_back(s);
+    select({ObjectKind::shape, static_cast<int>(scene.shapes.size()) - 1}, false);
+    changed = true;
+  }
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    ImGui::SetTooltip("Wellenleiter, der sich gleichmäßig verbreitert (z. B. zum Gitterkoppler).");
+  ImGui::SameLine();
+  if (ImGui::SmallButton("+ Bogen")) {
+    field::Shape s;
+    s.name = "Bogen " + std::to_string(scene.shapes.size() + 1);
+    s.kind = field::ShapeKind::arc;
+    s.x = cx, s.y = cy, s.radius = std::min(scene.width, scene.height) / 5;
+    s.inner_radius = s.radius - 0.45 * um > 0.0 ? s.radius - 0.45 * um : s.radius / 2;
+    s.index = 2.85;
+    scene.shapes.push_back(s);
+    select({ObjectKind::shape, static_cast<int>(scene.shapes.size()) - 1}, false);
+    changed = true;
+  }
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    ImGui::SetTooltip("Gekrümmter Wellenleiter (Ringausschnitt), Standard 90 Grad.");
+  ImGui::SameLine();
+  if (ImGui::SmallButton("+ Gruppe")) {
+    // leeres Objekt: nur Lage und Drehung; Mitglieder per Strg+G oder im Feld "Gruppe"
+    scene.groups.push_back({"Gruppe " + std::to_string(scene.groups.size() + 1), cx, cy, 0.0, -1});
+    select({ObjectKind::group, static_cast<int>(scene.groups.size()) - 1}, false);
+    designer_.mark_dirty();
+  }
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    ImGui::SetTooltip(
+        "Leeres Objekt mit Lage und Drehung. Objekte darin bewegen und drehen\nsich mit. Schneller: "
+        "Objekte auswählen und Strg+G.");
   if (ImGui::SmallButton("+ Quelle")) {
     field::Source s;
     s.name = "Quelle " + std::to_string(scene.sources.size() + 1);
@@ -671,42 +730,101 @@ void FieldLab::draw_add_toolbar() {
   }
 }
 
+void FieldLab::list_click(ObjectRef ref) {
+  const ImGuiIO& io = ImGui::GetIO();
+  if (io.KeyShift && list_anchor_.kind != ObjectKind::none) {
+    // Umschalt: alles zwischen dem zuletzt angeklickten und diesem Eintrag (Reihenfolge der Liste)
+    const auto a = std::find(list_order_.begin(), list_order_.end(), list_anchor_);
+    const auto b = std::find(list_order_.begin(), list_order_.end(), ref);
+    if (a != list_order_.end() && b != list_order_.end()) {
+      if (!io.KeyCtrl) clear_selection();
+      for (auto it = std::min(a, b); it <= std::max(a, b); ++it)
+        if (!is_selected(it->kind, it->index)) select(*it, true);
+      return;  // Anker bleibt für weitere Umschalt-Klicks
+    }
+  }
+  select(ref, io.KeyCtrl);  // Strg: genau diesen umschalten; sonst nur diesen
+  list_anchor_ = ref;
+}
+
 void FieldLab::draw_objects() {
   FieldScene& scene = designer_.project().field;
-  ImGui::SeparatorText("Objekte");
-  ImGui::TextDisabled("Strg+Klick: mehrere, Rechtsklick: Menü");
-  auto row = [&](ObjectKind kind, int index, const std::string& name, bool enabled, const char* prefix,
-                 ImU32 color) {
-    ImGui::PushID(static_cast<int>(kind) * 100000 + index);
+  if (!ImGui::CollapsingHeader("Objekte", ImGuiTreeNodeFlags_DefaultOpen)) return;
+  ImGui::TextDisabled("Strg: einzeln, Umschalt: Bereich, Rechtsklick: Menü");
+  std::vector<ObjectRef> order;  // sichtbare Reihenfolge für Umschalt-Klicks im nächsten Bild
+  auto row = [&](ObjectRef ref, const std::string& name, bool enabled, const char* prefix, ImU32 color,
+                 bool has_children) {
+    order.push_back(ref);
+    ImGui::PushID(static_cast<int>(ref.kind) * 100000 + ref.index);
     ImGui::PushStyleColor(ImGuiCol_Text, enabled ? color : ImGui::GetColorU32(ImGuiCol_TextDisabled));
     const std::string label =
         std::string(prefix) + (name.empty() ? "(ohne Namen)" : name) + (enabled ? "" : "  (aus)");
-    if (ImGui::Selectable(label.c_str(), is_selected(kind, index))) {
-      const ImGuiIO& io = ImGui::GetIO();
-      select({kind, index}, io.KeyCtrl || io.KeyShift);
-    }
+    ImGuiTreeNodeFlags flags =
+        ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen;
+    if (!has_children) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+    if (is_selected(ref.kind, ref.index)) flags |= ImGuiTreeNodeFlags_Selected;
+    const bool open = ImGui::TreeNodeEx("##knoten", flags, "%s", label.c_str());
     ImGui::PopStyleColor();
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Left) && !ImGui::IsItemToggledOpen()) list_click(ref);
     if (ImGui::BeginPopupContextItem("kontext")) {
-      if (!is_selected(kind, index)) select({kind, index}, false);
+      if (!is_selected(ref.kind, ref.index)) select(ref, false);
       draw_context_items();
       ImGui::EndPopup();
     }
     ImGui::PopID();
+    return open && has_children;
   };
-  for (int i = 0; i < static_cast<int>(scene.shapes.size()); ++i) {
-    const auto& s = scene.shapes[static_cast<std::size_t>(i)];
-    row(ObjectKind::shape, i, s.name, s.enabled, "Form: ", IM_COL32(227, 232, 239, 255));
+  // rekursiv: Untergruppen, dann Objekte der Gruppe; -1 = oberste Ebene
+  auto draw_level = [&](auto&& self, int parent, int depth) -> void {
+    if (depth > static_cast<int>(scene.groups.size())) return;  // Schutz vor Zyklen
+    for (int g = 0; g < static_cast<int>(scene.groups.size()); ++g) {
+      const auto& group = scene.groups[static_cast<std::size_t>(g)];
+      if (group.parent != parent) continue;
+      if (row({ObjectKind::group, g}, group.name, true, "Gruppe: ", color_group, true)) {
+        self(self, g, depth + 1);
+        ImGui::TreePop();
+      }
+    }
+    for (int i = 0; i < static_cast<int>(scene.shapes.size()); ++i)
+      if (const auto& o = scene.shapes[static_cast<std::size_t>(i)]; o.group == parent)
+        row({ObjectKind::shape, i}, o.name, o.enabled, "Form: ", IM_COL32(227, 232, 239, 255), false);
+    for (int i = 0; i < static_cast<int>(scene.sources.size()); ++i)
+      if (const auto& o = scene.sources[static_cast<std::size_t>(i)]; o.group == parent)
+        row({ObjectKind::source, i}, o.name, o.enabled, "Quelle: ", color_source, false);
+    for (int i = 0; i < static_cast<int>(scene.monitors.size()); ++i)
+      if (const auto& o = scene.monitors[static_cast<std::size_t>(i)]; o.group == parent)
+        row({ObjectKind::monitor, i}, o.name, o.enabled, "Monitor: ", color_monitor, false);
+    for (int i = 0; i < static_cast<int>(scene.ports.size()); ++i)
+      if (const auto& o = scene.ports[static_cast<std::size_t>(i)]; o.group == parent)
+        row({ObjectKind::port, i}, o.name, true, "Port: ", color_port, false);
+  };
+  draw_level(draw_level, -1, 0);
+  list_order_ = std::move(order);
+}
+
+bool FieldLab::group_combo(const char* label, int* group, int exclude) {
+  // Auswahl der Gruppe; exclude: diese Gruppe und alles darin ist nicht wählbar (gegen Zyklen)
+  const FieldScene& scene = designer_.project().field;
+  const std::string current = *group >= 0 && static_cast<std::size_t>(*group) < scene.groups.size()
+                                  ? scene.groups[static_cast<std::size_t>(*group)].name
+                                  : std::string("keine");
+  bool changed = false;
+  ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
+  if (ImGui::BeginCombo(label, current.c_str())) {
+    if (ImGui::Selectable("keine", *group < 0)) *group = -1, changed = true;
+    for (int g = 0; g < static_cast<int>(scene.groups.size()); ++g) {
+      if (exclude >= 0 && field::in_group(scene, g, exclude)) continue;
+      ImGui::PushID(g);
+      if (ImGui::Selectable(scene.groups[static_cast<std::size_t>(g)].name.c_str(), *group == g))
+        *group = g, changed = true;
+      ImGui::PopID();
+    }
+    ImGui::EndCombo();
   }
-  for (int i = 0; i < static_cast<int>(scene.sources.size()); ++i) {
-    const auto& s = scene.sources[static_cast<std::size_t>(i)];
-    row(ObjectKind::source, i, s.name, s.enabled, "Quelle: ", color_source);
-  }
-  for (int i = 0; i < static_cast<int>(scene.monitors.size()); ++i) {
-    const auto& m = scene.monitors[static_cast<std::size_t>(i)];
-    row(ObjectKind::monitor, i, m.name, m.enabled, "Monitor: ", color_monitor);
-  }
-  for (int i = 0; i < static_cast<int>(scene.ports.size()); ++i)
-    row(ObjectKind::port, i, scene.ports[static_cast<std::size_t>(i)].name, true, "Port: ", color_port);
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    ImGui::SetTooltip("Gruppe, mit der sich das Objekt bewegt und dreht.");
+  if (changed) designer_.mark_dirty();
+  return changed;
 }
 
 void FieldLab::draw_selected_object() {
@@ -723,7 +841,7 @@ void FieldLab::draw_selected_object() {
       designer_.mark_dirty();
     }
   };
-  ImGui::SeparatorText("Ausgewählt");
+  if (!ImGui::CollapsingHeader("Ausgewählt", ImGuiTreeNodeFlags_DefaultOpen)) return;
   ImGui::PushID("auswahl");
   const double w = scene.width, h = scene.height;
   if (selection_.size() > 1) {
@@ -745,29 +863,90 @@ void FieldLab::draw_selected_object() {
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
       ImGui::SetTooltip("Deaktivierte Objekte bleiben in der Szene, wirken aber nicht auf die Rechnung.");
   };
-  if (selected_kind_ == ObjectKind::shape && index < scene.shapes.size()) {
+  // Winkel in Grad bearbeiten, intern Bogenmaß
+  auto drag_degrees = [&](const char* label, double* radians, double lo, double hi) {
+    double degrees = *radians * 180.0 / constants::pi;
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
+    if (ImGui::DragScalar(label, ImGuiDataType_Double, &degrees, 0.5f, &lo, &hi, "%.1f°",
+                          ImGuiSliderFlags_AlwaysClamp)) {
+      *radians = degrees * constants::pi / 180.0;
+      return true;
+    }
+    return false;
+  };
+  if (selected_kind_ == ObjectKind::group && index < scene.groups.size()) {
+    // Gruppe: Lage und Drehung wirken auf alle Mitglieder (absolute Koordinaten werden mitgeführt)
+    field::Group& g = scene.groups[index];
+    name_field(&g.name);
+    double x = g.x, y = g.y, rotation = g.rotation;
+    bool moved = drag_um("x", &x, -w, 2 * w);
+    moved |= drag_um("y", &y, -h, 2 * h);
+    moved |= drag_degrees("Drehung", &rotation, -360.0, 360.0);
+    if (moved) {
+      field::transform_group(scene, selected_index_, x - g.x, y - g.y, rotation - g.rotation);
+      changed = true;
+    }
+    int parent = g.parent;
+    if (group_combo("übergeordnet", &parent, selected_index_)) g.parent = parent;
+    if (ImGui::SmallButton("Mitglieder auswählen")) {
+      const int self = selected_index_;
+      clear_selection();
+      for (int i = 0; i < static_cast<int>(scene.shapes.size()); ++i)
+        if (field::in_group(scene, scene.shapes[static_cast<std::size_t>(i)].group, self))
+          select({ObjectKind::shape, i}, true);
+      for (int i = 0; i < static_cast<int>(scene.sources.size()); ++i)
+        if (field::in_group(scene, scene.sources[static_cast<std::size_t>(i)].group, self))
+          select({ObjectKind::source, i}, true);
+      for (int i = 0; i < static_cast<int>(scene.monitors.size()); ++i)
+        if (field::in_group(scene, scene.monitors[static_cast<std::size_t>(i)].group, self))
+          select({ObjectKind::monitor, i}, true);
+      for (int i = 0; i < static_cast<int>(scene.ports.size()); ++i)
+        if (field::in_group(scene, scene.ports[static_cast<std::size_t>(i)].group, self))
+          select({ObjectKind::port, i}, true);
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Auflösen")) delete_selection();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+      ImGui::SetTooltip("Löscht nur die Gruppe; ihre Objekte bleiben, wo sie sind.");
+  } else if (selected_kind_ == ObjectKind::shape && index < scene.shapes.size()) {
     field::Shape& s = scene.shapes[index];
     name_field(&s.name);
     enabled_box(&s.enabled);
+    group_combo("Gruppe", &s.group);
+    int kind = static_cast<int>(s.kind);
+    const char* kinds[] = {"Rechteck", "Kreis", "Ring", "Taper", "Bogen"};
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
+    if (ImGui::Combo("Form", &kind, kinds, 5)) {
+      s.kind = static_cast<field::ShapeKind>(kind);
+      changed = true;
+    }
     changed |= drag_um("x", &s.x, 0.0, w);
     changed |= drag_um("y", &s.y, 0.0, h);
-    if (s.kind == field::ShapeKind::rectangle) {
-      changed |= drag_um("Breite", &s.width, 10e-9, 2 * w);
-      changed |= drag_um("Höhe", &s.height, 10e-9, 2 * h);
-      double degrees = s.rotation * 180.0 / constants::pi;
-      const double lo = -180.0, hi = 180.0;
-      ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
-      if (ImGui::DragScalar("Drehung", ImGuiDataType_Double, &degrees, 0.5f, &lo, &hi, "%.1f°",
-                            ImGuiSliderFlags_AlwaysClamp)) {
-        s.rotation = degrees * constants::pi / 180.0;
-        changed = true;
-      }
-    } else {
-      changed |= drag_um("Radius", &s.radius, 10e-9, std::max(w, h));
-      if (s.kind == field::ShapeKind::ring) {
+    switch (s.kind) {
+      case field::ShapeKind::rectangle:
+        changed |= drag_um("Breite", &s.width, 10e-9, 2 * w);
+        changed |= drag_um("Höhe", &s.height, 10e-9, 2 * h);
+        changed |= drag_degrees("Drehung", &s.rotation, -180.0, 180.0);
+        break;
+      case field::ShapeKind::taper:
+        changed |= drag_um("Länge", &s.width, 10e-9, 2 * w);
+        changed |= drag_um("Breite Anfang", &s.height, 10e-9, 2 * h);
+        changed |= drag_um("Breite Ende", &s.width2, 10e-9, 2 * h);
+        changed |= drag_degrees("Drehung", &s.rotation, -180.0, 180.0);
+        break;
+      case field::ShapeKind::circle:
+        changed |= drag_um("Radius", &s.radius, 10e-9, std::max(w, h));
+        break;
+      case field::ShapeKind::ring:
+      case field::ShapeKind::arc:
+        changed |= drag_um("Radius", &s.radius, 10e-9, std::max(w, h));
         changed |= drag_um("Innenradius", &s.inner_radius, 0.0, s.radius - 1e-9);
         s.inner_radius = std::min(s.inner_radius, s.radius - 1e-9);
-      }
+        if (s.kind == field::ShapeKind::arc) {
+          changed |= drag_degrees("Anfang", &s.rotation, -360.0, 360.0);
+          changed |= drag_degrees("Winkel", &s.sweep, 1.0, 360.0);
+        }
+        break;
     }
     changed |= drag_index("Brechzahl", &s.index, scene);
     if (ImGui::SmallButton("Form löschen")) {
@@ -778,6 +957,7 @@ void FieldLab::draw_selected_object() {
     field::Source& s = scene.sources[index];
     name_field(&s.name);
     enabled_box(&s.enabled);
+    group_combo("Gruppe", &s.group);
     int kind = static_cast<int>(s.kind);
     const char* kinds[] = {"Punkt", "Linie", "Mode"};
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
@@ -853,6 +1033,7 @@ void FieldLab::draw_selected_object() {
     field::Monitor& m = scene.monitors[index];
     name_field(&m.name);
     enabled_box(&m.enabled);
+    group_combo("Gruppe", &m.group);
     int kind = static_cast<int>(m.kind);
     const char* kinds[] = {"Feld an einem Punkt", "Leistungsfluss durch eine Linie", "Amplitude einer Mode"};
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 13.0f);
@@ -889,6 +1070,7 @@ void FieldLab::draw_selected_object() {
     // Ports wirken nur bei der S-Parameter-Extraktion: Änderungen starten die Feldrechnung nicht neu
     field::Port& p = scene.ports[index];
     name_field(&p.name);
+    group_combo("Gruppe", &p.group);
     bool port_changed = false;
     port_changed |= drag_um("x Anfang", &p.x1, 0.0, w);
     port_changed |= drag_um("y Anfang", &p.y1, 0.0, h);
@@ -1008,6 +1190,9 @@ void FieldLab::draw_canvas(float height) {
         auto add = [&](ObjectKind kind, int i) {
           if (!is_selected(kind, i)) select({kind, i}, true);
         };
+        for (int i = 0; i < static_cast<int>(scene.groups.size()); ++i)
+          if (const auto& o = scene.groups[static_cast<std::size_t>(i)]; inside(o.x, o.y))
+            add(ObjectKind::group, i);
         for (int i = 0; i < static_cast<int>(scene.shapes.size()); ++i)
           if (const auto& o = scene.shapes[static_cast<std::size_t>(i)]; inside(o.x, o.y))
             add(ObjectKind::shape, i);
@@ -1074,21 +1259,48 @@ void FieldLab::draw_canvas(float height) {
     const ImU32 color = selected ? color_selected : s.enabled ? color_outline : color_disabled;
     const float thickness = selected ? 2.0f : 1.0f;
     if (!show_geometry_ && !selected) continue;
-    if (s.kind == field::ShapeKind::rectangle) {
+    if (s.kind == field::ShapeKind::rectangle || s.kind == field::ShapeKind::taper) {
       const double c = std::cos(s.rotation), sn = std::sin(s.rotation);
+      const double end = s.kind == field::ShapeKind::taper ? s.width2 : s.height;
       ImVec2 corners[4];
-      const double hx[4] = {-0.5, 0.5, 0.5, -0.5}, hy[4] = {-0.5, -0.5, 0.5, 0.5};
+      const double hx[4] = {-0.5, 0.5, 0.5, -0.5};
+      const double hv[4] = {-0.5 * s.height, -0.5 * end, 0.5 * end, 0.5 * s.height};
       for (int k = 0; k < 4; ++k) {
-        const double u = hx[k] * s.width, v = hy[k] * s.height;
+        const double u = hx[k] * s.width, v = hv[k];
         corners[k] = to_screen(s.x + c * u - sn * v, s.y + sn * u + c * v);
       }
       draw->AddPolyline(corners, 4, color, ImDrawFlags_Closed, thickness);
+    } else if (s.kind == field::ShapeKind::arc) {
+      std::vector<ImVec2> outline;
+      const int n = 48;
+      for (int pass = 0; pass < 2; ++pass) {
+        const double r = pass == 0 ? s.radius : s.inner_radius;
+        for (int k = 0; k <= n; ++k) {
+          const double a = s.rotation + s.sweep * (pass == 0 ? k : n - k) / n;
+          outline.push_back(to_screen(s.x + r * std::cos(a), s.y + r * std::sin(a)));
+        }
+      }
+      draw->AddPolyline(outline.data(), static_cast<int>(outline.size()), color, ImDrawFlags_Closed,
+                        thickness);
     } else {
       draw->AddCircle(to_screen(s.x, s.y), static_cast<float>(s.radius) * px_per_m, color, 96, thickness);
       if (s.kind == field::ShapeKind::ring)
         draw->AddCircle(to_screen(s.x, s.y), static_cast<float>(s.inner_radius) * px_per_m, color, 96,
                         thickness);
     }
+  }
+  for (int g = 0; g < static_cast<int>(scene.groups.size()); ++g) {
+    // Gruppe: Kreuz am Bezugspunkt, Strich zeigt die Ausrichtung
+    const auto& group = scene.groups[static_cast<std::size_t>(g)];
+    const bool selected = is_selected(ObjectKind::group, g);
+    const ImVec2 a = to_screen(group.x, group.y);
+    const float r = (selected ? 8.0f : 6.0f) * ui_scale_;
+    draw->AddCircle(a, r, color_group, 24, selected ? 2.5f : 1.5f);
+    draw->AddLine(a,
+                  {a.x + 2.2f * r * static_cast<float>(std::cos(group.rotation)),
+                   a.y + 2.2f * r * static_cast<float>(std::sin(group.rotation))},
+                  color_group, 2.0f);
+    draw->AddText({a.x + r + 3.0f, a.y + 2.0f}, color_group, group.name.c_str());
   }
   for (int i = 0; i < static_cast<int>(scene.sources.size()); ++i) {
     const auto& s = scene.sources[static_cast<std::size_t>(i)];
@@ -1166,14 +1378,29 @@ void FieldLab::draw_plots() {
   const FieldScene& scene = designer_.project().field;
   if (!ImGui::BeginTabBar("plots")) return;
   // Lange Zeitreihen ausgedünnt zeichnen (höchstens etwa 4000 Punkte je Kurve)
+  const double period = scene.sources.empty() ? 0.0 : scene.sources.front().wavelength / constants::c0;
   auto plot_series = [&](bool flux, const char* y_label) {
     if (ImPlot::BeginPlot("##zeit", ImVec2(-1.0f, -1.0f))) {
       ImPlot::SetupAxes("Zeit [fs]", y_label, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
-      ImPlot::SetupLegend(ImPlotLocation_NorthWest);
+      ImPlot::SetupLegend(ImPlotLocation_NorthWest, ImPlotLegendFlags_Outside);
+      std::vector<double> averaged;
       for (const auto& m : monitors_) {
         if ((m.kind == field::MonitorKind::flux) != flux || m.values.empty()) continue;
-        const int stride = std::max(1, static_cast<int>(m.values.size() / 4000));
-        ImPlot::PlotLine(m.name.c_str(), m.values.data(), static_cast<int>(m.values.size()) / stride,
+        const std::vector<double>* values = &m.values;
+        if (flux && flux_average_ && period > 0.0 && m.sample_interval > 0.0) {
+          // gleitender Mittelwert über eine Periode: zeigt die mittlere Leistung statt der Schwingung
+          const auto window = std::max<std::size_t>(1, static_cast<std::size_t>(period / m.sample_interval));
+          averaged.assign(m.values.size(), 0.0);
+          double sum = 0.0;
+          for (std::size_t k = 0; k < m.values.size(); ++k) {
+            sum += m.values[k];
+            if (k >= window) sum -= m.values[k - window];
+            averaged[k] = sum / static_cast<double>(std::min(k + 1, window));
+          }
+          values = &averaged;
+        }
+        const int stride = std::max(1, static_cast<int>(values->size() / 4000));
+        ImPlot::PlotLine(m.name.c_str(), values->data(), static_cast<int>(values->size()) / stride,
                          m.sample_interval * stride / units::fs, m.start_time / units::fs, 0, 0,
                          stride * static_cast<int>(sizeof(double)));
       }
@@ -1190,8 +1417,12 @@ void FieldLab::draw_plots() {
   }
   if (has_flux && ImGui::BeginTabItem("Leistungsfluss")) {
     // Mittelwert über die letzten Perioden der ersten Quelle
+    ImGui::Checkbox("über eine Periode gemittelt", &flux_average_);
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+      ImGui::SetTooltip(
+          "Aus: momentaner Fluss (schwingt mit doppelter Lichtfrequenz).\nAn: mittlere Leistung.");
+    ImGui::SameLine();
     if (!scene.sources.empty()) {
-      const double period = scene.sources.front().wavelength / constants::c0;
       std::string line = "Mittel der letzten 4 Perioden:";
       for (const auto& m : monitors_)
         if (m.kind == field::MonitorKind::flux) {
@@ -1252,6 +1483,7 @@ void FieldLab::select_all() {
   for (int i = 0; i < static_cast<int>(scene.sources.size()); ++i) select({ObjectKind::source, i}, true);
   for (int i = 0; i < static_cast<int>(scene.monitors.size()); ++i) select({ObjectKind::monitor, i}, true);
   for (int i = 0; i < static_cast<int>(scene.ports.size()); ++i) select({ObjectKind::port, i}, true);
+  for (int i = 0; i < static_cast<int>(scene.groups.size()); ++i) select({ObjectKind::group, i}, true);
 }
 
 void FieldLab::delete_selection() {
@@ -1269,6 +1501,7 @@ void FieldLab::delete_selection() {
     if (r.kind == ObjectKind::source) erase(scene.sources, r.index);
     if (r.kind == ObjectKind::monitor) erase(scene.monitors, r.index);
     if (r.kind == ObjectKind::port) erase(scene.ports, r.index);
+    if (r.kind == ObjectKind::group) field::remove_group(scene, r.index);  // Mitglieder bleiben
   }
   clear_selection();
   scene_changed_ = true;
@@ -1357,8 +1590,25 @@ void FieldLab::move_selection(double dx, double dy) {
     *y = std::clamp(*y + dy, 0.0, scene.height);
   };
   bool physics = false;  // Ports ändern die Feldrechnung nicht
+  // Objekte in einer ausgewählten Gruppe bewegt die Gruppe mit; nicht doppelt verschieben
+  auto carried = [&](int group) {
+    for (const ObjectRef& r : selection_)
+      if (r.kind == ObjectKind::group && field::in_group(scene, group, r.index)) return true;
+    return false;
+  };
+  for (const ObjectRef& r : selection_)
+    if (r.kind == ObjectKind::group && static_cast<std::size_t>(r.index) < scene.groups.size() &&
+        !carried(scene.groups[static_cast<std::size_t>(r.index)].parent)) {
+      field::transform_group(scene, r.index, dx, dy, 0.0);
+      physics = true;
+    }
   for (const ObjectRef& r : selection_) {
     const auto i = static_cast<std::size_t>(r.index);
+    if (r.kind == ObjectKind::shape && i < scene.shapes.size() && carried(scene.shapes[i].group)) continue;
+    if (r.kind == ObjectKind::source && i < scene.sources.size() && carried(scene.sources[i].group)) continue;
+    if (r.kind == ObjectKind::monitor && i < scene.monitors.size() && carried(scene.monitors[i].group))
+      continue;
+    if (r.kind == ObjectKind::port && i < scene.ports.size() && carried(scene.ports[i].group)) continue;
     if (r.kind == ObjectKind::shape && i < scene.shapes.size()) {
       move(&scene.shapes[i].x, &scene.shapes[i].y);
       physics = true;
@@ -1383,6 +1633,11 @@ FieldLab::ObjectRef FieldLab::pick(ImVec2 mouse) const {
   // Quellen vor Ports vor Monitoren vor Formen, oberste Form zuerst
   const FieldScene& scene = designer_.project().field;
   const float grab = 7.0f * ui_scale_;
+  for (int g = 0; g < static_cast<int>(scene.groups.size()); ++g) {
+    const auto& group = scene.groups[static_cast<std::size_t>(g)];
+    const ImVec2 a = to_screen(group.x, group.y);
+    if (std::hypot(mouse.x - a.x, mouse.y - a.y) <= grab + 3.0f) return {ObjectKind::group, g};
+  }
   for (int i = 0; i < static_cast<int>(scene.sources.size()); ++i) {
     const auto& s = scene.sources[static_cast<std::size_t>(i)];
     const ImVec2 a = to_screen(s.x1, s.y1),
@@ -1419,6 +1674,8 @@ void FieldLab::draw_context_items() {
   const bool can_paste = !(clipboard_.shapes.empty() && clipboard_.sources.empty() &&
                            clipboard_.monitors.empty() && clipboard_.ports.empty());
   if (ImGui::MenuItem("Einfügen", "Strg+V", false, can_paste)) paste(false);
+  if (any && ImGui::MenuItem("Gruppieren", "Strg+G")) group_selection();
+  if (any && ImGui::MenuItem("Aus Gruppe lösen")) ungroup_selection();
   if (ImGui::MenuItem("Alles auswählen", "Strg+A")) select_all();
   if (any && selected_kind_ == ObjectKind::shape) {
     // Formen überdecken einander in Listenreihenfolge
@@ -1444,9 +1701,71 @@ void FieldLab::draw_context_items() {
   }
 }
 
+void FieldLab::group_selection() {
+  FieldScene& scene = designer_.project().field;
+  if (selection_.empty()) return;
+  // neue Gruppe im Schwerpunkt der Auswahl; sie liegt dort, wo das erste Objekt lag
+  double sx = 0.0, sy = 0.0;
+  int parent = -2;  // gemeinsame Gruppe aller Objekte, sonst -1
+  auto add = [&](double x, double y, int group) {
+    sx += x, sy += y;
+    parent = parent == -2 || parent == group ? group : -1;
+  };
+  for (const ObjectRef& r : selection_) {
+    const auto i = static_cast<std::size_t>(r.index);
+    if (r.kind == ObjectKind::shape) add(scene.shapes[i].x, scene.shapes[i].y, scene.shapes[i].group);
+    if (r.kind == ObjectKind::source)
+      add(0.5 * (scene.sources[i].x1 + scene.sources[i].x2),
+          0.5 * (scene.sources[i].y1 + scene.sources[i].y2), scene.sources[i].group);
+    if (r.kind == ObjectKind::monitor)
+      add(0.5 * (scene.monitors[i].x1 + scene.monitors[i].x2),
+          0.5 * (scene.monitors[i].y1 + scene.monitors[i].y2), scene.monitors[i].group);
+    if (r.kind == ObjectKind::port)
+      add(0.5 * (scene.ports[i].x1 + scene.ports[i].x2), 0.5 * (scene.ports[i].y1 + scene.ports[i].y2),
+          scene.ports[i].group);
+    if (r.kind == ObjectKind::group) add(scene.groups[i].x, scene.groups[i].y, scene.groups[i].parent);
+  }
+  const double n = static_cast<double>(selection_.size());
+  const int g = static_cast<int>(scene.groups.size());
+  scene.groups.push_back({"Gruppe " + std::to_string(g + 1), sx / n, sy / n, 0.0, std::max(parent, -1)});
+  for (const ObjectRef& r : selection_) {
+    const auto i = static_cast<std::size_t>(r.index);
+    if (r.kind == ObjectKind::shape) scene.shapes[i].group = g;
+    if (r.kind == ObjectKind::source) scene.sources[i].group = g;
+    if (r.kind == ObjectKind::monitor) scene.monitors[i].group = g;
+    if (r.kind == ObjectKind::port) scene.ports[i].group = g;
+    if (r.kind == ObjectKind::group) scene.groups[i].parent = g;
+  }
+  select({ObjectKind::group, g}, false);
+  designer_.mark_dirty();
+}
+
+void FieldLab::ungroup_selection() {
+  FieldScene& scene = designer_.project().field;
+  for (const ObjectRef& r : selection_) {
+    const auto i = static_cast<std::size_t>(r.index);
+    if (r.kind == ObjectKind::shape) scene.shapes[i].group = -1;
+    if (r.kind == ObjectKind::source) scene.sources[i].group = -1;
+    if (r.kind == ObjectKind::monitor) scene.monitors[i].group = -1;
+    if (r.kind == ObjectKind::port) scene.ports[i].group = -1;
+    if (r.kind == ObjectKind::group) scene.groups[i].parent = -1;
+  }
+  designer_.mark_dirty();
+}
+
 void FieldLab::handle_shortcuts() {
   // nur, wenn das Bauteil-Labor den Fokus hat und kein Textfeld bearbeitet wird
-  if (ImGui::GetIO().WantTextInput || !ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) return;
+  const ImGuiID space_owner = ImGui::GetID("leertaste");
+  if (ImGui::GetIO().WantTextInput || !ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
+    if (ImGui::GetKeyOwner(ImGuiKey_Space) == space_owner)
+      ImGui::SetKeyOwner(ImGuiKey_Space, ImGuiKeyOwner_NoOwner);
+    return;
+  }
+  // Leertaste gehört hier Start/Pause: Besitz anmelden, damit sie keinen fokussierten Knopf mehr auslöst
+  ImGui::SetKeyOwner(ImGuiKey_Space, space_owner);
+  if (ImGui::IsKeyPressed(ImGuiKey_Space, ImGuiInputFlags_None, space_owner) && sim_) toggle_running();
+  if (ImGui::IsKeyChordPressed(ImGuiKey_R)) reset_run();
+  if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_G)) group_selection();
   if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_A)) select_all();
   if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_C)) copy_selection();
   if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_X)) copy_selection(), delete_selection();

@@ -494,3 +494,63 @@ TEST_CASE("Deaktivierte Objekte wirken nicht: gleiche Rechnung wie ohne sie") {
   CHECK(c.monitors().empty());
   CHECK(active_scene(with).shapes.empty());
 }
+
+TEST_CASE("Formen Taper und Bogen: Punkte innen und außen") {
+  Shape taper;
+  taper.kind = ShapeKind::taper;
+  taper.x = 0.0, taper.y = 0.0, taper.width = 2e-6, taper.height = 0.4e-6, taper.width2 = 1.2e-6;
+  CHECK(contains(taper, -0.99e-6, 0.19e-6));        // schmaler Anfang
+  CHECK_FALSE(contains(taper, -0.99e-6, 0.25e-6));  // knapp außerhalb am Anfang
+  CHECK(contains(taper, 0.99e-6, 0.55e-6));         // breites Ende
+  CHECK(contains(taper, 0.0, 0.39e-6));             // Mitte: halbe Breite 0,4 um
+  CHECK_FALSE(contains(taper, 0.0, 0.41e-6));
+  CHECK_FALSE(contains(taper, 1.01e-6, 0.0));
+  taper.rotation = constants::pi / 2;  // gedreht: Länge zeigt nach unten (+y)
+  CHECK(contains(taper, 0.55e-6, 0.99e-6));
+  CHECK_FALSE(contains(taper, 0.55e-6, -0.99e-6));
+
+  Shape arc;
+  arc.kind = ShapeKind::arc;
+  arc.radius = 2e-6, arc.inner_radius = 1.5e-6, arc.rotation = 0.0, arc.sweep = constants::pi / 2;
+  CHECK(contains(arc, 1.75e-6, 0.01e-6));   // bei 0 Grad (rechts)
+  CHECK(contains(arc, 0.01e-6, 1.75e-6));   // bei 90 Grad (unten, y nach unten)
+  CHECK_FALSE(contains(arc, 0.0, -1.75e-6));  // bei 270 Grad: außerhalb des Bogens
+  CHECK_FALSE(contains(arc, 1.0e-6, 0.0));    // innerhalb des Innenradius
+  arc.rotation = -constants::pi / 4;          // Anfang bei -45 Grad
+  CHECK(contains(arc, 1.2e-6, -1.2e-6));
+}
+
+TEST_CASE("Gruppen: Verschieben und Drehen nehmen Mitglieder und Untergruppen mit") {
+  FieldScene s;
+  s.width = s.height = 20e-6;
+  s.groups = {{"aussen", 10e-6, 10e-6, 0.0, -1}, {"innen", 12e-6, 10e-6, 0.0, 0}};
+  Shape block;
+  block.x = 14e-6, block.y = 10e-6, block.group = 1;  // 4 um rechts vom Bezugspunkt
+  Monitor line;
+  line.kind = MonitorKind::flux, line.x1 = line.x2 = 11e-6, line.y1 = 9e-6, line.y2 = 11e-6, line.group = 0;
+  Shape outside;
+  outside.x = 1e-6, outside.y = 1e-6;
+  s.shapes = {block, outside};
+  s.monitors = {line};
+
+  transform_group(s, 0, 1e-6, 0.0, constants::pi / 2);  // um (10, 10) drehen, dann 1 um nach rechts
+  const auto near = [](double a, double b) { return std::abs(a - b) < 1e-15; };
+  CHECK(near(s.shapes[0].x, 11e-6));   // (14,10) -> (10,14) -> (11,14)
+  CHECK(near(s.shapes[0].y, 14e-6));
+  CHECK(s.shapes[0].rotation == doctest::Approx(constants::pi / 2));
+  CHECK(near(s.groups[1].x, 11e-6));  // Untergruppe (12,10) -> (10,12) -> (11,12)
+  CHECK(near(s.groups[1].y, 12e-6));
+  CHECK(near(s.monitors[0].y1, s.monitors[0].y2));  // senkrechte Linie wird waagerecht
+  CHECK(s.shapes[1].x == 1e-6);                     // gehört zu keiner Gruppe: bleibt
+  CHECK(near(s.groups[0].x, 11e-6));
+
+  CHECK(in_group(s, 1, 0));
+  CHECK_FALSE(in_group(s, 0, 1));
+  remove_group(s, 0);  // Mitglieder rücken auf, Indizes dahinter sinken
+  CHECK(s.groups.size() == 1);
+  CHECK(s.groups[0].parent == -1);
+  CHECK(s.shapes[0].group == 0);
+  CHECK(s.monitors[0].group == -1);
+  s.groups[0].parent = 0;  // Zyklus
+  CHECK_THROWS_AS(validate(s), FieldError);
+}

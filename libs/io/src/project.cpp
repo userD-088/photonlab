@@ -73,6 +73,10 @@ ordered_json scene_to_json(const field::FieldScene& scene) {
     if (sh.beta_tpa != 0.0) shape["beta_tpa"] = sh.beta_tpa;
     if (sh.carrier_lifetime != 0.0) shape["carrier_lifetime"] = sh.carrier_lifetime;
     if (!sh.enabled) shape["enabled"] = false;
+    // neue Felder nur, wenn genutzt: bestehende Dateien bleiben gleich
+    if (sh.kind == field::ShapeKind::taper) shape["width2"] = sh.width2;
+    if (sh.kind == field::ShapeKind::arc) shape["sweep"] = sh.sweep;
+    if (sh.group >= 0) shape["group"] = sh.group;
     shapes.push_back(std::move(shape));
   }
   for (const auto& q : scene.sources) {
@@ -91,6 +95,7 @@ ordered_json scene_to_json(const field::FieldScene& scene) {
                            {"ramp_periods", q.ramp_periods},
                            {"mode_order", q.mode_order}};
     if (!q.enabled) source["enabled"] = false;  // nur wenn deaktiviert: bestehende Dateien bleiben gleich
+    if (q.group >= 0) source["group"] = q.group;
     sources.push_back(std::move(source));
   }
   for (const auto& m : scene.monitors) {
@@ -103,39 +108,47 @@ ordered_json scene_to_json(const field::FieldScene& scene) {
                             {"mode_order", m.mode_order},
                             {"wavelength", m.wavelength}};
     if (!m.enabled) monitor["enabled"] = false;
+    if (m.group >= 0) monitor["group"] = m.group;
     monitors.push_back(std::move(monitor));
   }
   ordered_json ports = ordered_json::array();
-  for (const auto& p : scene.ports)
-    ports.push_back({{"name", p.name},
-                     {"x1", p.x1},
-                     {"y1", p.y1},
-                     {"x2", p.x2},
-                     {"y2", p.y2},
-                     {"mode_order", p.mode_order}});
+  for (const auto& p : scene.ports) {
+    ordered_json port = {{"name", p.name}, {"x1", p.x1}, {"y1", p.y1},
+                         {"x2", p.x2},     {"y2", p.y2}, {"mode_order", p.mode_order}};
+    if (p.group >= 0) port["group"] = p.group;
+    ports.push_back(std::move(port));
+  }
   const auto& sp = scene.sparameters;
-  return {{"name", scene.name},
-          {"width", scene.width},
-          {"height", scene.height},
-          {"cell_size", scene.cell_size},
-          {"background_index", scene.background_index},
-          {"polarization", std::string(field::to_string(scene.polarization))},
-          {"boundary_x", std::string(field::to_string(scene.boundary_x))},
-          {"boundary_y", std::string(field::to_string(scene.boundary_y))},
-          {"pml_cells", scene.pml_cells},
-          {"courant", scene.courant},
-          {"duration", scene.duration},
-          {"shapes", std::move(shapes)},
-          {"sources", std::move(sources)},
-          {"monitors", std::move(monitors)},
-          {"ports", std::move(ports)},
-          {"sparameters",
-           {{"wavelength_start", sp.wavelength_start},
-            {"wavelength_stop", sp.wavelength_stop},
-            {"points", sp.points},
-            {"source_offset", sp.source_offset},
-            {"decay", sp.decay},
-            {"max_time", sp.max_time}}}};
+  ordered_json result = {{"name", scene.name},
+                         {"width", scene.width},
+                         {"height", scene.height},
+                         {"cell_size", scene.cell_size},
+                         {"background_index", scene.background_index},
+                         {"polarization", std::string(field::to_string(scene.polarization))},
+                         {"boundary_x", std::string(field::to_string(scene.boundary_x))},
+                         {"boundary_y", std::string(field::to_string(scene.boundary_y))},
+                         {"pml_cells", scene.pml_cells},
+                         {"courant", scene.courant},
+                         {"duration", scene.duration},
+                         {"shapes", std::move(shapes)},
+                         {"sources", std::move(sources)},
+                         {"monitors", std::move(monitors)},
+                         {"ports", std::move(ports)},
+                         {"sparameters",
+                          {{"wavelength_start", sp.wavelength_start},
+                           {"wavelength_stop", sp.wavelength_stop},
+                           {"points", sp.points},
+                           {"source_offset", sp.source_offset},
+                           {"decay", sp.decay},
+                           {"max_time", sp.max_time}}}};
+  if (!scene.groups.empty()) {
+    ordered_json groups = ordered_json::array();
+    for (const auto& g : scene.groups)
+      groups.push_back(
+          {{"name", g.name}, {"x", g.x}, {"y", g.y}, {"rotation", g.rotation}, {"parent", g.parent}});
+    result["groups"] = std::move(groups);
+  }
+  return result;
 }
 
 field::FieldScene scene_from_json(const ordered_json& json) {
@@ -169,6 +182,9 @@ field::FieldScene scene_from_json(const ordered_json& json) {
       sh.beta_tpa = j.value("beta_tpa", 0.0);
       sh.carrier_lifetime = j.value("carrier_lifetime", 0.0);
       sh.enabled = j.value("enabled", true);
+      sh.width2 = j.value("width2", sh.width2);
+      sh.sweep = j.value("sweep", sh.sweep);
+      sh.group = j.value("group", -1);
       scene.shapes.push_back(std::move(sh));
     }
   if (json.contains("sources"))
@@ -189,6 +205,7 @@ field::FieldScene scene_from_json(const ordered_json& json) {
       q.ramp_periods = j.value("ramp_periods", q.ramp_periods);
       q.mode_order = j.value("mode_order", 0);
       q.enabled = j.value("enabled", true);
+      q.group = j.value("group", -1);
       scene.sources.push_back(std::move(q));
     }
   if (json.contains("monitors"))
@@ -203,12 +220,18 @@ field::FieldScene scene_from_json(const ordered_json& json) {
       m.mode_order = j.value("mode_order", 0);
       m.wavelength = j.value("wavelength", 0.0);
       m.enabled = j.value("enabled", true);
+      m.group = j.value("group", -1);
       scene.monitors.push_back(std::move(m));
     }
   if (json.contains("ports"))
     for (const auto& j : json.at("ports"))
       scene.ports.push_back({j.value("name", ""), j.at("x1").get<double>(), j.at("y1").get<double>(),
-                             j.at("x2").get<double>(), j.at("y2").get<double>(), j.value("mode_order", 0)});
+                             j.at("x2").get<double>(), j.at("y2").get<double>(), j.value("mode_order", 0),
+                             j.value("group", -1)});
+  if (json.contains("groups"))
+    for (const auto& j : json.at("groups"))
+      scene.groups.push_back({j.value("name", ""), j.value("x", 0.0), j.value("y", 0.0),
+                              j.value("rotation", 0.0), j.value("parent", -1)});
   if (json.contains("sparameters")) {
     const auto& j = json.at("sparameters");
     auto& sp = scene.sparameters;

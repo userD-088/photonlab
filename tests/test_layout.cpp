@@ -125,3 +125,22 @@ TEST_CASE("Layout: Kristall-Szene (W1) – je Loch ein Polygon, Löcher auf eige
   const auto back = read_gds(write_gds(layout));
   CHECK(back.cells[0].polygons.size() == scene.shapes.size());
 }
+
+TEST_CASE("Layout: Taper als Trapez (Fläche exakt), Bogen als Ringausschnitt") {
+  field::FieldScene scene;
+  scene.width = scene.height = 20e-6;
+  field::Shape taper;
+  taper.kind = field::ShapeKind::taper;
+  taper.x = taper.y = 5e-6, taper.width = 4e-6, taper.height = 0.5e-6, taper.width2 = 1.5e-6;
+  field::Shape arc;
+  arc.kind = field::ShapeKind::arc;
+  arc.x = arc.y = 10e-6, arc.radius = 3e-6, arc.inner_radius = 2.5e-6, arc.sweep = constants::pi / 2;
+  scene.shapes = {taper, arc};
+  LayoutSettings settings;
+  settings.max_deviation = 1e-9;
+  const Layout layout = scene_to_layout(scene, settings);
+  const auto& p = layout.cells[0].polygons;
+  CHECK(signed_area(p[0]) == doctest::Approx(4000.0 * 0.5 * (500.0 + 1500.0)).epsilon(1e-12).scale(0.0));
+  const double quarter = 0.25 * constants::pi * (3000.0 * 3000.0 - 2500.0 * 2500.0);
+  CHECK(signed_area(p[1]) == doctest::Approx(quarter).epsilon(0.01).scale(0.0));
+}

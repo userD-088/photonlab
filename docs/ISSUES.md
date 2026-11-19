@@ -173,11 +173,12 @@ Bauteil-Labor, Feld (2D-FDTD):
 - [x] #124 Deaktivierte Objekte (`enabled` in Form/Quelle/Monitor): bleiben in der Szene und der Datei, wirken nicht auf FDTD, Brechzahl und GDSII (`field::active_scene`)
 - [x] #125 Ansicht: Mausrad-Zoom um den Mauszeiger, Verschieben mit mittlerer Maustaste, Einpassen (F)
 - [x] #126 Seitenleiste neu geordnet: Rechnung (mit Laufzeit) - Neues Objekt - Ausgewählt - Objektliste - Rechengebiet
-- [ ] #127 Gruppen (leeres Elternobjekt mit relativer Lage, wie in Unity): Szenen-Format um Gruppen erweitern, verschachtelt verschieben/drehen
+- [x] #127 Gruppen (leeres Objekt mit Lage und Drehung, verschachtelbar): `FieldScene::groups`, `transform_group`; Objektliste als Baum, Strg+G gruppieren, Gruppe ziehen/drehen nimmt Mitglieder mit
 - [ ] #128 Rückgängig/Wiederholen im Szenen-Editor (Szene als Schnappschuss je Änderung; siehe #11, #44)
 - [ ] #129 Ladebildschirm/Fortschritt beim Öffnen großer Projekte und beim Aufsetzen des Lösers (Modenquellen, große Gitter) als Job
 - [ ] #130 Weitere Materialien in `libs/materials` (Ge, InP, GaAs, LiNbO3, Al2O3, Polymere, Luft/Metalle mit Drude-Modell) - jede Zahl mit Quelle; Dispersion im FDTD (Lorentz/Drude) als eigenes Issue
-- [ ] #131 Weitere Formen: Polygon, Bogen (Wellenleiter-Kurve), Taper, Ellipse; boolesche Operationen (siehe #44)
+- [x] #131a Formen Taper und Bogen (Ringausschnitt), auch im GDSII-Export
+- [ ] #131 Weitere Formen: Polygon, Ellipse; boolesche Operationen (siehe #44)
 - [ ] #132 Größere Gebiete: Speicher- und Zeitschätzung vor dem Start anzeigen; float-Kern (#112) halbiert den Speicher. Grenze heute 200 x 200 µm, sinnvoll mit 4 Kernen etwa 50 x 50 µm bei 40 nm Zellen
 - [ ] #133 Quellen: Pulsfolgen (Bitmuster), breitbandige Quelle (Chirp, mehrere Wellenlängen), Gauß-Strahl unter Winkel
 - [ ] #134 Monitor-Plots: Schwellen für 0 und 1 einzeichnen und Bits auswerten (Brücke zum Logik-Labor), Intensität über Zeit gemittelt, Export als CSV
@@ -192,6 +193,8 @@ Bewertung der Reiter (Festlegung nach Rückmeldung, umsetzen je als eigenes Issu
 - [ ] #141 Quanten-Modus: enthält HOM, CNOT, Boson Sampling, MZI-Gitter, Schaltung als Interferometer; Rückmeldung "leer" klären (Bildschirmfoto), Einstieg erklären
 
 Obere Leiste, Bedienung:
+- [x] #149 Seitenleiste: alle Bereiche einklappbar, Hinweise eingeklappt (schwere bleiben sichtbar); Leertaste = Start/Pause, R = Zurücksetzen; ein Tempo-Regler statt Schritte je Bild + volle Geschwindigkeit; Energie als Erklärung im Tooltip
+- [x] #150 Objektliste: Strg+Klick einzeln, Umschalt+Klick Bereich; Flussdiagramm über eine Periode gemittelt (abschaltbar), Legende außerhalb
 - [x] #142 Datei: Beispiele getrennt nach Feld/Schaltung; Strg+N, Strg+O, Strg+S, Strg+Umschalt+S global; Ansicht: Vollbild (F11)
 - [ ] #143 Mehr Beispiele: Halbaddierer und Volladdierer (Schaltung und Logik-Ebene), weitere Feld-Szenen
 - [ ] #144 Hilfe-Menü je Arbeitsbereich (Feld, Schaltung, Logik, Quanten) mit Bildern; ImGui-Demo nur noch für Entwickler

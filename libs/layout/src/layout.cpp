@@ -84,12 +84,31 @@ Layout scene_to_layout(const field::FieldScene& scene, const LayoutSettings& set
     if (!shape.enabled) continue;  // deaktivierte Formen gehören nicht ins Layout
     Polygon polygon;
     polygon.layer = layer_of(shape.index);
-    if (shape.kind == field::ShapeKind::rectangle) {
+    if (shape.kind == field::ShapeKind::rectangle || shape.kind == field::ShapeKind::taper) {
       const double c = std::cos(shape.rotation), s = std::sin(shape.rotation);
-      const double corners[4][2] = {{-0.5, -0.5}, {0.5, -0.5}, {0.5, 0.5}, {-0.5, 0.5}};
+      // Breite quer zur Länge: am Anfang height, am Ende height (Rechteck) bzw. width2 (Taper)
+      const double end = shape.kind == field::ShapeKind::taper ? shape.width2 : shape.height;
+      const double corners[4][2] = {
+          {-0.5, -0.5 * shape.height}, {0.5, -0.5 * end}, {0.5, 0.5 * end}, {-0.5, 0.5 * shape.height}};
       for (const auto& corner : corners) {
-        const double u = corner[0] * shape.width, v = corner[1] * shape.height;
+        const double u = corner[0] * shape.width, v = corner[1];
         polygon.points.push_back(to_point(shape.x + c * u - s * v, shape.y + s * u + c * v, height, unit));
+      }
+    } else if (shape.kind == field::ShapeKind::arc) {
+      // außen von Anfang bis Ende, innen zurück
+      const int n = std::max(2, static_cast<int>(std::ceil(circle_segments(shape.radius, settings) *
+                                                           shape.sweep / (2.0 * constants::pi))));
+      for (int pass = 0; pass < 2; ++pass) {
+        const double r = pass == 0 ? shape.radius : shape.inner_radius;
+        if (r == 0.0) {  // Tortenstück: innen nur der Mittelpunkt
+          polygon.points.push_back(to_point(shape.x, shape.y, height, unit));
+          break;
+        }
+        for (int k = 0; k <= n; ++k) {
+          const double a = shape.rotation + shape.sweep * (pass == 0 ? k : n - k) / n;
+          polygon.points.push_back(
+              to_point(shape.x + r * std::cos(a), shape.y + r * std::sin(a), height, unit));
+        }
       }
     } else {
       const int n = circle_segments(shape.radius, settings);

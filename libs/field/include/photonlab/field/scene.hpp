@@ -25,7 +25,13 @@ enum class Boundary {
   periodic,  // was rechts hinausläuft, kommt links wieder herein
 };
 
-enum class ShapeKind { rectangle, circle, ring };
+enum class ShapeKind {
+  rectangle,
+  circle,
+  ring,
+  taper,  // Trapez: Länge width entlang der Drehrichtung, Breite height am Anfang, width2 am Ende
+  arc,    // Ringausschnitt (Wellenleiter-Bogen): von rotation über den Winkel sweep, Radien wie beim Ring
+};
 
 // Formen überdecken einander in der Reihenfolge der Liste: spätere liegen oben.
 struct Shape {
@@ -44,6 +50,9 @@ struct Shape {
   double carrier_lifetime =
       0.0;  // > 0: freie Ladungsträger aus TPA mit dieser Lebensdauer [s] (Silizium-Konstanten)
   bool enabled = true;  // false: bleibt in der Szene, wirkt aber nicht (siehe active_scene)
+  double width2 = 0.5e-6;  // Taper: Breite am Ende [m]
+  double sweep = 1.5707963267948966;  // Bogen: überstrichener Winkel ab rotation [rad], im Uhrzeigersinn
+  int group = -1;                     // Index der Gruppe in FieldScene::groups; -1 = keine
   bool operator==(const Shape&) const = default;
 };
 
@@ -68,6 +77,7 @@ struct Source {
   double ramp_periods = 4.0;       // Dauerstrich: sanftes Einschalten über so viele Perioden
   int mode_order = 0;              // Modenquelle: Ordnung der Mode (0 = Grundmode); Linie achsenparallel
   bool enabled = true;
+  int group = -1;
   bool operator==(const Source&) const = default;
 };
 
@@ -85,6 +95,7 @@ struct Monitor {
   int mode_order = 0;         // Modenmonitor: Ordnung der Mode
   double wavelength = 0.0;    // Modenmonitor: Wellenlänge des Profils [m]; 0 = die der ersten Quelle
   bool enabled = true;
+  int group = -1;
   bool operator==(const Monitor&) const = default;
 };
 
@@ -96,6 +107,7 @@ struct Port {
   double x1 = 0.0, y1 = 0.0;  // Anfang der Linie [m]
   double x2 = 0.0, y2 = 0.0;  // Ende der Linie [m]
   int mode_order = 0;         // Ordnung der Mode, auf die sich der Port bezieht
+  int group = -1;
   bool operator==(const Port&) const = default;
 };
 
@@ -108,6 +120,16 @@ struct SParameterSettings {
   double decay = 1e-5;            // Rechnung endet, wenn die Feldenergie auf diesen Anteil gefallen ist
   double max_time = 5e-12;        // Obergrenze der simulierten Zeit je Anregung [s]
   bool operator==(const SParameterSettings&) const = default;
+};
+
+// Gruppe ("leeres Objekt"): Bezugspunkt mit Lage und Drehung. Mitglieder speichern absolute Koordinaten;
+// die Gruppe bewegt sie beim Bearbeiten mit (transform_group). Für die Rechnung spielt sie keine Rolle.
+struct Group {
+  std::string name;
+  double x = 0.0, y = 0.0;  // Bezugspunkt [m]
+  double rotation = 0.0;    // Ausrichtung [rad], im Uhrzeigersinn (y zeigt nach unten)
+  int parent = -1;          // übergeordnete Gruppe; -1 = keine
+  bool operator==(const Group&) const = default;
 };
 
 struct FieldScene {
@@ -127,6 +149,7 @@ struct FieldScene {
   std::vector<Monitor> monitors;
   std::vector<Port> ports;  // nur für die S-Parameter-Extraktion; die normale Rechnung ignoriert sie
   SParameterSettings sparameters;
+  std::vector<Group> groups;
 
   bool empty() const { return !(width > 0.0) || !(height > 0.0); }
   bool operator==(const FieldScene&) const = default;
@@ -148,6 +171,14 @@ void validate(const FieldScene& scene);
 // Gitterabmessungen, die der Löser aus der Szene ableitet.
 int grid_nx(const FieldScene& scene);
 int grid_ny(const FieldScene& scene);
+// Verschiebt die Gruppe um (dx, dy) und dreht sie um ihren Bezugspunkt um rotation [rad]; alle Mitglieder
+// und Untergruppen gehen mit. Linien bleiben nur bei Vielfachen von 90 Grad achsenparallel.
+void transform_group(FieldScene& scene, int group, double dx, double dy, double rotation);
+// true, wenn member_group gleich group ist oder darin (auch tiefer) liegt
+bool in_group(const FieldScene& scene, int member_group, int group);
+// Löscht die Gruppe; ihre Mitglieder und Untergruppen rücken zur übergeordneten Gruppe auf.
+void remove_group(FieldScene& scene, int group);
+
 // Kopie der Szene ohne deaktivierte Formen, Quellen und Monitore; damit rechnet der Löser
 FieldScene active_scene(const FieldScene& scene);
 double time_step(const FieldScene& scene);  // dt = courant * dx / (c0 * sqrt(2))

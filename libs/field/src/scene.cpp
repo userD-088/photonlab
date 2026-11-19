@@ -25,8 +25,79 @@ bool contains(const Shape& shape, double x, double y) {
       const double r2 = dx * dx + dy * dy;
       return r2 <= shape.radius * shape.radius && r2 >= shape.inner_radius * shape.inner_radius;
     }
+    case ShapeKind::taper: {
+      const double c = std::cos(shape.rotation), s = std::sin(shape.rotation);
+      const double u = c * dx + s * dy, v = -s * dx + c * dy;
+      if (std::abs(u) > 0.5 * shape.width) return false;
+      const double t = u / shape.width + 0.5;  // 0 am Anfang, 1 am Ende
+      return std::abs(v) <= 0.5 * (shape.height + t * (shape.width2 - shape.height));
+    }
+    case ShapeKind::arc: {
+      const double r2 = dx * dx + dy * dy;
+      if (r2 > shape.radius * shape.radius || r2 < shape.inner_radius * shape.inner_radius) return false;
+      // Winkel relativ zum Anfang, in [0, 2 pi)
+      const double two_pi = 2.0 * constants::pi;
+      const double a = std::fmod(std::fmod(std::atan2(dy, dx) - shape.rotation, two_pi) + two_pi, two_pi);
+      return a <= shape.sweep;
+    }
   }
   return false;
+}
+
+bool in_group(const FieldScene& scene, int member_group, int group) {
+  // Kette der Eltern hochlaufen; höchstens so viele Schritte wie Gruppen (schützt vor Zyklen)
+  for (std::size_t steps = 0; member_group >= 0 && steps <= scene.groups.size(); ++steps) {
+    if (member_group == group) return true;
+    if (static_cast<std::size_t>(member_group) >= scene.groups.size()) return false;
+    member_group = scene.groups[static_cast<std::size_t>(member_group)].parent;
+  }
+  return false;
+}
+
+void transform_group(FieldScene& scene, int group, double dx, double dy, double rotation) {
+  if (group < 0 || static_cast<std::size_t>(group) >= scene.groups.size()) return;
+  const double px = scene.groups[static_cast<std::size_t>(group)].x,
+               py = scene.groups[static_cast<std::size_t>(group)].y;
+  const double c = std::cos(rotation), s = std::sin(rotation);
+  // Punkt um den Bezugspunkt drehen, dann verschieben (gleiche Drehrichtung wie Rechteck-Drehung)
+  auto map = [&](double& x, double& y) {
+    const double u = x - px, v = y - py;
+    x = px + c * u - s * v + dx;
+    y = py + s * u + c * v + dy;
+  };
+  for (auto& sh : scene.shapes)
+    if (in_group(scene, sh.group, group)) {
+      map(sh.x, sh.y);
+      sh.rotation += rotation;
+    }
+  for (auto& q : scene.sources)
+    if (in_group(scene, q.group, group)) map(q.x1, q.y1), map(q.x2, q.y2);
+  for (auto& m : scene.monitors)
+    if (in_group(scene, m.group, group)) map(m.x1, m.y1), map(m.x2, m.y2);
+  for (auto& p : scene.ports)
+    if (in_group(scene, p.group, group)) map(p.x1, p.y1), map(p.x2, p.y2);
+  for (int g = 0; g < static_cast<int>(scene.groups.size()); ++g)
+    if (in_group(scene, g, group)) {
+      auto& gr = scene.groups[static_cast<std::size_t>(g)];
+      map(gr.x, gr.y);
+      gr.rotation += rotation;
+    }
+}
+
+void remove_group(FieldScene& scene, int group) {
+  if (group < 0 || static_cast<std::size_t>(group) >= scene.groups.size()) return;
+  const int parent = scene.groups[static_cast<std::size_t>(group)].parent;
+  // Verweise umhängen und die Indizes dahinter um eins verkleinern
+  auto fix = [&](int& g) {
+    if (g == group) g = parent;
+    if (g > group) --g;
+  };
+  for (auto& sh : scene.shapes) fix(sh.group);
+  for (auto& q : scene.sources) fix(q.group);
+  for (auto& m : scene.monitors) fix(m.group);
+  for (auto& p : scene.ports) fix(p.group);
+  for (auto& gr : scene.groups) fix(gr.parent);
+  scene.groups.erase(scene.groups.begin() + group);
 }
 
 FieldScene active_scene(const FieldScene& scene) {
@@ -87,13 +158,33 @@ void validate(const FieldScene& scene) {
   for (const auto& shape : scene.shapes) {
     const std::string who = "Form '" + shape.name + "': ";
     if (!(shape.index >= 1.0)) throw FieldError(who + "die Brechzahl muss mindestens 1 sein");
-    if (shape.kind == ShapeKind::rectangle && (!(shape.width > 0.0) || !(shape.height > 0.0)))
+    const bool box = shape.kind == ShapeKind::rectangle || shape.kind == ShapeKind::taper;
+    if (box && (!(shape.width > 0.0) || !(shape.height > 0.0)))
       throw FieldError(who + "Breite und Höhe müssen positiv sein");
-    if (shape.kind != ShapeKind::rectangle && !(shape.radius > 0.0))
-      throw FieldError(who + "der Radius muss positiv sein");
-    if (shape.kind == ShapeKind::ring && !(shape.inner_radius >= 0.0 && shape.inner_radius < shape.radius))
+    if (shape.kind == ShapeKind::taper && !(shape.width2 > 0.0))
+      throw FieldError(who + "die Endbreite muss positiv sein");
+    if (!box && !(shape.radius > 0.0)) throw FieldError(who + "der Radius muss positiv sein");
+    if ((shape.kind == ShapeKind::ring || shape.kind == ShapeKind::arc) &&
+        !(shape.inner_radius >= 0.0 && shape.inner_radius < shape.radius))
       throw FieldError(who + "der Innenradius muss kleiner als der Außenradius sein");
+    if (shape.kind == ShapeKind::arc && !(shape.sweep > 0.0 && shape.sweep <= 2.0 * constants::pi))
+      throw FieldError(who + "der Winkel des Bogens muss zwischen 0 und 360 Grad liegen");
   }
+  // Gruppen: Verweise gültig, keine Zyklen
+  const int group_count = static_cast<int>(scene.groups.size());
+  auto check_group = [&](int g, const std::string& who) {
+    if (g < -1 || g >= group_count) throw FieldError(who + "verweist auf eine Gruppe, die es nicht gibt");
+  };
+  for (int g = 0; g < group_count; ++g) {
+    const auto& group = scene.groups[static_cast<std::size_t>(g)];
+    check_group(group.parent, "Gruppe '" + group.name + "' ");
+    if (group.parent >= 0 && in_group(scene, group.parent, g))
+      throw FieldError("Gruppe '" + group.name + "' liegt in sich selbst");
+  }
+  for (const auto& sh : scene.shapes) check_group(sh.group, "Form '" + sh.name + "' ");
+  for (const auto& q : scene.sources) check_group(q.group, "Quelle '" + q.name + "' ");
+  for (const auto& m : scene.monitors) check_group(m.group, "Monitor '" + m.name + "' ");
+  for (const auto& p : scene.ports) check_group(p.group, "Port '" + p.name + "' ");
   auto inside = [&](double x, double y) {
     return x >= 0.0 && x <= scene.width && y >= 0.0 && y <= scene.height;
   };
@@ -198,7 +289,19 @@ Enum from_string(std::string_view text, const Enum (&values)[N], const char* wha
 std::string_view to_string(Polarization p) { return p == Polarization::ez ? "ez" : "hz"; }
 std::string_view to_string(Boundary b) { return b == Boundary::pml ? "pml" : "periodic"; }
 std::string_view to_string(ShapeKind k) {
-  return k == ShapeKind::rectangle ? "rectangle" : k == ShapeKind::circle ? "circle" : "ring";
+  switch (k) {
+    case ShapeKind::rectangle:
+      return "rectangle";
+    case ShapeKind::circle:
+      return "circle";
+    case ShapeKind::ring:
+      return "ring";
+    case ShapeKind::taper:
+      return "taper";
+    case ShapeKind::arc:
+      return "arc";
+  }
+  return "rectangle";
 }
 std::string_view to_string(SourceKind k) {
   return k == SourceKind::point ? "point" : k == SourceKind::line ? "line" : "mode";
@@ -217,7 +320,8 @@ Boundary boundary_from_string(std::string_view text) {
   return from_string(text, values, "den Rand");
 }
 ShapeKind shape_kind_from_string(std::string_view text) {
-  static const ShapeKind values[] = {ShapeKind::rectangle, ShapeKind::circle, ShapeKind::ring};
+  static const ShapeKind values[] = {ShapeKind::rectangle, ShapeKind::circle, ShapeKind::ring,
+                                     ShapeKind::taper, ShapeKind::arc};
   return from_string(text, values, "die Form");
 }
 SourceKind source_kind_from_string(std::string_view text) {
