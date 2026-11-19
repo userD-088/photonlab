@@ -50,7 +50,9 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
+#ifndef NOMINMAX
+#define NOMINMAX  // MinGW setzt es schon
+#endif
 #include <windows.h>
 #endif
 

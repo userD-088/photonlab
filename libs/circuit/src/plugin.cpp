@@ -12,7 +12,9 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
+#ifndef NOMINMAX
+#define NOMINMAX  // MinGW setzt es schon
+#endif
 #include <windows.h>
 #else
 #include <dlfcn.h>
@@ -29,6 +31,11 @@ std::vector<PluginInfo>& plugin_list() {
 std::mutex& load_mutex() {
   static std::mutex m;
   return m;
+}
+
+// Pfade sind intern UTF-8 (wie in der Oberfläche)
+std::filesystem::path path_of(const std::string& utf8) {
+  return std::filesystem::path(std::u8string(utf8.begin(), utf8.end()));
 }
 
 // Einstiegsfunktion aus der Bibliothek holen (Bibliothek bleibt bis Programmende geladen)
@@ -66,10 +73,6 @@ plab_entry_fn open_library(const std::string& path) {
 
 std::string text(const char* s) { return s ? std::string(s) : std::string(); }
 
-// Pfade sind intern UTF-8 (wie in der Oberfläche)
-std::filesystem::path path_of(const std::string& utf8) {
-  return std::filesystem::path(std::u8string(utf8.begin(), utf8.end()));
-}
 std::string utf8_of(const std::filesystem::path& path) {
   const std::u8string u = path.u8string();
   return std::string(u.begin(), u.end());
