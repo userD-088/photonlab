@@ -265,7 +265,7 @@ int main(int argc, char** argv) {
       field_lab.draw();
       chip_designer.draw();
       logic_lab.draw();
-      if (chip_designer.canvas_visible()) eye_view.draw();  // gehört zum Chip-Designer
+      if (chip_designer.show_side_window(EyeView::window_name)) eye_view.draw();  // gehört zum Chip-Designer
       quantum_view.draw();
       // Beim Start liegt der Chip-Designer vorn (einziger schon nutzbarer Arbeitsbereich)
       if (frame_count == 2) ImGui::SetWindowFocus(ChipDesigner::window_curve);

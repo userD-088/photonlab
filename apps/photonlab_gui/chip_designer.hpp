@@ -54,6 +54,9 @@ class ChipDesigner {
   }  // zählt bei jedem neu geladenen Projekt hoch
   std::uint64_t revision() const { return revision_; }     // zählt bei jeder physikalischen Änderung hoch
   bool canvas_visible() const { return canvas_visible_; }  // Chip-Designer liegt vorn (Seitenfenster zeigen)
+  // Seitenfenster zeichnen? Ja, wenn der Chip-Designer vorn liegt oder das Fenster selbst ein Reiter neben
+  // ihm ist (sonst blendet jeder den anderen aus und beide flackern).
+  bool show_side_window(const char* name) const;
   void mark_dirty() { dirty_ = true; }                     // Einstellungen geändert, Physik gleich
   void touch_circuit() { touch(); }                        // Schaltung physikalisch geändert
   void load_example(const std::string& name) { request(Pending::load_example, name); }

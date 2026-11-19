@@ -1,5 +1,7 @@
 #include "chip_designer.hpp"
 
+#include "imgui_internal.h"  // FindWindowByName, DockId
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -601,15 +603,20 @@ void ChipDesigner::draw() {
 
   // Die Seiten- und Plotfenster gehören zum Chip-Designer: liegt ein anderer Arbeitsbereich vorn, werden
   // sie nicht gezeichnet, ihre Plätze im Layout klappen zu und der andere Bereich bekommt die ganze Fläche.
-  if (canvas_visible_) {
-    draw_library();
-    draw_properties();
-    draw_spectrum();
-    draw_monte_carlo();
-    draw_curve();
-  }
+  if (show_side_window(window_library)) draw_library();
+  if (show_side_window(window_properties)) draw_properties();
+  if (show_side_window(window_spectrum)) draw_spectrum();
+  if (show_side_window(window_monte_carlo)) draw_monte_carlo();
+  if (show_side_window(window_curve)) draw_curve();
   draw_canvas();  // zuletzt, damit der Arbeitsbereich beim Start den Fokus hat
   draw_confirm_popup();
+}
+
+bool ChipDesigner::show_side_window(const char* name) const {
+  if (canvas_visible_) return true;
+  const ImGuiWindow* side = ImGui::FindWindowByName(name);
+  const ImGuiWindow* canvas = ImGui::FindWindowByName(window_canvas);
+  return side && canvas && side->DockId != 0 && side->DockId == canvas->DockId;
 }
 
 void ChipDesigner::draw_file_menu() {
