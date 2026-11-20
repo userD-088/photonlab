@@ -101,6 +101,11 @@ zitiert, wie schon in `modes.md`).
 
 ## Feld-Szene in 3D (`extrude3d.*`, Bauteil-Labor: Umschalter 2D/3D)
 
+Oberfläche: die 3D-Umgebung (`apps/photonlab_gui/viewport3d.cpp`) zeigt den Aufbau perspektivisch (Formen als
+Körper, Substrat, Mantel, Quellen/Monitore/Ports als Flächen durch den Querschnitt) und nach der Rechnung die
+Feldschnitte als Ebenen; Auswahl und Verschieben wirken auf dieselbe Szene wie in 2D. Die Überhöhung in z ist
+nur Anzeige.
+
 Die 2D-Szene wird zu einem Schichtaufbau (Voreinstellung Standard-SOI): Substrat SiO2 unten, Bauteilschicht der
 Dicke d (220 nm), Mantel SiO2 (oder Luft) oben, je 0,7 µm bis zur Randschicht. Brechzahlen aus der
 Materialbibliothek bei der Wellenlänge der ersten Quelle.

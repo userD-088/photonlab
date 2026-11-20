@@ -14,6 +14,7 @@
 #include "photonlab/core/job.hpp"
 #include "photonlab/core/thread_pool.hpp"
 #include "photonlab/field/extrude3d.hpp"
+#include "viewport3d.hpp"
 
 struct SDL_Renderer;
 struct SDL_Texture;
@@ -27,7 +28,9 @@ class View3d {
   View3d(const View3d&) = delete;
   View3d& operator=(const View3d&) = delete;
 
-  void draw();  // Hauptbereich des Reiters "Feld" im 3D-Modus
+  // Hauptbereich des Reiters "Feld" im 3D-Modus: 3D-Umgebung, Rechnung, Monitore und flache Schnitte
+  void draw(const ViewportHooks& hooks, float ui_scale);
+  void fit_view() { viewport_.fit(); }
   void stop();  // laufende Rechnung abbrechen
   bool running() const { return future_.valid(); }
 
@@ -35,7 +38,7 @@ class View3d {
   struct Snapshot {
     std::mutex mutex;
     int nx = 0, ny = 0, nz = 0, layer_k = 0;
-    double cell = 0.0, time = 0.0, y_cut = 0.0;
+    double cell = 0.0, time = 0.0, y_cut = 0.0, layer_bottom = 0.0;
     std::size_t step = 0, total = 0;
     std::vector<float> top, side, top_index, side_index;
     std::vector<field::Monitor3dData> monitors;
@@ -51,8 +54,9 @@ class View3d {
     std::vector<std::uint8_t> pixels;
   };
   void start();
+  // alpha: Deckkraft nach Feldstärke (für die Ebenen in der 3D-Umgebung), sonst Kerne aufgehellt
   void fill(Picture& picture, const std::vector<float>& values, const std::vector<float>& index, int nx,
-            int ny, bool flip_rows);
+            int ny, bool flip_rows, bool alpha = false);
   void draw_settings();
   void draw_pictures(float height);
   void draw_monitors();
@@ -71,7 +75,8 @@ class View3d {
   bool has_run_ = false;
   std::uint64_t shown_serial_ = 0;
   bool shown_intensity_ = false;
-  Picture top_, side_;
+  Picture top_, side_, top3d_, side3d_;
+  Viewport3d viewport_;
 };
 
 }  // namespace photonlab::gui

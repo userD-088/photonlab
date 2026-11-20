@@ -442,7 +442,36 @@ void FieldLab::draw_field_tab() {
   draw_toolbar();
   if (mode3d_) {
     pause();  // 2D ruht, solange die 3D-Ansicht vorn ist
-    view3d_.draw();
+    auto to_kind = [](Pick3d pick) {
+      switch (pick) {
+        case Pick3d::shape:
+          return ObjectKind::shape;
+        case Pick3d::source:
+          return ObjectKind::source;
+        case Pick3d::monitor:
+          return ObjectKind::monitor;
+        case Pick3d::port:
+          return ObjectKind::port;
+        case Pick3d::none:
+          break;
+      }
+      return ObjectKind::none;
+    };
+    ViewportHooks hooks;
+    hooks.is_selected = [&](Pick3d pick, int index) { return is_selected(to_kind(pick), index); };
+    hooks.select = [&](Pick3d pick, int index, bool additive) {
+      if (pick == Pick3d::none)
+        clear_selection();
+      else
+        select({to_kind(pick), index}, additive);
+    };
+    hooks.move = [&](double dx, double dy) {
+      move_selection(dx, dy);
+      dragging_ = true;
+    };
+    hooks.move_done = [&] { dragging_ = false; };
+    hooks.context_menu = [&] { draw_context_items(); };
+    view3d_.draw(hooks, ui_scale_);
     ImGui::EndChild();
     return;
   }
@@ -2190,7 +2219,10 @@ void FieldLab::handle_shortcuts() {
   if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) clear_selection();
   if (ImGui::IsKeyChordPressed(ImGuiKey_H) && !selection_.empty())
     set_selection_enabled(!selection_enabled());
-  if (ImGui::IsKeyChordPressed(ImGuiKey_F)) zoom_ = 1.0f, pan_ = {};
+  if (ImGui::IsKeyChordPressed(ImGuiKey_F)) {
+    zoom_ = 1.0f, pan_ = {};
+    if (mode3d_) view3d_.fit_view();
+  }
 }
 
 }  // namespace photonlab::gui

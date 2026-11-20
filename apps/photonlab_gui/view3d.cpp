@@ -51,7 +51,7 @@ View3d::View3d(ThreadPool& pool, ChipDesigner& designer, SDL_Renderer* renderer)
 View3d::~View3d() {
   stop();
   if (future_.valid()) future_.wait();
-  for (Picture* p : {&top_, &side_})
+  for (Picture* p : {&top_, &side_, &top3d_, &side3d_})
     if (p->texture) SDL_DestroyTexture(p->texture);
 }
 
@@ -107,6 +107,7 @@ void View3d::start() {
         std::lock_guard lock(snap->mutex);
         snap->nx = sim.solver().nx(), snap->ny = sim.solver().ny(), snap->nz = sim.solver().nz();
         snap->layer_k = sim.layer_k();
+        snap->layer_bottom = sim.layer_bottom();
         snap->cell = sim.solver().cell_size();
         snap->total = total;
         snap->warnings = sim.warnings();
@@ -135,9 +136,10 @@ void View3d::start() {
   });
 }
 
-// Bild aus Werten (Feld mit Vorzeichen rot/blau, |E|² dunkel nach hell), Kerne aufgehellt
+// Bild aus Werten (Feld mit Vorzeichen rot/blau, |E|² dunkel nach hell); flach: Kerne aufgehellt, für die
+// 3D-Umgebung: Deckkraft nach Feldstärke (schwaches Feld durchsichtig)
 void View3d::fill(Picture& picture, const std::vector<float>& values, const std::vector<float>& index, int nx,
-                  int ny, bool flip_rows) {
+                  int ny, bool flip_rows, bool alpha) {
   const std::size_t count = static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny);
   if (values.size() < count || nx <= 0 || ny <= 0) return;
   if (!picture.texture || picture.nx != nx || picture.ny != ny) {
@@ -145,6 +147,7 @@ void View3d::fill(Picture& picture, const std::vector<float>& values, const std:
     picture.nx = nx, picture.ny = ny;
     picture.texture = SDL_CreateTexture(renderer_, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, nx, ny);
     if (picture.texture) SDL_SetTextureScaleMode(picture.texture, SDL_SCALEMODE_LINEAR);
+    if (picture.texture) SDL_SetTextureBlendMode(picture.texture, SDL_BLENDMODE_BLEND);
   }
   if (!picture.texture) return;
   const std::size_t offset = intensity_ && values.size() >= 2 * count ? count : 0;
@@ -171,7 +174,7 @@ void View3d::fill(Picture& picture, const std::vector<float>& values, const std:
         r = std::min(1.0f, 1.6f * t), g = t * t,
         b = 0.35f * std::sin(3.1416f * std::min(t * 1.4f, 1.0f)) + 0.6f * t * t * t;
       }
-      if (k < index.size() && n_high > n_low) {
+      if (!alpha && k < index.size() && n_high > n_low) {
         const float tint = 0.16f * (index[k] - n_low) / (n_high - n_low);
         r += tint, g += tint, b += tint;
       }
@@ -180,6 +183,9 @@ void View3d::fill(Picture& picture, const std::vector<float>& values, const std:
       picture.pixels[p + 0] = static_cast<std::uint8_t>(std::clamp(r, 0.0f, 1.0f) * 255.0f);
       picture.pixels[p + 1] = static_cast<std::uint8_t>(std::clamp(g, 0.0f, 1.0f) * 255.0f);
       picture.pixels[p + 2] = static_cast<std::uint8_t>(std::clamp(b, 0.0f, 1.0f) * 255.0f);
+      if (alpha)
+        picture.pixels[p + 3] = static_cast<std::uint8_t>(
+            std::clamp(1.4f * std::pow(std::abs(v), offset == 0 ? 0.6f : 0.35f), 0.0f, 0.92f) * 255.0f);
     }
   SDL_UpdateTexture(picture.texture, nullptr, picture.pixels.data(), nx * 4);
 }
@@ -257,12 +263,6 @@ void View3d::draw_pictures(float height) {
   {
     std::lock_guard lock(snap->mutex);
     nx = snap->nx, ny = snap->ny, nz = snap->nz, cell = snap->cell, y_cut = snap->y_cut;
-    if (snap->serial != shown_serial_ || intensity_ != shown_intensity_) {
-      shown_serial_ = snap->serial;
-      shown_intensity_ = intensity_;
-      fill(top_, snap->top, snap->top_index, nx, ny, false);
-      fill(side_, snap->side, snap->side_index, nx, nz, true);
-    }
   }
   if (!top_.texture || nx <= 0) return;
   // Draufsicht (y nach unten wie im 2D-Bild), darunter die Seitenansicht (z nach oben), gleicher Maßstab
@@ -347,7 +347,7 @@ void View3d::draw_monitors() {
   ImPlot::EndPlot();
 }
 
-void View3d::draw() {
+void View3d::draw(const ViewportHooks& hooks, float ui_scale) {
   if (future_.valid() && future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
     future_.get();
   draw_settings();
@@ -357,23 +357,7 @@ void View3d::draw() {
   if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
     ImGui::SetTooltip("Intensität statt der Hauptkomponente (Ey bei Hz-Szenen, Ez bei Ez-Szenen)");
 
-  if (!has_run_) {
-    ImGui::Spacing();
-    ImGui::PushTextWrapPos(ImGui::GetFontSize() * 48.0f);
-    ImGui::TextUnformatted("3D: dieselbe Szene als echte Schicht auf einem Chip.");
-    ImGui::TextDisabled(
-        "Die Formen werden zu einer Schicht der eingestellten Dicke (Standard: 220 nm Silizium auf Oxid). "
-        "Formen mit "
-        "einer 2D-Brechzahl ab 2 werden zum Kernmaterial - in 2D stehen dort meist effektive Indizes. "
-        "Quellen "
-        "speisen die echte 3D-Mode unter ihrer Linie ein, Flussmonitore messen durch eine Fläche quer zum "
-        "Chip. "
-        "So zeigt sich, was die 2D-Rechnung nicht kann: Licht, das nach oben ins Oxid oder nach unten ins "
-        "Substrat "
-        "abstrahlt. Die Rechnung dauert Minuten statt Sekunden.");
-    ImGui::PopTextWrapPos();
-    return;
-  }
+  // Zustand: Fehler, Hinweise, Brechzahlen, geänderte Szene (eine Zeile, wenn alles gut ist)
   if (snapshot_) {
     std::lock_guard lock(snapshot_->mutex);
     ImGui::PushTextWrapPos(0.0f);
@@ -383,16 +367,62 @@ void View3d::draw() {
     if (snapshot_->nx > 0)
       ImGui::TextDisabled("Kern n = %.3f, unten %.3f, oben %.3f", snapshot_->indices.core,
                           snapshot_->indices.substrate, snapshot_->indices.cladding);
+  } else {
+    ImGui::TextDisabled(
+        "Die Szene als Schicht auf einem Chip. Formen mit einer 2D-Brechzahl ab 2 werden zum Kernmaterial; "
+        "'3D rechnen' zeigt danach das Feld im Raum.");
   }
-  if (!(scene == computed_scene_)) {
+  if (has_run_ && !(scene == computed_scene_)) {
     ImGui::SameLine();
     ImGui::TextColored(ui_color_limited, "Szene seit der Rechnung geändert.");
   }
+
+  // Feldschnitte für die 3D-Umgebung (Texturen werden in draw_pictures nachgeführt)
+  FieldSlices slices;
+  bool have_slices = false;
+  if (snapshot_) {
+    {
+      std::lock_guard lock(snapshot_->mutex);
+      if (snapshot_->nx > 0 && (snapshot_->serial != shown_serial_ || intensity_ != shown_intensity_)) {
+        shown_serial_ = snapshot_->serial;
+        shown_intensity_ = intensity_;
+        fill(top_, snapshot_->top, snapshot_->top_index, snapshot_->nx, snapshot_->ny, false);
+        fill(side_, snapshot_->side, snapshot_->side_index, snapshot_->nx, snapshot_->nz, true);
+        fill(top3d_, snapshot_->top, snapshot_->top_index, snapshot_->nx, snapshot_->ny, false, true);
+        fill(side3d_, snapshot_->side, snapshot_->side_index, snapshot_->nx, snapshot_->nz, true, true);
+      }
+      slices.grid_width = snapshot_->nx * snapshot_->cell;
+      slices.grid_height = snapshot_->ny * snapshot_->cell;
+      slices.grid_depth = snapshot_->nz * snapshot_->cell;
+      slices.layer_bottom = snapshot_->layer_bottom;
+      slices.y_cut = snapshot_->y_cut;
+    }
+    if (top3d_.texture && side3d_.texture) {
+      slices.top = static_cast<ImTextureID>(reinterpret_cast<std::intptr_t>(top3d_.texture));
+      slices.side = static_cast<ImTextureID>(reinterpret_cast<std::intptr_t>(side3d_.texture));
+      have_slices = true;
+    }
+  }
+
+  // 3D-Umgebung oben, darunter Monitore und flache Schnitte
   const float available = ImGui::GetContentRegionAvail().y;
-  ImGui::BeginChild("bilder3d", ImVec2(0.0f, available * 0.66f));
-  draw_pictures(available * 0.66f);
-  ImGui::EndChild();
-  draw_monitors();
+  const float view_height = has_run_ ? available * 0.62f : available - ImGui::GetStyle().ItemSpacing.y;
+  viewport_.draw(scene, stack_, have_slices ? &slices : nullptr, hooks,
+                 ImVec2(ImGui::GetContentRegionAvail().x, view_height), ui_scale);
+  if (!has_run_) return;
+  if (ImGui::BeginTabBar("unten3d")) {
+    if (ImGui::BeginTabItem("Monitore")) {
+      draw_monitors();
+      ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("Schnitte (flach)")) {
+      ImGui::BeginChild("bilder3d", ImVec2(0.0f, 0.0f));
+      draw_pictures(ImGui::GetContentRegionAvail().y);
+      ImGui::EndChild();
+      ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
+  }
 }
 
 }  // namespace photonlab::gui

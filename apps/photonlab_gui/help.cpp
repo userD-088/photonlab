@@ -136,6 +136,22 @@ void field_lab() {
       "macht "
       "aus der Szene eine echte Schicht (Dicke, Kernmaterial, Mantel einstellbar) und rechnet alle sechs "
       "Feldkomponenten; das dauert Minuten. Flüsse in 3D vergleicht man am besten relativ zueinander.");
+  heading("Die 3D-Umgebung");
+  paragraph(
+      "Im 3D-Modus steht die Szene als Chip im Raum: Formen als Körper in der Schicht, darunter das "
+      "Substrat, "
+      "darüber der Mantel (Umriss), Quellen, Monitore und Ports als Flächen quer durch den Aufbau - so "
+      "speisen "
+      "und messen sie in der 3D-Rechnung. Nach '3D rechnen' liegt das Feld als zwei Schnittebenen im Raum "
+      "(waagerecht in der Mitte der Schicht, senkrecht entlang x); schwaches Feld ist durchsichtig.");
+  static const char* const mouse[][2] = {
+      {"Linke Maustaste",
+       "Objekt wählen (Strg/Umschalt: dazu) und auf der Schicht verschieben; ins Leere: drehen"},
+      {"Rechte Maustaste", "ziehen: drehen; klicken: Menü des Objekts"},
+      {"Mittlere Maustaste, Mausrad", "verschieben, zoomen"},
+      {"Schräg, Oben, Vorne, Seite", "feste Blickrichtungen; Einpassen (auch F) zeigt die ganze Szene"},
+      {"Höhe x3", "Überhöhung in z, nur für die Anzeige (die Schicht ist sonst hauchdünn)"}};
+  table("maus3d", mouse, 5);
 }
 
 void chip_designer() {

@@ -50,7 +50,7 @@ Beim Start liegt eine leere Szene bereit (Oxid-Mantel, Hz, 1 ps). Beispiele unte
 | Aktion | Bedienung |
 |---|---|
 | Rechnung | Werkzeugleiste: Start/Pause (Leertaste), Zurücksetzen (R); Tempo und Laufzeit links unter „Rechnung“ |
-| 2D oder 3D | Umschalter in der Werkzeugleiste; 3D rechnet die Szene als Schicht (220 nm Si auf Oxid) |
+| 2D oder 3D | Umschalter in der Werkzeugleiste; 3D zeigt die Szene als Chip im Raum (drehen, wählen, verschieben) und rechnet sie als Schicht (220 nm Si auf Oxid), das Feld liegt dann als Ebenen im Raum |
 | Neues Objekt | Knöpfe „+ Rechteck“ … „+ Port“ oder Umschalt+Buchstabe; „Bausteine …“ für fertige Gruppen |
 | Auswählen, verschieben | im Bild klicken und ziehen; Strg/Umschalt für mehrere; Pfeiltasten |
 | Rückgängig | Pfeile in der Werkzeugleiste, Strg+Z / Strg+Y |
