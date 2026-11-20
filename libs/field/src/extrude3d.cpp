@@ -54,7 +54,8 @@ Extent3d extent_3d(const FieldScene& scene, const Stack3d& stack) {
   return e;
 }
 
-Extruded3d::Extruded3d(const FieldScene& input, const Stack3d& stack) : scene_(active_scene(input)), stack_(stack) {
+Extruded3d::Extruded3d(const FieldScene& input, const Stack3d& stack)
+    : scene_(active_scene(input)), stack_(stack) {
   validate(scene_);
   if (!(stack.thickness > 0.0) || !(stack.below >= 0.0) || !(stack.above >= 0.0))
     throw FieldError("3D-Schichtaufbau: Dicke muss positiv sein, Abstände dürfen nicht negativ sein");
@@ -89,17 +90,20 @@ Extruded3d::Extruded3d(const FieldScene& input, const Stack3d& stack) : scene_(a
       map[static_cast<std::size_t>(p) + static_cast<std::size_t>(mx) * static_cast<std::size_t>(q)] =
           static_cast<float>(index_in_layer((0.5 * p - 0.25) * dx, (0.5 * q - 0.25) * dx));
   const double z0 = layer_z0_, z1 = layer_z1_, n_sub = indices_.substrate, n_clad = indices_.cladding;
-  s3.index_function = [map = std::move(map), mx, my, dx, z0, z1, n_sub, n_clad](double x, double y, double z) {
+  s3.index_function = [map = std::move(map), mx, my, dx, z0, z1, n_sub, n_clad](double x, double y,
+                                                                                double z) {
     if (z < z0) return n_sub;
     if (z > z1) return n_clad;
     const int p = std::clamp(static_cast<int>(std::lround(2.0 * x / dx + 0.5)), 0, mx - 1);
     const int q = std::clamp(static_cast<int>(std::lround(2.0 * y / dx + 0.5)), 0, my - 1);
-    return static_cast<double>(map[static_cast<std::size_t>(p) + static_cast<std::size_t>(mx) * static_cast<std::size_t>(q)]);
+    return static_cast<double>(
+        map[static_cast<std::size_t>(p) + static_cast<std::size_t>(mx) * static_cast<std::size_t>(q)]);
   };
   fdtd_ = std::make_unique<Fdtd3d>(s3);
   const Fdtd3d& f = *fdtd_;
   layer_k_ = std::clamp(static_cast<int>(0.5 * (z0 + z1) / dx), 0, f.nz() - 1);
-  period_steps_ = std::max<std::size_t>(1, static_cast<std::size_t>(std::lround(wavelength / constants::c0 / f.time_step())));
+  period_steps_ = std::max<std::size_t>(
+      1, static_cast<std::size_t>(std::lround(wavelength / constants::c0 / f.time_step())));
 
   const bool ez = scene_.polarization == Polarization::ez;
   // Hz-Szenen (E in der Ebene, TE-artig auf dem Chip): Hauptkomponente Ey; Ez-Szenen: Ez
@@ -123,13 +127,17 @@ Extruded3d::Extruded3d(const FieldScene& input, const Stack3d& stack) : scene_(a
       if (ez) g /= n * n;  // TM: E senkrecht zur Schicht ~ H / n²
       profile_z[static_cast<std::size_t>(k)] = std::abs(g) < 1e-3 ? 0.0 : g;
     }
-    if (slab.empty()) warnings_.push_back("Die Schicht führt keine Mode; Quellen speisen gleichmäßig über die Dicke.");
+    if (slab.empty())
+      warnings_.push_back("Die Schicht führt keine Mode; Quellen speisen gleichmäßig über die Dicke.");
   }
 
-  auto cell_index = [&](double v, int n) { return std::clamp(static_cast<int>(std::floor(v / dx)), 0, n - 1); };
+  auto cell_index = [&](double v, int n) {
+    return std::clamp(static_cast<int>(std::floor(v / dx)), 0, n - 1);
+  };
   auto check_inside = [&](int i, int j, const std::string& who) {
     if (i < pml || j < pml || i >= f.nx() - pml || j >= f.ny() - pml)
-      throw FieldError(who + " liegt in der Randschicht der 3D-Rechnung (" + std::to_string(pml) + " Zellen zu " +
+      throw FieldError(who + " liegt in der Randschicht der 3D-Rechnung (" + std::to_string(pml) +
+                       " Zellen zu " +
                        std::to_string(static_cast<int>(std::lround(stack.cell_size / units::nm))) + " nm)");
   };
   // Linien enden spätestens am Rand der Randschicht (der Teil darin bleibt weg)
@@ -156,8 +164,10 @@ Extruded3d::Extruded3d(const FieldScene& input, const Stack3d& stack) : scene_(a
     }
     // Linie: Zellen quer, Profil quer (Mode wie in 2D bzw. gleichmäßig/Gauß) mal Profil senkrecht
     s.component = ez ? Component3d::ez : (vertical ? Component3d::ey : Component3d::ex);
-    int i1 = cell_index(std::min(source.x1, source.x2), f.nx()), i2 = cell_index(std::max(source.x1, source.x2), f.nx());
-    int j1 = cell_index(std::min(source.y1, source.y2), f.ny()), j2 = cell_index(std::max(source.y1, source.y2), f.ny());
+    int i1 = cell_index(std::min(source.x1, source.x2), f.nx()),
+        i2 = cell_index(std::max(source.x1, source.x2), f.nx());
+    int j1 = cell_index(std::min(source.y1, source.y2), f.ny()),
+        j2 = cell_index(std::max(source.y1, source.y2), f.ny());
     if (vertical)
       check_inside(i1, inside_y(j1), who), j1 = inside_y(j1), j2 = inside_y(j2);
     else
@@ -179,7 +189,8 @@ Extruded3d::Extruded3d(const FieldScene& input, const Stack3d& stack) : scene_(a
       for (int k = 0; k < grid.ny; ++k)
         for (int c = 0; c < count; ++c) {
           const double t = ((vertical ? j1 : i1) + c + half) * dx, z = (k_lo + k + 0.5) * dx;
-          grid.index[static_cast<std::size_t>(c) + static_cast<std::size_t>(count) * static_cast<std::size_t>(k)] =
+          grid.index[static_cast<std::size_t>(c) +
+                     static_cast<std::size_t>(count) * static_cast<std::size_t>(k)] =
               z < layer_z0_   ? indices_.substrate
               : z > layer_z1_ ? indices_.cladding
                               : (vertical ? index_in_layer(source.x1, t) : index_in_layer(t, source.y1));
@@ -190,25 +201,29 @@ Extruded3d::Extruded3d(const FieldScene& input, const Stack3d& stack) : scene_(a
       settings.modes = source.mode_order + 1;
       try {
         const auto found = modes::solve_modes(grid, settings);
-        if (static_cast<int>(found.size()) > source.mode_order && found[static_cast<std::size_t>(source.mode_order)].guided) {
+        if (static_cast<int>(found.size()) > source.mode_order &&
+            found[static_cast<std::size_t>(source.mode_order)].guided) {
           section = found[static_cast<std::size_t>(source.mode_order)].field;
           n_eff = found[static_cast<std::size_t>(source.mode_order)].n_eff;
         }
       } catch (const modes::ModeError&) {
       }
       if (section.empty())
-        warnings_.push_back(who + ": Modenlöser findet keine geführte 3D-Mode; Profil aus 2D-Mode mal Schichtmode.");
+        warnings_.push_back(
+            who + ": Modenlöser findet keine geführte 3D-Mode; Profil aus 2D-Mode mal Schichtmode.");
     }
     if (source.kind == SourceKind::mode && section.empty()) {
       std::vector<double> index_2d(static_cast<std::size_t>(count));
       for (int c = 0; c < count; ++c) {
         const double t = ((vertical ? j1 : i1) + c + half) * dx;
-        index_2d[static_cast<std::size_t>(c)] = vertical ? index_at(scene_, source.x1, t) : index_at(scene_, t, source.y1);
+        index_2d[static_cast<std::size_t>(c)] =
+            vertical ? index_at(scene_, source.x1, t) : index_at(scene_, t, source.y1);
       }
       std::vector<modes::ProfileMode> found;
       try {
         found = modes::profile_modes(index_2d, dx, source.wavelength,
-                                     ez ? modes::SlabPolarization::te : modes::SlabPolarization::tm, source.mode_order + 1);
+                                     ez ? modes::SlabPolarization::te : modes::SlabPolarization::tm,
+                                     source.mode_order + 1);
       } catch (const modes::ModeError& error) {
         throw FieldError(who + ": " + error.what());
       }
@@ -220,9 +235,11 @@ Extruded3d::Extruded3d(const FieldScene& input, const Stack3d& stack) : scene_(a
       for (int c = 0; c < count; ++c) {
         const double n = index_2d[static_cast<std::size_t>(c)];
         // Hz-Szenen: das Profil ist H (TM in der Ebene), das eingespeiste E quer dazu ~ H / n²
-        lateral[static_cast<std::size_t>(c)] = ez ? mode.field[static_cast<std::size_t>(c)] : mode.field[static_cast<std::size_t>(c)] / (n * n);
+        lateral[static_cast<std::size_t>(c)] =
+            ez ? mode.field[static_cast<std::size_t>(c)] : mode.field[static_cast<std::size_t>(c)] / (n * n);
       }
-      const double peak = *std::max_element(lateral.begin(), lateral.end(), [](double a, double b) { return std::abs(a) < std::abs(b); });
+      const double peak = *std::max_element(lateral.begin(), lateral.end(),
+                                            [](double a, double b) { return std::abs(a) < std::abs(b); });
       for (double& v : lateral) v /= std::abs(peak) > 0.0 ? std::abs(peak) : 1.0;
     } else if (source.beam_width > 0.0) {
       const double center = vertical ? 0.5 * (source.y1 + source.y2) : 0.5 * (source.x1 + source.x2);
@@ -247,17 +264,20 @@ Extruded3d::Extruded3d(const FieldScene& input, const Stack3d& stack) : scene_(a
     Source3d second = s;
     second.signal.phase += extra_phase;
     for (int k = 0; k < f.nz(); ++k) {
-      const double g = section.empty() ? profile_z[static_cast<std::size_t>(k)] : (k >= k_lo && k < k_hi ? 1.0 : 0.0);
+      const double g =
+          section.empty() ? profile_z[static_cast<std::size_t>(k)] : (k >= k_lo && k < k_hi ? 1.0 : 0.0);
       if (g == 0.0) continue;
       for (int c = 0; c < count; ++c) {
         const double p = section.empty()
                              ? lateral[static_cast<std::size_t>(c)]
-                             : section[static_cast<std::size_t>(c) + static_cast<std::size_t>(count) * static_cast<std::size_t>(k - k_lo)];
+                             : section[static_cast<std::size_t>(c) +
+                                       static_cast<std::size_t>(count) * static_cast<std::size_t>(k - k_lo)];
         if (std::abs(p) < 1e-4) continue;
         const int i = vertical ? i0 : i1 + c, j = vertical ? j1 + c : j0;
         const std::size_t cell = f.at(i, j, k);
         const double eps = f.permittivity(s.component, cell);
-        const double weight = 2.0 * n_eff * constants::c0 * f.time_step() / (eps * dx) * source.amplitude * scale * p * g;
+        const double weight =
+            2.0 * n_eff * constants::c0 * f.time_step() / (eps * dx) * source.amplitude * scale * p * g;
         s.cells.push_back(cell);
         s.weights.push_back(weight);
         if (shift != 0) {
@@ -292,8 +312,10 @@ Extruded3d::Extruded3d(const FieldScene& input, const Stack3d& stack) : scene_(a
     FluxPlane plane;
     plane.monitor = index;
     plane.normal_x = std::abs(monitor.x2 - monitor.x1) < 0.5 * dx;
-    const int i1 = cell_index(std::min(monitor.x1, monitor.x2), f.nx() - 1), i2 = cell_index(std::max(monitor.x1, monitor.x2), f.nx() - 1);
-    const int j1 = cell_index(std::min(monitor.y1, monitor.y2), f.ny() - 1), j2 = cell_index(std::max(monitor.y1, monitor.y2), f.ny() - 1);
+    const int i1 = cell_index(std::min(monitor.x1, monitor.x2), f.nx() - 1),
+              i2 = cell_index(std::max(monitor.x1, monitor.x2), f.nx() - 1);
+    const int j1 = cell_index(std::min(monitor.y1, monitor.y2), f.ny() - 1),
+              j2 = cell_index(std::max(monitor.y1, monitor.y2), f.ny() - 1);
     for (int k = pml; k < f.nz() - pml; ++k)
       for (int j = j1; j <= (plane.normal_x ? j2 : j1); ++j)
         for (int i = i1; i <= (plane.normal_x ? i1 : i2); ++i) plane.cells.push_back(f.at(i, j, k));
@@ -350,13 +372,14 @@ void Extruded3d::record() {
     }
     monitors_[plane.monitor].value.push_back(sum * area);
   }
-  for (const Probe& probe : probes_)
-    monitors_[probe.monitor].value.push_back(f.component(main_)[probe.cell]);
+  for (const Probe& probe : probes_) monitors_[probe.monitor].value.push_back(f.component(main_)[probe.cell]);
   for (auto& m : monitors_) {
     const std::size_t n = std::min(period_steps_, m.value.size());
     double sum = 0.0;
-    for (std::size_t k = m.value.size() - n; k < m.value.size(); ++k) sum += m.flux ? m.value[k] : m.value[k] * m.value[k];
-    m.mean = n > 0 ? (m.flux ? sum / static_cast<double>(n) : std::sqrt(2.0 * sum / static_cast<double>(n))) : 0.0;
+    for (std::size_t k = m.value.size() - n; k < m.value.size(); ++k)
+      sum += m.flux ? m.value[k] : m.value[k] * m.value[k];
+    m.mean =
+        n > 0 ? (m.flux ? sum / static_cast<double>(n) : std::sqrt(2.0 * sum / static_cast<double>(n))) : 0.0;
     m.mean_history.push_back(m.mean);
   }
 }
@@ -373,7 +396,8 @@ std::vector<float> Extruded3d::top_view(bool intensity) const {
                      ez = f.component(Component3d::ez)[c];
         v = ex * ex + ey * ey + ez * ez;
       }
-      out[static_cast<std::size_t>(i) + static_cast<std::size_t>(f.nx()) * static_cast<std::size_t>(j)] = static_cast<float>(v);
+      out[static_cast<std::size_t>(i) + static_cast<std::size_t>(f.nx()) * static_cast<std::size_t>(j)] =
+          static_cast<float>(v);
     }
   return out;
 }
@@ -391,7 +415,8 @@ std::vector<float> Extruded3d::side_view(double y, bool intensity) const {
                      ez = f.component(Component3d::ez)[c];
         v = ex * ex + ey * ey + ez * ez;
       }
-      out[static_cast<std::size_t>(i) + static_cast<std::size_t>(f.nx()) * static_cast<std::size_t>(k)] = static_cast<float>(v);
+      out[static_cast<std::size_t>(i) + static_cast<std::size_t>(f.nx()) * static_cast<std::size_t>(k)] =
+          static_cast<float>(v);
     }
   return out;
 }
@@ -415,7 +440,8 @@ std::vector<float> Extruded3d::side_index(double y) const {
       const double n = z < layer_z0_   ? indices_.substrate
                        : z > layer_z1_ ? indices_.cladding
                                        : index_in_layer((i + 0.5) * f.cell_size(), y);
-      out[static_cast<std::size_t>(i) + static_cast<std::size_t>(f.nx()) * static_cast<std::size_t>(k)] = static_cast<float>(n);
+      out[static_cast<std::size_t>(i) + static_cast<std::size_t>(f.nx()) * static_cast<std::size_t>(k)] =
+          static_cast<float>(n);
     }
   return out;
 }

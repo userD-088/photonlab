@@ -3,6 +3,7 @@ add_executable(photonlab_gui
   chip_designer.cpp
   field_gate_view.cpp
   field_lab.cpp
+  help.cpp
   inverse_view.cpp
   file_dialog.cpp
   logic_view.cpp

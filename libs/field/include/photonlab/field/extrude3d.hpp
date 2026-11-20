@@ -36,10 +36,10 @@ StackIndices stack_indices(const Stack3d& stack, double wavelength);
 
 struct Monitor3dData {
   std::string name;
-  bool flux = false;          // Fluss durch eine Fläche [W]; sonst Feld an einem Punkt [V/m]
-  std::vector<double> value;  // je Zeitschritt
+  bool flux = false;                 // Fluss durch eine Fläche [W]; sonst Feld an einem Punkt [V/m]
+  std::vector<double> value;         // je Zeitschritt
   std::vector<double> mean_history;  // gleitendes Mittel über eine Periode, je Zeitschritt
-  double mean = 0.0;          // Mittel über die letzte Periode der ersten Quelle
+  double mean = 0.0;                 // Mittel über die letzte Periode der ersten Quelle
 };
 
 // Abmessungen vorab (für die Anzeige von Zellen, Speicher und Schritten vor dem Start).

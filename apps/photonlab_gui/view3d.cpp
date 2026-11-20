@@ -39,7 +39,8 @@ void material_combo(const char* label, std::string* name, bool with_air) {
       if (ImGui::Selectable(material.name.c_str(), material.name == *name)) *name = material.name;
     ImGui::EndCombo();
   }
-  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort) && current) ImGui::SetTooltip("%s", current->label.c_str());
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort) && current)
+    ImGui::SetTooltip("%s", current->label.c_str());
 }
 
 }  // namespace
@@ -78,7 +79,9 @@ void View3d::start() {
   // Der Job besitzt Szene, Löser, Steuerung und Schnappschuss; er greift nie auf die Oberfläche zu.
   future_ = pool_.submit([scene, stack = stack_, control = control_, snap = snapshot_, y_cut = y_cut_] {
     const auto start = std::chrono::steady_clock::now();
-    auto seconds = [&] { return std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count(); };
+    auto seconds = [&] {
+      return std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    };
     try {
       field::Extruded3d sim(scene, stack);
       const double duration = scene.duration > 0.0 ? scene.duration : 1000 * units::fs;
@@ -154,7 +157,8 @@ void View3d::fill(Picture& picture, const std::vector<float>& values, const std:
   for (int row = 0; row < ny; ++row)
     for (int col = 0; col < nx; ++col) {
       const std::size_t k =
-          static_cast<std::size_t>(col) + static_cast<std::size_t>(nx) * static_cast<std::size_t>(flip_rows ? ny - 1 - row : row);
+          static_cast<std::size_t>(col) +
+          static_cast<std::size_t>(nx) * static_cast<std::size_t>(flip_rows ? ny - 1 - row : row);
       const float v = values[offset + k] / peak;
       float r, g, b;
       if (offset == 0) {
@@ -164,13 +168,15 @@ void View3d::fill(Picture& picture, const std::vector<float>& values, const std:
         b = v >= 0.0f ? 0.10f + 0.25f * a * a : 0.10f + 0.90f * a;
       } else {
         const float t = std::clamp(std::sqrt(std::abs(v)), 0.0f, 1.0f);
-        r = std::min(1.0f, 1.6f * t), g = t * t, b = 0.35f * std::sin(3.1416f * std::min(t * 1.4f, 1.0f)) + 0.6f * t * t * t;
+        r = std::min(1.0f, 1.6f * t), g = t * t,
+        b = 0.35f * std::sin(3.1416f * std::min(t * 1.4f, 1.0f)) + 0.6f * t * t * t;
       }
       if (k < index.size() && n_high > n_low) {
         const float tint = 0.16f * (index[k] - n_low) / (n_high - n_low);
         r += tint, g += tint, b += tint;
       }
-      const std::size_t p = 4 * (static_cast<std::size_t>(col) + static_cast<std::size_t>(nx) * static_cast<std::size_t>(row));
+      const std::size_t p =
+          4 * (static_cast<std::size_t>(col) + static_cast<std::size_t>(nx) * static_cast<std::size_t>(row));
       picture.pixels[p + 0] = static_cast<std::uint8_t>(std::clamp(r, 0.0f, 1.0f) * 255.0f);
       picture.pixels[p + 1] = static_cast<std::uint8_t>(std::clamp(g, 0.0f, 1.0f) * 255.0f);
       picture.pixels[p + 2] = static_cast<std::uint8_t>(std::clamp(b, 0.0f, 1.0f) * 255.0f);
@@ -186,7 +192,8 @@ void View3d::draw_settings() {
   ImGui::TextUnformatted("Schicht");
   ImGui::SameLine();
   drag_nm("##dicke", &stack_.thickness, 20e-9, 3e-6, 2.0f);
-  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) ImGui::SetTooltip("Dicke der Bauteilschicht (220 nm: Standard-SOI)");
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    ImGui::SetTooltip("Dicke der Bauteilschicht (220 nm: Standard-SOI)");
   ImGui::SameLine();
   material_combo("Kern", &stack_.core, false);
   ImGui::SameLine();
@@ -196,12 +203,14 @@ void View3d::draw_settings() {
   ImGui::SameLine();
   drag_nm("Zelle", &stack_.cell_size, 15e-9, 100e-9, 0.5f);
   if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-    ImGui::SetTooltip("Würfelzelle des 3D-Gitters. 40 nm: grob, aber schnell; 20 nm: achtmal so viele Zellen.");
+    ImGui::SetTooltip(
+        "Würfelzelle des 3D-Gitters. 40 nm: grob, aber schnell; 20 nm: achtmal so viele Zellen.");
   ImGui::SameLine();
   double margin_um = stack_.below / units::um;
   const double lo = 0.2, hi = 3.0;
   ImGui::SetNextItemWidth(ImGui::GetFontSize() * 4.5f);
-  if (ImGui::DragScalar("Mantel", ImGuiDataType_Double, &margin_um, 0.01f, &lo, &hi, "%.2f µm", ImGuiSliderFlags_AlwaysClamp))
+  if (ImGui::DragScalar("Mantel", ImGuiDataType_Double, &margin_um, 0.01f, &lo, &hi, "%.2f µm",
+                        ImGuiSliderFlags_AlwaysClamp))
     stack_.below = stack_.above = margin_um * units::um;
   if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
     ImGui::SetTooltip("Oxid bzw. Luft unter und über der Schicht bis zur Randschicht");
@@ -217,22 +226,27 @@ void View3d::draw_settings() {
     std::size_t step = 0, total = 1;
     if (snapshot_) {
       std::lock_guard lock(snapshot_->mutex);
-      t = snapshot_->time, seconds = snapshot_->seconds, step = snapshot_->step, total = std::max<std::size_t>(1, snapshot_->total);
+      t = snapshot_->time, seconds = snapshot_->seconds, step = snapshot_->step,
+      total = std::max<std::size_t>(1, snapshot_->total);
     }
     char text[96];
-    const double rest = step > 0 ? seconds * static_cast<double>(total - step) / static_cast<double>(step) : 0.0;
+    const double rest =
+        step > 0 ? seconds * static_cast<double>(total - step) / static_cast<double>(step) : 0.0;
     std::snprintf(text, sizeof text, "%.0f fs, noch etwa %.0f s", t / units::fs, rest);
-    ImGui::ProgressBar(control_ ? control_->progress.load() : 0.0f, ImVec2(ImGui::GetFontSize() * 18.0f, 0.0f), text);
+    ImGui::ProgressBar(control_ ? control_->progress.load() : 0.0f,
+                       ImVec2(ImGui::GetFontSize() * 18.0f, 0.0f), text);
   } else {
     ImGui::BeginDisabled(too_big || scene.sources.empty());
     if (ImGui::Button("3D rechnen", ImVec2(ImGui::GetFontSize() * 6.0f, 0.0f))) start();
     ImGui::EndDisabled();
   }
   ImGui::SameLine();
-  ImGui::TextDisabled("%d x %d x %d = %.1f Mio. Zellen, %.2f GB, %zu Schritte bis %.0f fs", e.nx, e.ny, e.nz, cells / 1e6,
-                      e.memory_bytes / 1e9, e.steps, scene.duration / units::fs);
-  if (too_big) ImGui::TextColored(ui_color_bad, "Zu groß für den Speicher: Zelle vergrößern oder Szene verkleinern.");
-  if (scene.duration <= 0.0) ImGui::TextColored(ui_color_limited, "Keine Laufzeit gesetzt: gerechnet wird 1000 fs.");
+  ImGui::TextDisabled("%d x %d x %d = %.1f Mio. Zellen, %.2f GB, %zu Schritte bis %.0f fs", e.nx, e.ny, e.nz,
+                      cells / 1e6, e.memory_bytes / 1e9, e.steps, scene.duration / units::fs);
+  if (too_big)
+    ImGui::TextColored(ui_color_bad, "Zu groß für den Speicher: Zelle vergrößern oder Szene verkleinern.");
+  if (scene.duration <= 0.0)
+    ImGui::TextColored(ui_color_limited, "Keine Laufzeit gesetzt: gerechnet wird 1000 fs.");
 }
 
 void View3d::draw_pictures(float height) {
@@ -253,15 +267,17 @@ void View3d::draw_pictures(float height) {
   if (!top_.texture || nx <= 0) return;
   // Draufsicht (y nach unten wie im 2D-Bild), darunter die Seitenansicht (z nach oben), gleicher Maßstab
   const float width = ImGui::GetContentRegionAvail().x;
-  const float scale = std::max(1.0f, std::min(width / static_cast<float>(nx), (height - 3.0f * ImGui::GetFrameHeightWithSpacing()) /
-                                                                               static_cast<float>(ny + nz)));
+  const float scale = std::max(
+      1.0f, std::min(width / static_cast<float>(nx),
+                     (height - 3.0f * ImGui::GetFrameHeightWithSpacing()) / static_cast<float>(ny + nz)));
   ImGui::TextDisabled("Draufsicht in der Mitte der Schicht");
   const ImVec2 top_pos = ImGui::GetCursorScreenPos();
   ImGui::Image(static_cast<ImTextureID>(reinterpret_cast<std::intptr_t>(top_.texture)),
                ImVec2(scale * static_cast<float>(nx), scale * static_cast<float>(ny)));
   // Lage der Seitenansicht als Linie
   const float line_y = top_pos.y + static_cast<float>(y_cut / cell) * scale;
-  ImGui::GetWindowDrawList()->AddLine({top_pos.x, line_y}, {top_pos.x + scale * static_cast<float>(nx), line_y},
+  ImGui::GetWindowDrawList()->AddLine({top_pos.x, line_y},
+                                      {top_pos.x + scale * static_cast<float>(nx), line_y},
                                       IM_COL32(255, 255, 255, 120), 1.0f);
   ImGui::TextDisabled("Seitenansicht (Schnitt entlang x)");
   ImGui::SameLine();
@@ -315,7 +331,8 @@ void View3d::draw_monitors() {
   }
   // Zeitverlauf der Flüsse, gemittelt über je eine Periode (ausgedünnt)
   if (step == 0 || !ImPlot::BeginPlot("##fluss3d", ImVec2(-1.0f, -1.0f))) return;
-  ImPlot::SetupAxes("Zeit [fs]", "Fluss, Mittel einer Periode [W]", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+  ImPlot::SetupAxes("Zeit [fs]", "Fluss, Mittel einer Periode [W]", ImPlotAxisFlags_AutoFit,
+                    ImPlotAxisFlags_AutoFit);
   const double dt_fs = time / static_cast<double>(step) / units::fs;
   for (const auto& m : monitors) {
     if (!m.flux || m.mean_history.empty()) continue;
@@ -331,7 +348,8 @@ void View3d::draw_monitors() {
 }
 
 void View3d::draw() {
-  if (future_.valid() && future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) future_.get();
+  if (future_.valid() && future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+    future_.get();
   draw_settings();
   const field::FieldScene& scene = designer_.project().field;
   ImGui::SameLine();
@@ -344,10 +362,14 @@ void View3d::draw() {
     ImGui::PushTextWrapPos(ImGui::GetFontSize() * 48.0f);
     ImGui::TextUnformatted("3D: dieselbe Szene als echte Schicht auf einem Chip.");
     ImGui::TextDisabled(
-        "Die Formen werden zu einer Schicht der eingestellten Dicke (Standard: 220 nm Silizium auf Oxid). Formen mit "
-        "einer 2D-Brechzahl ab 2 werden zum Kernmaterial - in 2D stehen dort meist effektive Indizes. Quellen "
-        "speisen die echte 3D-Mode unter ihrer Linie ein, Flussmonitore messen durch eine Fläche quer zum Chip. "
-        "So zeigt sich, was die 2D-Rechnung nicht kann: Licht, das nach oben ins Oxid oder nach unten ins Substrat "
+        "Die Formen werden zu einer Schicht der eingestellten Dicke (Standard: 220 nm Silizium auf Oxid). "
+        "Formen mit "
+        "einer 2D-Brechzahl ab 2 werden zum Kernmaterial - in 2D stehen dort meist effektive Indizes. "
+        "Quellen "
+        "speisen die echte 3D-Mode unter ihrer Linie ein, Flussmonitore messen durch eine Fläche quer zum "
+        "Chip. "
+        "So zeigt sich, was die 2D-Rechnung nicht kann: Licht, das nach oben ins Oxid oder nach unten ins "
+        "Substrat "
         "abstrahlt. Die Rechnung dauert Minuten statt Sekunden.");
     ImGui::PopTextWrapPos();
     return;
@@ -359,8 +381,8 @@ void View3d::draw() {
     for (const auto& w : snapshot_->warnings) ImGui::TextColored(ui_color_limited, "%s", w.c_str());
     ImGui::PopTextWrapPos();
     if (snapshot_->nx > 0)
-      ImGui::TextDisabled("Kern n = %.3f, unten %.3f, oben %.3f", snapshot_->indices.core, snapshot_->indices.substrate,
-                          snapshot_->indices.cladding);
+      ImGui::TextDisabled("Kern n = %.3f, unten %.3f, oben %.3f", snapshot_->indices.core,
+                          snapshot_->indices.substrate, snapshot_->indices.cladding);
   }
   if (!(scene == computed_scene_)) {
     ImGui::SameLine();

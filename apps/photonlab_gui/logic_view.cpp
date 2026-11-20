@@ -61,7 +61,6 @@ bool instance_combo(const char* id, const circuit::Circuit& circuit, std::string
   return changed;
 }
 
-
 double param_of(const circuit::Instance& instance, const std::string& param) {
   const auto it = instance.params.find(param);
   if (it != instance.params.end()) return it->second;
@@ -148,7 +147,8 @@ void LogicView::update() {
   const io::Project& project = designer_.project();
   const std::string current = key();
   // Wahrheitstabelle und Zeugnis nur bis max_inputs Eingänge (2^n Rechnungen plus Toleranzen)
-  if (project.gate.empty() || project.gate.inputs.size() > logic::max_inputs || result_.key == current) return;
+  if (project.gate.empty() || project.gate.inputs.size() > logic::max_inputs || result_.key == current)
+    return;
 
   // Die Charakterisierung läuft als Job; er besitzt Kopien von Schaltung und Definition.
   future_ = pool_.submit([circuit = project.circuit, gate = project.gate, wavelength = project.wavelength,
@@ -220,7 +220,8 @@ void LogicView::draw_empty_state() {
   ImGui::TextUnformatted("Logik: rechnet die Schaltung als Logikgatter.");
   ImGui::TextDisabled(
       "Ein Eingang schaltet einen Parameter zwischen Bit 0 und Bit 1 (Heizleistung, Laserphase, "
-      "Laserleistung ...), ein Ausgang ist die Leistung an einem Detektor. Hier lassen sich die Bits von Hand "
+      "Laserleistung ...), ein Ausgang ist die Leistung an einem Detektor. Hier lassen sich die Bits von "
+      "Hand "
       "schalten; bis 6 Eingänge rechnet PhotonLab die ganze Wahrheitstabelle und ein Zeugnis.");
   ImGui::PopTextWrapPos();
   ImGui::Spacing();
@@ -232,8 +233,13 @@ void LogicView::draw_empty_state() {
       const circuit::ComponentType* type = registry().find(instance.type);
       if (!type) continue;
       if (project.gate.inputs.empty() && type->find_param("power") && type->port_names.size() == 1)
-        project.gate.inputs.push_back({"A", instance.name, "power", 0.0, type->find_param("power")->default_value,
-                                       logic::Encoding::intensity, {}});
+        project.gate.inputs.push_back({"A",
+                                       instance.name,
+                                       "power",
+                                       0.0,
+                                       type->find_param("power")->default_value,
+                                       logic::Encoding::intensity,
+                                       {}});
       if (project.gate.outputs.empty() && (instance.type == "detector" || instance.type == "photodiode"))
         project.gate.outputs.push_back({"Y", instance.name, "Leistung", {}, 0.0});
     }
@@ -252,7 +258,7 @@ void LogicView::draw_empty_state() {
       {"full_adder", "Volladdierer", "Übertrag als Licht auf zwei Schienen; baubar in Silizium."},
       {"adder2", "2-Bit-Addierer", "Zwei Volladdierer hintereinander, volle Wahrheitstabelle."},
       {"adder4", "4-Bit-Addierer", "Zahlen 0 bis 15 addieren."},
-      {"adder8", "8-Bit-Addierer", "Zahlen 0 bis 255 addieren, 66 Bauteile."},
+      {"adder8", "8-Bit-Addierer", "Zahlen 0 bis 255 addieren, 68 Bauteile."},
       {"xor_directed", "XOR mit Ringen", "Directed Logic, schmalbandig."},
       {"xor_interference", "Interferenz-XOR", "Phasencodiert, nicht kaskadierbar."}};
   for (const auto& example : examples) {
@@ -285,7 +291,8 @@ double LogicView::output_threshold(std::size_t output) const {
   if (gate.outputs[output].threshold > 0.0) return gate.outputs[output].threshold;
   // sonst aus der gemessenen Wahrheitstabelle (dieselbe Definition, Eingangswerte spielen dort keine Rolle)
   if (result_.error.empty() && result_.report.outputs.size() == gate.outputs.size() &&
-      result_.gate.outputs.size() == gate.outputs.size() && result_.gate.outputs[output].instance == gate.outputs[output].instance)
+      result_.gate.outputs.size() == gate.outputs.size() &&
+      result_.gate.outputs[output].instance == gate.outputs[output].instance)
     return result_.report.outputs[output].threshold;
   return 0.0;
 }
@@ -300,7 +307,8 @@ void LogicView::draw_live() {
   std::map<std::string, long long> input_values;
   for (const Word& word : words_of(gate.inputs)) {
     ImGui::PushID(word.name.c_str());
-    if (word.bits.size() == 1 && word.bits[0].first == 0 && word.name == gate.inputs[word.bits[0].second].name) {
+    if (word.bits.size() == 1 && word.bits[0].first == 0 &&
+        word.name == gate.inputs[word.bits[0].second].name) {
       const std::size_t k = word.bits[0].second;
       bool on = input_bit(k) != 0;
       if (ImGui::Checkbox(word.name.c_str(), &on)) set_input_bit(k, on ? 1 : 0);
@@ -358,8 +366,9 @@ void LogicView::draw_live() {
   auto bit_box = [&](std::size_t k) {
     const char* text = out_bits[k] < 0 ? "?" : out_bits[k] ? "1" : "0";
     const ImVec4 color = out_bits[k] > 0 ? ui_color_good : ui_color_neutral;
-    ImGui::PushStyleColor(ImGuiCol_Button, out_bits[k] > 0 ? ImVec4(color.x * 0.45f, color.y * 0.45f, color.z * 0.45f, 1.0f)
-                                                           : ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
+    ImGui::PushStyleColor(ImGuiCol_Button,
+                          out_bits[k] > 0 ? ImVec4(color.x * 0.45f, color.y * 0.45f, color.z * 0.45f, 1.0f)
+                                          : ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
     ImGui::PushID(static_cast<int>(k));
     ImGui::SmallButton(text);
     ImGui::PopID();

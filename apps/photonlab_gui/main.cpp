@@ -9,10 +9,12 @@
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "chip_designer.hpp"
 #include "field_lab.hpp"
+#include "help.hpp"
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
@@ -206,7 +208,8 @@ int main(int argc, char** argv) {
     photonlab::gui::FieldLab field_lab(pool, chip_designer, renderer, ui_scale);
     if (!project_path.empty() && !chip_designer.open_file(project_path) && automated) exit_code = 1;
 
-    bool running = true, show_demo = false, reset_layout = false, show_plugins = false;
+    bool running = true, reset_layout = false, show_plugins = false, show_help = false;
+    photonlab::gui::HelpTopic help_topic = photonlab::gui::HelpTopic::overview;
     int frame_count = 0;
     while (running && !chip_designer.quit_confirmed()) {
       SDL_Event e;
@@ -233,6 +236,7 @@ int main(int argc, char** argv) {
       }
       ImGui::DockSpaceOverViewport(dock_id, viewport);
 
+      if (ImGui::IsKeyPressed(ImGuiKey_F1, false)) show_help = !show_help;
       if (ImGui::IsKeyPressed(ImGuiKey_F11, false))
         SDL_SetWindowFullscreen(window, (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) == 0);
       if (ImGui::BeginMainMenuBar()) {
@@ -256,8 +260,19 @@ int main(int argc, char** argv) {
           ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Hilfe")) {
+          using photonlab::gui::HelpTopic;
+          const std::pair<HelpTopic, const char*> topics[] = {
+              {HelpTopic::overview, "Überblick"},          {HelpTopic::first_steps, "Erste Schritte"},
+              {HelpTopic::field_lab, "Bauteil-Labor"},     {HelpTopic::chip_designer, "Chip-Designer"},
+              {HelpTopic::shortcuts, "Tastenkürzel"},      {HelpTopic::physics, "Physik und Grenzen"},
+              {HelpTopic::command_line, "Kommandozeile"}};
+          for (const auto& [topic, label] : topics)
+            if (ImGui::MenuItem(label, topic == HelpTopic::overview ? "F1" : nullptr)) {
+              help_topic = topic;
+              show_help = true;
+            }
+          ImGui::Separator();
           ImGui::MenuItem("Plugins ...", nullptr, &show_plugins);
-          ImGui::MenuItem("ImGui-Demo anzeigen", nullptr, &show_demo);
           ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -275,7 +290,7 @@ int main(int argc, char** argv) {
         ImGui::SetWindowFocus(field_only ? window_field : ChipDesigner::window_canvas);
       }
       ++frame_count;
-      if (show_demo) ImGui::ShowDemoWindow(&show_demo);
+      if (show_help) photonlab::gui::draw_help_window(&show_help, &help_topic);
       if (show_plugins) draw_plugins_window(&show_plugins, plugin_errors);
 
       ImGui::Render();

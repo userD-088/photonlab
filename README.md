@@ -41,6 +41,25 @@ Programme:
 - `build/apps/photonlab_gui/(Release/)photonlab_gui [datei.plab.json]` – Oberfläche
 - `build/apps/photonlab_cli/(Release/)photonlab_cli` – Kommandozeile (`photonlab_cli bench` misst die Rechengeschwindigkeit auf dem eigenen Rechner)
 
+Im Programm erklärt **Hilfe** (F1) alle Bereiche, erste Schritte und Tastenkürzel.
+
+## Bauteil-Labor bedienen
+
+Beim Start liegt eine leere Szene bereit (Oxid-Mantel, Hz, 1 ps). Beispiele unter Datei → Beispiele: Feld.
+
+| Aktion | Bedienung |
+|---|---|
+| Rechnung | Werkzeugleiste: Start/Pause (Leertaste), Zurücksetzen (R); Tempo und Laufzeit links unter „Rechnung“ |
+| 2D oder 3D | Umschalter in der Werkzeugleiste; 3D rechnet die Szene als Schicht (220 nm Si auf Oxid) |
+| Neues Objekt | Knöpfe „+ Rechteck“ … „+ Port“ oder Umschalt+Buchstabe; „Bausteine …“ für fertige Gruppen |
+| Auswählen, verschieben | im Bild klicken und ziehen; Strg/Umschalt für mehrere; Pfeiltasten |
+| Rückgängig | Pfeile in der Werkzeugleiste, Strg+Z / Strg+Y |
+| Titel | Feld ganz links in der Werkzeugleiste (wird auch der Name des Bauteils) |
+
+Reiter: **Feld** (bauen und rechnen), **Bauteil für den Chip-Designer** (Ports automatisch setzen, S-Matrix
+messen, mit einem Klick in die Schaltung), **Logik prüfen** (Wahrheitstabellen der Feld-Gatter),
+**Moden und Bänder** (Modenlöser, Bandstruktur), **Inverses Design**.
+
 ## Chip-Designer bedienen
 
 | Aktion | Bedienung |
@@ -53,66 +72,14 @@ Programme:
 | Parameter | Bauteil anklicken, Regler im Fenster „Eigenschaften“ |
 
 Die Verbindungen zeigen das Licht: Farbton = Phase, Helligkeit = Leistung. „Spektrum“ rechnet einen
-Wellenlängen-Sweep als Job im Threadpool, „Kennlinie“ zeigt die Detektorleistungen über einem Parameter
-des ausgewählten Bauteils (beim Start: die cos²-Kennlinie des Mach-Zehnder-Interferometers).
-Neben dem Spektrum steht die Tabelle der gefundenen Resonanzen; ein Klick auf eine Zeile legt die
-Arbeitswellenlänge dorthin. „Monte-Carlo“ streut Parameter normalverteilt und zeigt Histogramm und
-Ausbeute. Das Häkchen „Werte“ blendet Leistung und Phase an jeder Verbindung ein.
+Wellenlängen-Sweep, „Kennlinie“ zeigt die Detektorleistungen über einem Parameter des gewählten Bauteils,
+„Monte-Carlo“ streut Parameter und zeigt die Ausbeute. Das Fenster **Logik** legt Eingänge (Heizer, Laser …)
+und Ausgänge (Detektoren) fest: Bits und Zahlen von Hand schalten, das Licht auf der Zeichenfläche folgt;
+bis 6 Eingänge zusätzlich Wahrheitstabelle und Zeugnis mit Ampeln.
 
-## Bauteil-Labor bedienen
-
-Datei → Beispiele → „Feld: Interferenz zweier Quellen“ laden; das Feld läuft sofort los.
-
-| Aktion | Bedienung |
-|---|---|
-| Rechnung | Start/Pause, Zurücksetzen, „Schritte je Bild“ für das Tempo |
-| Objekt wählen und verschieben | im Bild anklicken und ziehen, oder in der Liste „Objekte“ wählen |
-| Objekt ändern | Werte unter „Ausgewählt“ (Lage, Größe, Brechzahl, Wellenlänge, Phase ...) |
-| Neues Objekt | Knöpfe „+ Rechteck“, „+ Kreis“, „+ Ring“, „+ Quelle“, „+ Monitor“ |
-| Gitter und Ränder | Abschnitt „Rechengebiet“ |
-
-Jede Änderung an der Szene startet die Rechnung neu. Unter „Hinweise“ steht, wenn die Auflösung zu grob ist
-oder eine Quelle in der Randschicht liegt. Gerechnet wird in zwei Dimensionen: Abstrahlung nach oben und
-unten fehlt, und Brechzahlen haben keine Dispersion.
-
-### Querschnitt und Moden
-
-Im Bauteil-Labor den Reiter „Querschnitt (Moden)“ wählen. Kern- und Mantelmaterial, Breite, Höhe und
-Wellenlänge einstellen und „Moden berechnen“ drücken. Die Tabelle zeigt effektiven Index, Gruppenindex,
-Einschluss und Modenfläche; das Bild zeigt das Feld der gewählten Mode. Der Knopf „n_eff und n_g in den
-Chip-Designer übernehmen“ schreibt die Werte in alle Wellenleiter und Ringe der Schaltung.
-
-Der Löser ist semi-vektoriell: bei stark führenden Silizium-Drähten liegt der effektive Index etwa 2 % über
-vollvektoriellen Literaturwerten.
-
-### S-Parameter: vom Bauteil zum Chip
-
-1. Datei → Beispiele → „Feld: Richtkoppler mit S-Kurven“ laden. Die violetten Linien sind die Ports; der
-   Pfeil zeigt ins Bauteil. Eigene Ports legt „+ Port“ im Reiter „Feld“ an.
-2. Reiter „S-Parameter“ → „S-Parameter extrahieren“. Je Port läuft eine Rechnung (parallel); der Fortschritt
-   steht daneben.
-3. Ergebnis prüfen (Reziprozität und Passivität stehen über dem Plot), dann „In die Bauteilbibliothek
-   übernehmen“. Im Chip-Designer erscheint das Bauteil in der Bauteilbibliothek und lässt sich wie jedes
-   andere verschalten.
-
-Die Bibliothek wird mit dem Projekt gespeichert; einzelne Bauteile lassen sich als `.sparam.json` speichern
-und laden. Hat sich die Szene nicht geändert, bietet PhotonLab das vorhandene Ergebnis an (Cache).
-
-## Logik-Labor bedienen
-
-Datei → Beispiele → „Interferenz-XOR/XNOR“ laden und den Reiter „Logik-Labor“ öffnen.
-
-- **Gatter-Definition**: Ein Eingang schaltet einen Parameter zwischen zwei Werten um (z. B. die Phase
-  eines Lasers zwischen 0 und π), ein Ausgang ist die Leistung an einem Detektor.
-- **Wahrheitstabelle**: PhotonLab simuliert alle Kombinationen und zeigt Leistung, entschiedenes Bit und
-  Entscheidungspegel. Falsche Zeilen sind rot markiert.
-- **Zeugnis**: Ampel je Kriterium (Kontrast, Kaskadierbarkeit, Fan-out, Pegelregeneration, Bias-Toleranz
-  usw.) mit Messwert und Begründung. Der Kaskaden-Test schaltet zwei Gatter wirklich hintereinander.
-- **Optimierer**: stimmt einen Parameter (z. B. die Bias-Phase) auf den besten Kontrast ab.
-
-Die drei Beispiele zeigen drei typische Befunde: das Interferenz-XOR hat perfekten Kontrast, ist aber
-nicht kaskadierbar; das lineare AND hat nur 6 dB Kontrast und scheitert im Kaskaden-Test; Directed Logic
-mit Ringen ist realistisch, aber schmalbandig.
+Addierer-Beispiele (Datei → Beispiele: Schaltung): Halb-, Voll-, 2-, 4- und 8-Bit-Addierer aus
+MZI-Schaltern mit Heizern, Gitterkoppler und Photodioden. Die Summanden sind Heizleistungen, der Übertrag
+läuft als Licht auf zwei Schienen; der 8-Bit-Addierer rechnet z. B. 23 + 42 = 65 und prüft das Ergebnis.
 
 ## Kommandozeile
 
@@ -124,6 +91,8 @@ photonlab_cli run examples/03b_ring_adddrop.plab.json --resonances    # FSR, Gü
 photonlab_cli run examples/03_ring_allpass.plab.json --monte-carlo    # Streuung und Statistik
 photonlab_cli run examples/05_interferenz_xor.plab.json --logic       # Wahrheitstabelle und Zeugnis
 photonlab_cli run examples/01_wellenleiter_fdtd.plab.json --field     # 2D-FDTD über die Laufzeit der Szene
+photonlab_cli run examples/04c_richtkoppler_fdtd.plab.json --field3d  # dieselbe Szene als Si-Schicht in 3D
+photonlab_cli run examples/31_addierer_8bit_chip.plab.json            # 8-Bit-Addierer (Eingänge 0)
 photonlab_cli run examples/02_mach_zehnder.plab.json --modes          # Moden des Querschnitts der Datei
 photonlab_cli materials 1310                              # Brechzahlen der Materialbibliothek bei 1310 nm
 photonlab_cli run examples/04c_richtkoppler_fdtd.plab.json --sparam --out koppler.sparam.json

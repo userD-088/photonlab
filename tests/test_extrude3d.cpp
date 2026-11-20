@@ -49,11 +49,13 @@ TEST_CASE("3D-Szene: Kerne werden Silizium, darüber und darunter Oxid") {
   CHECK(sim.indices().core == doctest::Approx(n_si));
   const auto top = sim.top_index();
   const int nx = sim.solver().nx(), ny = sim.solver().ny(), nz = sim.solver().nz();
-  CHECK(top[static_cast<std::size_t>(nx / 2 + nx * (ny / 2))] == doctest::Approx(n_si).epsilon(1e-6));  // Kern
-  CHECK(top[static_cast<std::size_t>(nx / 2 + nx * 2)] == doctest::Approx(n_ox).epsilon(1e-6));        // daneben
+  CHECK(top[static_cast<std::size_t>(nx / 2 + nx * (ny / 2))] ==
+        doctest::Approx(n_si).epsilon(1e-6));                                                    // Kern
+  CHECK(top[static_cast<std::size_t>(nx / 2 + nx * 2)] == doctest::Approx(n_ox).epsilon(1e-6));  // daneben
   const auto side = sim.side_index(1.2e-6);
-  CHECK(side[static_cast<std::size_t>(nx / 2 + nx * 1)] == doctest::Approx(n_ox).epsilon(1e-6));       // Substrat
-  CHECK(side[static_cast<std::size_t>(nx / 2 + nx * (nz - 2))] == doctest::Approx(n_ox).epsilon(1e-6));  // Mantel
+  CHECK(side[static_cast<std::size_t>(nx / 2 + nx * 1)] == doctest::Approx(n_ox).epsilon(1e-6));  // Substrat
+  CHECK(side[static_cast<std::size_t>(nx / 2 + nx * (nz - 2))] ==
+        doctest::Approx(n_ox).epsilon(1e-6));  // Mantel
   CHECK(side[static_cast<std::size_t>(nx / 2 + nx * sim.layer_k())] == doctest::Approx(n_si).epsilon(1e-6));
   CHECK(sim.layer_top() - sim.layer_bottom() == doctest::Approx(220e-9));
   const Extent3d e = extent_3d(scene, stack);

@@ -122,13 +122,13 @@ Offen aus Phase 6 (Folge-Issues):
 - [x] #85 Heizer-Phasenschieber (P_pi kalibriert auf 24,8 mW, Harris 2014)
 - [x] #86 PN-Phasenschieber und Ring-Modulator (Soref-Bennett, Verarmungszone, V_pi L = 2,6 V cm, RC-Grenzfrequenz)
 - [x] #87 Photodiode mit Schrot- und thermischem Rauschen, SNR
-- [x] #88 Zeitbereich der Strecke: PRBS, Treiber, Ring (Coupled-Mode) und MZM, Empfänger, Augendiagramm, Q, BER (`libs/signal`)
+- [x] #88 Zeitbereich der Strecke: PRBS, Treiber, Ring (Coupled-Mode) und MZM, Empfänger, Augendiagramm, Q, BER (`libs/signal`; im Nov. 2026 entfernt, #158)
 - [x] #89 PCM-Speicherzelle (GST): Pulsmodell, Programmieren mit Nachlesen, Zwischenstufen; Handlungen im Chip-Designer
 - [ ] #90 Zeitbereich für beliebige Schaltungen (Vector Fitting der S-Parameter)
 - [ ] #91 PN-Überlapp mit dem Modenlöser statt gleichmäßiger Verteilung; Wanderwellen-Elektrode für lange MZM
 - [ ] #92 Thermische Zeitkonstante und Übersprechen der Heizer; Laser-RIN-Spektrum statt weiß
 
-## Phase 10 – Logik-Ebene
+## Phase 10 – Logik-Ebene (Event-Simulator im Nov. 2026 entfernt, siehe #158)
 - [x] #93 Brücke 2: Logikblöcke mit gemessenen Pegeln, Codierung, Laufzeit, Energie (ideal, regeneriert, passiv aus Schaltungen)
 - [x] #94 Ereignisgesteuerter Simulator mit Physik und idealer Logik je Netz; erste Fehlerursache mit Pegel und Schwelle
 - [x] #95 Pegel- und Codierungs-Prüfung je Verbindung (Fan-out, Regeneration)
@@ -137,7 +137,7 @@ Offen aus Phase 6 (Folge-Issues):
 - [ ] #98 Logikblöcke direkt aus dem Zeugnis eines eigenen Gatters im Logik-Labor übernehmen (bisher: Referenz-Gatter)
 - [ ] #99 Rauschen und Phasenstabilität auf der Logik-Ebene; WDM-Kanäle unterscheiden
 
-## Phase 11 – Quanten + MZI-Gitter
+## Phase 11 – Quanten + MZI-Gitter (im Nov. 2026 entfernt, siehe #158)
 - [x] #100 Fock-Simulator mit Permanenten (Ryser), Unterscheidbarkeit, Verluste, Detektoren (Effizienz, Dunkelzählung, Schwellwert/zahlauflösend), Quellen mit Mehrphotonen-Anteil
 - [x] #101 Hong-Ou-Mandel (Sichtbarkeit 1), linear-optisches CNOT (1/9), Bell-Zustand, Boson Sampling
 - [x] #102 Übertragungsmatrix einer Schaltung des Chip-Designers (Laser -> Detektoren) für den Quanten-Modus
@@ -156,7 +156,7 @@ Offen aus Phase 6 (Folge-Issues):
 - [ ] #112 Zeitliches Blocken und float-Variante des FDTD (weniger Speicherverkehr, ändert Ergebnisse im letzten Bit)
 - [ ] #113 3D: Dispersion, Verluste, Nichtlinearität; geneigte und gekrümmte Formen mit Mittelung (Subpixel)
 - [ ] #114 3D-Szenen im Editor und im Dateiformat (.plab.json), Feldbilder live
-- [ ] #115 3D: Monitore, Fluss, S-Parameter-Extraktion (Brücke 1 in 3D), varFDTD/2,5D
+- [ ] #115 (Monitore und Fluss erledigt mit #162) 3D: Monitore, Fluss, S-Parameter-Extraktion (Brücke 1 in 3D), varFDTD/2,5D
 
 ## Phase 13 – Kür
 - [x] #116 GDSII-Export (libs/layout): Polygone aus Feld-Szenen und Pixelbildern, Stream nach Formatbeschreibung, Leser für Tests; CLI `gds`, Menü Datei
@@ -187,12 +187,12 @@ Bauteil-Labor, Feld (2D-FDTD):
 - [ ] #135 Leistung: GPU-Backend (#111, braucht Rückfrage wegen Abhängigkeit), float-Kern/Zeitblöcke (#112); Mehrkern läuft schon (Phase 12)
 
 Bewertung der Reiter (Festlegung nach Rückmeldung, umsetzen je als eigenes Issue):
-- [ ] #136 Querschnitt (Moden): behalten, aber als Werkzeug zum Bauteil-Entwurf erklären - liefert n_eff und n_g eines Wellenleiter-Querschnitts (Breite, Höhe, Material) und übergibt sie an den Chip-Designer; Hilfeseite + Knopf "Werte übernehmen" sichtbarer
-- [ ] #137 Bandstruktur: behalten als Entwurfswerkzeug für photonische Kristalle (wo ist die Bandlücke -> welche Wellenlängen sperrt das Gitter); Ergebnis direkt als Kristall-Szene ins Feld legen; Hilfeseite
-- [ ] #138 S-Parameter: Brücke Feld -> Schaltung (ein im Feld gerechnetes Bauteil wird zum Bauteil im Chip-Designer); heute schwer zu finden. In den Feld-Reiter integrieren ("Als Bauteil exportieren"), eigener Reiter entfällt
+- [x] #136 (Reiter "Moden und Bänder") Querschnitt (Moden): behalten, aber als Werkzeug zum Bauteil-Entwurf erklären - liefert n_eff und n_g eines Wellenleiter-Querschnitts (Breite, Höhe, Material) und übergibt sie an den Chip-Designer; Hilfeseite + Knopf "Werte übernehmen" sichtbarer
+- [x] #137 (Reiter "Moden und Bänder") Bandstruktur: behalten als Entwurfswerkzeug für photonische Kristalle (wo ist die Bandlücke -> welche Wellenlängen sperrt das Gitter); Ergebnis direkt als Kristall-Szene ins Feld legen; Hilfeseite
+- [x] #138 S-Parameter: Brücke Feld -> Schaltung (ein im Feld gerechnetes Bauteil wird zum Bauteil im Chip-Designer); heute schwer zu finden. In den Feld-Reiter integrieren ("Als Bauteil exportieren"), eigener Reiter entfällt
 - [ ] #139 Chip-Designer: Zweck in der Oberfläche erklären (viele Bauteile auf einem Chip schnell rechnen, ohne Feld); Tooltips mit Erklärung je Bauteil beim Verweilen; Kennlinie (Ausgang über einem Parameter) und Monte-Carlo (Fertigungsstreuung -> Ausbeute) mit Hilfetext
-- [ ] #140 Logik-Labor: zusammenlegen - Schaltungs-Gatter und Feld-Gatter (Kristall) als zwei Ebenen desselben Gatters zeigen; Hilfeseite mit Ablauf Gatter wählen -> Wahrheitstabelle messen -> Zeugnis
-- [ ] #141 Quanten-Modus: enthält HOM, CNOT, Boson Sampling, MZI-Gitter, Schaltung als Interferometer; Rückmeldung "leer" klären (Bildschirmfoto), Einstieg erklären
+- [x] #140 (anders gelöst: Fenster Logik im Chip-Designer, Reiter "Logik prüfen" im Bauteil-Labor) Logik-Labor: zusammenlegen - Schaltungs-Gatter und Feld-Gatter (Kristall) als zwei Ebenen desselben Gatters zeigen; Hilfeseite mit Ablauf Gatter wählen -> Wahrheitstabelle messen -> Zeugnis
+- [x] #141 (entfernt, #158) Quanten-Modus: enthält HOM, CNOT, Boson Sampling, MZI-Gitter, Schaltung als Interferometer; Rückmeldung "leer" klären (Bildschirmfoto), Einstieg erklären
 
 Obere Leiste, Bedienung:
 - [x] #149 Seitenleiste: alle Bereiche einklappbar, Hinweise eingeklappt (schwere bleiben sichtbar); Leertaste = Start/Pause, R = Zurücksetzen; ein Tempo-Regler statt Schritte je Bild + volle Geschwindigkeit; Energie als Erklärung im Tooltip
@@ -204,11 +204,11 @@ Obere Leiste, Bedienung:
 - [x] #143d Kristall-Halbaddierer als ein Chip (Summe 7,8 dB, Übertrag 5,5 dB) und Kristall-Volladdierer aus drei Chips mit Regeneration (alle 8 Zeilen richtig); Kristall-Löcher als Gruppe "Kristall" (auch aus der Bandstruktur)
 - [ ] #143e Kristall-Halbaddierer: tiefere Auslöschung der Summe (Verzweigungen weiter weg von der Bandkante entwerfen, inverses Design der Y-Verzweigung)
 - [ ] #143c Volladdierer ohne elektrische Regeneration (Kerr-Schwellwert im FDTD) und Halbaddierer-UND mit mehr als 6 dB (nichtlinear)
-- [ ] #144 Hilfe-Menü je Arbeitsbereich (Feld, Schaltung, Logik, Quanten) mit Bildern; ImGui-Demo nur noch für Entwickler
+- [x] #144 (ohne Bilder; ImGui-Demo entfernt) Hilfe-Menü je Arbeitsbereich (Feld, Schaltung, Logik, Quanten) mit Bildern; ImGui-Demo nur noch für Entwickler
 - [ ] #145 Einstellungen-Fenster (Schriftgröße, Farbschema, Threads, Sprache) und Speichern der Einstellungen
 - [ ] #146 Sprachen Deutsch/Englisch: alle Oberflächentexte über eine Übersetzungstabelle (Latin-1 bleibt Pflicht)
 - [ ] #147 Design: Farbschema überarbeiten, Symbole in Werkzeugleisten
-- [ ] #148 3D-Simulator mit derselben Bedienung wie 2D (Editor, Objekte, Monitore; baut auf #114, #115 auf)
+- [x] #148 (Editor und Objekte wie in 2D, eigene 3D-Ansicht; S-Parameter in 3D offen, #164) 3D-Simulator mit derselben Bedienung wie 2D (Editor, Objekte, Monitore; baut auf #114, #115 auf)
 
 ## Phase 15 – Regenerator, Bausteine, Grafikkarte (Nov. 2026)
 - [x] #152 Regenerator als Quelle mit Auslöser (Detektor, Schwelle, Verzögerung, invertiert): O/E/O in der Feld-Szene; Verbindungslinie im Editor
@@ -219,3 +219,21 @@ Obere Leiste, Bedienung:
 - [x] #143c Rein optischer Volladdierer mit einem Kerr-Ring (`field_fulladder_optical`, Gatter `optical_fulladder`): Übertrag = Drop des eingerasteten Rings, Summe = |Drop - k s|^2; alle 8 Zeilen richtig, Summe 13,8 dB, Übertrag 13,4 dB. Modell: n2 = 20 m^2/W (Silizium 4,5e-18), keine TPA, idealer Kombinierer
 - [ ] #143f Rein optischer Volladdierer mit echten Y-Kombinierern statt Einspeisung, Kerr-Zellen auf der Grafikkarte, TPA und Ladungsträger einschalten und Pulsbetrieb prüfen
 - [ ] #156 Feld-Gatter: Threads je Belegung fest am Anfang verteilt; die letzten Belegungen laufen dann auf einem Kern (Volladdierer-Szene: Schluss dauert lange). Freiwerdende Threads nachreichen oder Belegungen nacheinander mit allen Threads rechnen
+
+## Phase 16 – praktikabler Simulator (Nov. 2026)
+
+Rückmeldung: Bauplan ablösen, unnötige Bereiche entfernen, Chip-Designer mit Addierern bis 8 Bit (später als
+echter Chip baubar), Bauteil-Labor aufräumen, eigene Bauteile in den Chip-Designer, echter 3D-Simulator, Hilfe.
+
+- [x] #158 Entfernt: Bauplan-PDF, Quanten-Modus (`libs/quantum`), Augendiagramm (`libs/signal`), Logik-Event-Simulator und Gatter-Optimierer; CLI-Befehle `quantum`, `mesh`, `logic-sim`, `run --eye`, `run --unitary`
+- [x] #159 Bauteil `mzi_switch` (zwei Heizer) und Addierer 1/2/4/8 Bit aus MZI-Schaltern (Directed Logic, Übertrag auf zwei Lichtschienen); Gatter-Eingänge schalten mehrere Instanzen, Ausgänge mit fester Schwelle; Fenster Logik im Chip-Designer (Bits/Zahlen schalten, Probe A + B + Cin)
+- [x] #160 Bauteil-Labor: leere Szene zum Start, Titel, Werkzeugleiste (Start, Rückgängig, Darstellung, 2D/3D, Als Bauteil, Zoom); Reiter Feld, Bauteil für den Chip-Designer, Logik prüfen, Moden und Bänder, Inverses Design
+- [x] #161 Bauteil-Designer: Ports automatisch (`auto_ports`), S-Matrix messen (Cache im Projekt), mit einem Klick in Bibliothek und Schaltung
+- [x] #162 3D-Rechnung der Szene (`extrude3d`): Schichtaufbau aus der Materialbibliothek, Querschnittsmode als Quelle, Flussflächen, Draufsicht und Seitenansicht live; `run --field3d`
+- [x] #163 Hilfe-Fenster (F1): Überblick, Erste Schritte, Bauteil-Labor, Chip-Designer, Tastenkürzel, Physik und Grenzen, Kommandozeile
+- [ ] #164 S-Parameter-Extraktion in 3D (Bauteil-Designer wahlweise mit 3D-Messung)
+- [ ] #165 3D-FDTD auf der Grafikkarte (OpenCL-Kerne wie in 2D, bitgleich zum Prozessor)
+- [ ] #166 Vom Chip-Designer zum Layout: Bauteile als Zellen (MZI-Schalter, Koppler, Gitterkoppler, Photodiode) platzieren, Wellenleiter routen, Heizer-Pads; GDSII für die Fertigung
+- [ ] #167 Hierarchie im Chip-Designer: Unterschaltungen (Volladdierer-Zelle 8-mal), Steuerleitungen als eigene Netze
+- [ ] #168 Heizer realistischer: thermisches Übersprechen benachbarter Arme, Zeitkonstante, unterätzte Heizer (P_pi unter 1 mW) als Variante
+- [ ] #169 3D: Streulicht der Quelle verringern (Quelle auf der Yee-Mode des Gitters statt der FDE-Mode), Abschätzung der Rechenzeit vor dem Start
