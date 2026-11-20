@@ -22,7 +22,7 @@ Werte bei 1550 nm:
 |---|---|---|---|---|
 | SiO₂ | 1,4440 | 1,4626 | 1,0·10⁻⁵ | Leviton/Frey, Proc. SPIE 6273 (2006), ca. |
 | Si₃N₄ | 1,9963 | 2,0396 | 2,45·10⁻⁵ | Arbabi/Goddard, Opt. Lett. 38, 3878 (2013) |
-| Si | 3,4777 | 3,6053 | 1,8·10⁻⁴ | Bauplan 4.4; vgl. Komma et al., Appl. Phys. Lett. 101, 041905 (2012) |
+| Si | 3,4777 | 3,6053 | 1,8·10⁻⁴ | vgl. Komma et al., Appl. Phys. Lett. 101, 041905 (2012) |
 
 ## Grenzen
 

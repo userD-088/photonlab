@@ -11,6 +11,7 @@
 
 #include "band_view.hpp"
 #include "chip_designer.hpp"
+#include "field_gate_view.hpp"
 #include "imgui.h"
 #include "inverse_view.hpp"
 #include "mode_view.hpp"
@@ -73,6 +74,7 @@ class FieldLab {
   bool running() const { return job_.valid(); }
 
   void draw_field_tab();
+  void draw_solvers_tab();
   void draw_empty_state();
   void draw_controls();
   void toggle_running();  // Start/Pause (auch Leertaste)
@@ -125,6 +127,8 @@ class FieldLab {
   Wave3dView wave3d_view_;
   InverseView inverse_view_;
   SParamView sparam_view_;
+  FieldGateView field_gate_view_;
+  int solver_page_ = 0;  // Reiter "Moden und Bänder": 0 Querschnitt, 1 Bandstruktur, 2 3D-Wellenleiter
 
   std::uint64_t seen_generation_ = 0;
   bool scene_changed_ = false;

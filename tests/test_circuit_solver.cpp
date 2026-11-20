@@ -1,4 +1,4 @@
-// Validierung des linearen Schaltungslösers gegen analytische Lösungen (Bauplan Abschnitt 16).
+// Validierung des linearen Schaltungslösers gegen analytische Lösungen.
 #include <doctest/doctest.h>
 
 #include <cmath>

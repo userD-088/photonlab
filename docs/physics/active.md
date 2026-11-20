@@ -1,9 +1,10 @@
-# Aktive Photonik (Phase 9): Heizer, PN-Modulator, Photodiode, Zeitbereich, PCM
+# Aktive Photonik (Phase 9): Heizer, MZI-Schalter, PN-Modulator, Photodiode, PCM
 
 Code: `libs/materials/src/silicon_carriers.cpp`, `libs/materials/src/phase_change.cpp`,
 `libs/circuit/src/active_devices.cpp`, `libs/circuit/src/pcm.cpp`, Bauteile in `builtin_components.cpp`
-(`heater`, `pn_phase_shifter`, `ring_pn`, `photodiode`, `pcm_cell`), Zeitbereich `libs/signal/src/link.cpp`.
-Tests: `tests/test_active.cpp`, `tests/test_link.cpp`, `tests/test_pcm.cpp`; Validierung `photonlab_cli validate`.
+(`heater`, `mzi_switch`, `pn_phase_shifter`, `ring_pn`, `photodiode`, `pcm_cell`).
+Tests: `tests/test_active.cpp`, `tests/test_circuit_components.cpp`, `tests/test_pcm.cpp`; Validierung
+`photonlab_cli validate`.
 
 ## Heizer-Phasenschieber
 
@@ -13,6 +14,20 @@ Stationär, gleichmäßige Erwärmung, ohne Übersprechen. Voreinstellung: L = 6
 wie gemessen bei Harris u. a., *Opt. Express* 22, 10487 (2014) (Si-Heizer ohne Unterätzung; typisch 20–25 mW,
 unterätzt bis unter 1 mW). Temperaturerhöhung bei P_π ≈ 70 K. Das ist eine **Kalibrierung**, keine Vorhersage aus
 der Geometrie (R_th hängt vom Aufbau ab).
+
+## MZI-Schalter (`mzi_switch`)
+
+Koppler C, zwei gleich lange Arme mit je einem Heizer (Formel oben, P_a und P_b), Koppler C:
+
+    M = C · diag(e^{iφ_a}, e^{iφ_b}) · C · T_Arm,   C = [[t, iκ], [iκ, t]]
+
+Für den 50:50-Koppler: `|M(out1, in1)|² = sin²(Δφ/2)`, `|M(out2, in1)|² = cos²(Δφ/2)` mit Δφ = φ_a − φ_b.
+Gleiche Heizleistung (beide 0 oder beide P_π) koppelt über (Kreuz), ein Unterschied von P_π schaltet auf
+Durchgang. Steuert Bit A den einen und Bit B den anderen Heizer, ist der Zustand A xor B – die Grundlage der
+Addierer im Chip-Designer (`logic.md`). Reziprok, verlustfrei bis auf Koppler-Zusatzverlust und
+Wellenleiterverlust; die Phase π gilt bei 1550 nm und skaliert mit 1/λ (breitbandig, keine Resonanz). Nicht
+modelliert: thermisches Übersprechen zwischen den Armen, Zeitkonstante (einige µs), Erwärmung des Nachbarn.
+Test: Kreuz/Durchgang, Zwischenwert sin²(0,15π), Unitarität (`test_circuit_components.cpp`).
 
 ## PN-Phasenschieber (Plasma-Dispersion, Verarmung)
 
@@ -39,29 +54,6 @@ Grenzfrequenz RC: f = 1/(2π R_s C) mit der Sperrschichtkapazität.
     I = R P + I_d,   σ_Schrot² = 2 q I B,   σ_therm² = 4 k T B / R_L,   SNR = (R P)² / (σ_Schrot² + σ_therm²)
 
 Voreinstellung 1 A/W, 10 nA, 30 GHz, 50 Ω, 300 K (Größenordnungen für Ge-auf-Si nach Chrostowski/Hochberg, Kap. 7).
-
-## Zeitbereich und Augendiagramm (`signal::simulate_link`)
-
-Kette: PRBS (LFSR 2^7−1 … 2^15−1) → Rechteck → Treiber (ein Pol) → RC der Sperrschicht (ein Pol, Kapazität beim
-mittleren Arbeitspunkt) → Modulator → Streckenverlust → Photodiode → Empfänger (zwei gleiche Pole, Gesamt-3-dB-
-Bandbreite f_rx, Standard 0,7 × Bitrate) → Rauschen → Entscheidung.
-
-* **Mach-Zehnder**: Gegentakt (Arm 1 bei V, Arm 2 bei V_0 + V_1 − V), Arbeitspunkt-Phase, quasistatisch (die
-  optische Laufzeit ist gegenüber der Bitdauer vernachlässigt).
-* **Ring-Modulator** als Coupled-Mode-Modell (RK4): da/dt = (−iδ(V) − γ(V)/2) a + √κ_in s, s_out = s − √κ_in a mit
-  T_rt = n_g L/c, κ_in = κ²/T_rt, κ_0 = (1 − a²)/T_rt (Wellenleiter- und PN-Verlust), δ aus der Resonanzverschiebung.
-  Die **Photonenlebensdauer** 1/γ begrenzt die Bitrate (Test: Augenöffnung 97 % bei 5 Gbit/s, geschlossen bei 50 Gbit/s).
-  Stationär stimmt es mit dem exakten Ring (`ring_pn`) auf 0,02 überein.
-* **Rauschen** (weiß, gaußförmig, nach dem Empfangsfilter je Abtastung): σ² = (2qI + 4kT/R_L + RIN (R P)²) · B_n,
-  B_n = π f_pol/4 (Rauschbandbreite zweier gleicher Pole). Laser-Linienbreite als Phasen-Zufallsweg
-  (Varianz 2π Δν Δt je Schritt); im Gegentakt-MZM hebt sie sich auf, im Ring wird sie zu Amplitudenrauschen.
-* **Auswertung**: bester Abtastpunkt (Phase im Bit und Laufzeit bis 2 Bits) nach maximalem
-  Q = |μ1 − μ0|/(σ1 + σ0); BER = ½ erfc(Q/√2) (Gauß-Näherung); Extinktion aus den optischen Pegeln; Augenöffnung
-  ohne Rauschen (kleinste 1 − größte 0)/(μ1 − μ0) als Maß der Intersymbol-Interferenz. **σ enthält auch die ISI**
-  (musterabhängige Pegel), deshalb ist Q bei geschlossenem Auge kleiner als die Rauschformel allein angibt.
-
-Prüfungen: PRBS-7 Periode 127 mit 64 Einsen; BER(7) = 1,28·10⁻¹²; MZM ohne Rauschen = quasistatische Formel (10⁻³);
-gemessene Streuung = Rauschformel (Test 10 %, gemessen ~3 %); Treiber 0,15 × Bitrate schließt das Auge.
 
 ## PCM-Speicherzelle (GST-225)
 
@@ -91,4 +83,4 @@ PCM-Zelle die Handlungen „Schreiben“, „Löschen“, „Kristallisieren“ 
 * PN-Überlapp vereinfacht; Treiber und Sperrschicht als einzelne Pole; keine Wanderwellen-Elektrode.
 * Rauschen weiß und gaußförmig nach dem Filter; BER aus der Gauß-Näherung (nicht gezählt).
 * Zeitbereich nur für die feste Kette Sender → Modulator → Empfänger, nicht für beliebige Schaltungen des Chip-Designers
-  (dafür fehlt Vector Fitting der S-Parameter, Bauplan 5.3).
+  (dafür fehlt Vector Fitting der S-Parameter).

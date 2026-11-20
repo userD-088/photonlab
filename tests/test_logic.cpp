@@ -3,12 +3,13 @@
 #include <doctest/doctest.h>
 
 #include <cmath>
+#include <cstdint>
 #include <limits>
 
+#include "photonlab/circuit/monte_carlo.hpp"
 #include "photonlab/circuit/reference_designs.hpp"
 #include "photonlab/core/units.hpp"
 #include "photonlab/io/project.hpp"
-#include "photonlab/logic/optimize.hpp"
 #include "photonlab/logic/reference_gates.hpp"
 #include "photonlab/logic/report.hpp"
 
@@ -177,8 +178,8 @@ TEST_CASE("Latenz ist die Gruppenlaufzeit n_g*L/c0; ein Wellenleiter ist kein re
   c.connect("laser.out", "leitung.in");
   c.connect("leitung.out", "det.in");
   const GateDefinition gate{"Leitung",
-                            {{"A", "laser", "power", 0.0, 1e-3, Encoding::intensity}},
-                            {{"Y", "det", "Leistung", function_bits("BUFFER", 1)}}};
+                            {{"A", "laser", "power", 0.0, 1e-3, Encoding::intensity, {}}},
+                            {{"Y", "det", "Leistung", function_bits("BUFFER", 1), 0.0}}};
   const GateReport report = characterize(c, reg(), gate, lambda0);
   CHECK(report.latency == doctest::Approx(4.2 * length / constants::c0).epsilon(1e-6));
   CHECK(report.outputs[0].function == "BUFFER");
@@ -200,27 +201,6 @@ TEST_CASE("Zeugnis bei falscher Erwartung: Funktion rot, abhängige Kriterien ni
   CHECK(rating_of(report, "cascade") == Rating::not_rated);
   CHECK(rating_of(report, "bias") == Rating::not_rated);
   CHECK_FALSE(report.real_gate);
-}
-
-TEST_CASE("Optimierer findet die Bias-Phase pi/2 des XOR") {
-  io::Project project = io::reference_project("xor_interference");
-  // Verstimmter Bias: Pegel (1 -+ sin(bias)) mW, also CR = 10*log10((1 + sin)/(1 - sin)) = 2,7 dB bei 0,3 rad
-  project.circuit.find_instance("bias")->params["phase"] = 0.3;
-  CHECK(worst_contrast_db(project.circuit, reg(), project.gate, lambda0) ==
-        doctest::Approx(10.0 * std::log10((1 + std::sin(0.3)) / (1 - std::sin(0.3)))).epsilon(1e-10));
-  // Bias 0: beide Ausgänge zeigen immer 1 mW, keine Logik
-  project.circuit.find_instance("bias")->params["phase"] = 0.0;
-  CHECK(std::isnan(worst_contrast_db(project.circuit, reg(), project.gate, lambda0)));
-  project.circuit.find_instance("bias")->params["phase"] = 0.3;
-  const OptimizeResult result =
-      optimize_parameter(project.circuit, reg(), project.gate, lambda0, "bias", "phase", 0.0, constants::pi);
-  REQUIRE(result.found);
-  CHECK(result.best_x == doctest::Approx(constants::pi / 2).epsilon(1e-3));
-  CHECK(result.best_contrast_db > 60.0);
-  CHECK(result.x.size() == 121);
-  CHECK_THROWS_AS(
-      optimize_parameter(project.circuit, reg(), project.gate, lambda0, "laser_a", "phase", 0.0, 1.0),
-      circuit::CircuitError);  // logischer Eingang
 }
 
 TEST_CASE("Fehlerhafte Gatter-Definitionen werden mit Klartext abgelehnt") {
@@ -256,4 +236,53 @@ TEST_CASE("Projektdatei und .gate.json enthalten die Gatter-Definition") {
   // unendliche Werte (Isolation) werden als null geschrieben, nicht als ungültiges JSON
   CHECK(json.find("\"isolation_db\": null") != std::string::npos);
   CHECK(json.find("inf") == std::string::npos);
+}
+
+TEST_CASE("Volladdierer aus MZI-Schaltern: Summe XOR3, Übertrag Mehrheit, 2-Bit-Addierer rechnet richtig") {
+  for (const char* name : {"half_adder", "full_adder", "adder2"}) {
+    const io::Project project = io::reference_project(name);
+    const TruthTable table = run_truth_table(project.circuit, reg(), project.gate, project.wavelength);
+    for (std::size_t k = 0; k < project.gate.outputs.size(); ++k) {
+      const OutputAnalysis a = analyze_output(table, k, project.gate.outputs[k].expected);
+      CHECK_MESSAGE(a.separable, name, " ", project.gate.outputs[k].name);
+      CHECK(contrast_ratio_db(a.p1_min, a.p0_max) > 60.0);
+      // die feste Schwelle der Definition trennt ebenfalls
+      CHECK(logic_holds(table, k, a.bits, project.gate.outputs[k].threshold));
+    }
+  }
+  const io::Project full = io::reference_project("full_adder");
+  CHECK(identify_function(full.gate.outputs[0].expected) == "XOR3");
+  CHECK(identify_function(full.gate.outputs[1].expected) == "MAJ");
+}
+
+TEST_CASE("8-Bit-Addierer: 200 Zufallsaufgaben mit den festen Schwellen richtig") {
+  const io::Project project = io::reference_project("adder8");
+  const GateDefinition& gate = project.gate;
+  REQUIRE(gate.inputs.size() == 17);
+  REQUIRE(gate.outputs.size() == 9);
+  for (int task = 0; task < 200; ++task) {
+    // Aufgaben aus standard_normal (plattformunabhängig), dazu die Randfälle 0 + 0 und 255 + 255 + 1
+    auto draw = [&](int k) {
+      return static_cast<unsigned>(std::abs(circuit::standard_normal(7, static_cast<std::uint64_t>(task), k, 0)) *
+                                   1e6) % 256u;
+    };
+    const unsigned a = task == 0 ? 0u : task == 1 ? 255u : draw(0);
+    const unsigned b = task == 0 ? 0u : task == 1 ? 255u : draw(1);
+    const unsigned cin = task == 1 ? 1u : draw(2) % 2u;
+    std::vector<int> bits;
+    for (int i = 7; i >= 0; --i) bits.push_back(static_cast<int>((a >> i) & 1u));
+    for (int i = 7; i >= 0; --i) bits.push_back(static_cast<int>((b >> i) & 1u));
+    bits.push_back(static_cast<int>(cin));
+    const circuit::CompiledCircuit compiled(apply_bits(project.circuit, gate, bits), reg());
+    const auto measurements = compiled.measurements(compiled.solve(project.wavelength));
+    unsigned result = 0;
+    for (const auto& out : gate.outputs) {
+      double power = 0.0;
+      for (const auto& m : measurements)
+        if (m.instance == out.instance && m.measurement.name == out.measurement) power = m.measurement.value;
+      const unsigned weight = out.name == "Cout" ? 256u : 1u << (out.name[1] - '0');
+      if (power > out.threshold) result += weight;
+    }
+    CHECK_MESSAGE(result == a + b + cin, a, " + ", b, " + ", cin);
+  }
 }

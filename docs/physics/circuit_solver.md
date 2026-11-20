@@ -22,7 +22,7 @@ Quellen-Bauteilen abgegebenen Wellen `b_src` gilt
     b = S·a + b_src
     ⇒ (I − S·C)·b = S·a_ext + b_src
 
-Ohne Quellen-Bauteile ist das genau die Form `(I − S·C)·b = S·a_ext` aus dem Bauplan (Abschnitt 5.2).
+Ohne Quellen-Bauteile ist das genau die Form `(I − S·C)·b = S·a_ext`.
 Rückkopplungen (Ringe, Schleifen) stecken in `S·C` und werden ohne Sonderbehandlung exakt gelöst.
 
 Das System ist dicht und wird per LU-Zerlegung mit Teilpivotisierung gelöst (Eigen). Danach wird das

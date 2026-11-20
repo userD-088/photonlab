@@ -138,7 +138,8 @@ FieldLab::FieldLab(ThreadPool& pool, ChipDesigner& designer, SDL_Renderer* rende
       mode_view_(pool, designer, renderer, ui_scale),
       wave3d_view_(pool, renderer),
       inverse_view_(pool, designer, renderer),
-      sparam_view_(pool, designer) {}
+      sparam_view_(pool, designer),
+      field_gate_view_(pool, designer) {}
 
 FieldLab::~FieldLab() {
   pause();
@@ -352,22 +353,26 @@ void FieldLab::draw() {
     ImGui::End();
     return;
   }
-  // Ansichten: das Feld von oben (2D-FDTD), der Querschnitt eines Wellenleiters (Modenlöser), ein gerader
-  // Wellenleiter im 3D-FDTD, Bandstruktur und S-Parameter
+  // Reiter: das Feld selbst (Szene bauen und rechnen), daraus ein Bauteil für den Chip-Designer, die
+  // Logik-Prüfung von Feld-Gattern und die Hilfsrechner (Moden, Bänder, inverses Design, 3D-Wellenleiter)
   if (ImGui::BeginTabBar("ansichten")) {
-    if (ImGui::BeginTabItem("Feld (2D-FDTD)")) {
+    if (ImGui::BeginTabItem("Feld")) {
       draw_field_tab();
       ImGui::EndTabItem();
     } else {
       release_keys();  // Leertaste und Pfeile gehören dann wieder der Oberfläche
       pause();         // im anderen Reiter keine Rechenzeit verbrauchen
     }
-    if (ImGui::BeginTabItem("Querschnitt (Moden)")) {
-      mode_view_.draw();
+    if (ImGui::BeginTabItem("Bauteil für den Chip-Designer")) {
+      sparam_view_.draw();
       ImGui::EndTabItem();
     }
-    if (ImGui::BeginTabItem("3D-Wellenleiter")) {
-      wave3d_view_.draw();
+    if (ImGui::BeginTabItem("Logik prüfen")) {
+      field_gate_view_.draw();
+      ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("Moden und Bänder")) {
+      draw_solvers_tab();
       ImGui::EndTabItem();
     }
     if (ImGui::BeginTabItem("Inverses Design")) {
@@ -377,20 +382,30 @@ void FieldLab::draw() {
       }
       ImGui::EndTabItem();
     }
-    if (ImGui::BeginTabItem("Bandstruktur")) {
-      if (band_view_.draw()) {
-        scene_changed_ = true;
-        clear_selection();
-      }
-      ImGui::EndTabItem();
-    }
-    if (ImGui::BeginTabItem("S-Parameter")) {
-      sparam_view_.draw();
-      ImGui::EndTabItem();
-    }
     ImGui::EndTabBar();
   }
   ImGui::End();
+}
+
+// Eigenmoden-Rechner: Querschnitt eines Wellenleiters (n_eff, n_g) oder Bandstruktur eines Kristalls
+void FieldLab::draw_solvers_tab() {
+  const char* labels[] = {"Wellenleiter-Querschnitt (Modenlöser)", "Kristall-Bandstruktur (PWE)",
+                          "3D-Wellenleiter (Abnahme n_eff)"};
+  for (int k = 0; k < 3; ++k) {
+    if (k > 0) ImGui::SameLine();
+    ImGui::RadioButton(labels[k], &solver_page_, k);
+  }
+  ImGui::Separator();
+  if (solver_page_ == 0) {
+    mode_view_.draw();
+  } else if (solver_page_ == 1) {
+    if (band_view_.draw()) {
+      scene_changed_ = true;
+      clear_selection();
+    }
+  } else {
+    wave3d_view_.draw();
+  }
 }
 
 void FieldLab::draw_field_tab() {

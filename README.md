@@ -1,23 +1,18 @@
 # PhotonLab
 
-Realistischer Photonik-Simulator in C++20 mit SDL3: vom elektromagnetischen Feld über den photonischen Chip bis zur optischen Logik.
+Realistischer Photonik-Simulator in C++20 mit SDL3: vom elektromagnetischen Feld eines Bauteils bis zum
+photonischen Chip, der rechnet.
 
 | Ebene | Arbeitsbereich | Inhalt |
 |---|---|---|
-| Feld | Bauteil-Labor | Modenlöser, FDTD, Bandstrukturen photonischer Kristalle |
-| Schaltung | Chip-Designer | S-Matrizen, Ringe, Interferometer, nichtlineare Bauteile |
-| Logik | Logik-Labor | Wahrheitstabellen, Gatter-Zeugnis, Addierer, Speicher |
-| Quanten | Quanten-Modus | Einzelphotonen, HOM, CNOT, Boson Sampling |
+| Feld | Bauteil-Labor | 2D-FDTD (auch auf der Grafikkarte), 3D-Rechnung der Szene, Moden, Bandstrukturen, inverses Design; fertige Bauteile gehen als S-Matrix in den Chip-Designer |
+| Schaltung | Chip-Designer | S-Matrizen, Ringe, Interferometer, Heizer, MZI-Schalter, Photodioden, nichtlineare Bauteile; Fenster „Logik“ mit Wahrheitstabelle und Zeugnis |
 
-Der vollständige Bauplan steht in [`docs/PhotonLab_Bauplan_v2.pdf`](docs/PhotonLab_Bauplan_v2.pdf).
 Einen interaktiven Vorgeschmack gibt [`docs/prototypes/photonische_gatter.html`](docs/prototypes/photonische_gatter.html) (im Browser öffnen).
 
-**Status:** Alle 13 Phasen des Bauplans umgesetzt. Zuletzt Phase 13 – GDSII-Export, inverses Design mit der
-Adjoint-Methode (90-Grad-Knick, 99,5 % Transmission) und Bauteil-Plugins ([`docs/plugins.md`](docs/plugins.md)).
-Davor Phase 12 – Leistung und 3D: 2D-FDTD 5- bis 7-mal schneller (Threads je Zeitschritt, Randschicht nur am Rand,
-bitgleiche Ergebnisse), vollvektorielles 3D-FDTD mit Abnahme am Wellenleiter, `photonlab_cli bench`
-([`docs/performance.md`](docs/performance.md)). Davor: Quanten-Modus und MZI-Gitter, Logik-Ebene mit Event-Simulator, aktive Photonik (Modulatoren, Augendiagramm, PCM), nichtlineare Optik (Kerr, TPA, Bistabilität), photonische Kristalle,
-S-Parameter vom Feld in die Schaltung, Modenlöser, Schaltungen und Logik-Labor.
+**Status:** Schwerpunkt ist jetzt, den Simulator praktisch nutzbar zu machen. Beispiele im Chip-Designer:
+Halb-, Voll-, 2-, 4- und 8-Bit-Addierer aus thermo-optischen MZI-Schaltern (Directed Logic, baubar in einem
+Standard-Siliziumprozess). Offene Punkte: [`docs/ISSUES.md`](docs/ISSUES.md).
 
 ## Voraussetzungen (Windows)
 

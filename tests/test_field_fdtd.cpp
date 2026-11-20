@@ -1,4 +1,4 @@
-// Phase 4: 2D-FDTD gegen bekannte Lösungen (Bauplan Abschnitt 16).
+// Phase 4: 2D-FDTD gegen bekannte Lösungen.
 #include <doctest/doctest.h>
 
 #include <algorithm>

@@ -194,11 +194,85 @@ Circuit reference_pcm_memory() {
   return c;
 }
 
+// Halbaddierer aus MZI-Schaltern (Directed Logic): A und B heizen je einen Arm; Laser über einen
+// Gitterkoppler auf den Chip, Photodioden an den Ausgängen.
+Circuit reference_half_adder() {
+  Circuit c;
+  c.name = "Halbaddierer (MZI-Schalter, Directed Logic)";
+  c.add("laser", "laser", {{"power", 10e-3}}, 0, 0);
+  c.add("koppler_ein", "grating_coupler", {}, 6, 0);
+  c.add("verteiler", "coupler", {{"power_coupling", 0.5}}, 13, 0);
+  c.add("s", "mzi_switch", {}, 20, 0);
+  c.add("g", "mzi_switch", {}, 20, 4);
+  c.add("c", "mzi_switch", {}, 27, 4);
+  c.add("det_s", "photodiode", {}, 34, 0);
+  c.add("det_c", "photodiode", {}, 34, 4);
+  c.connect("laser.out", "koppler_ein.fiber");
+  c.connect("koppler_ein.wg", "verteiler.in1");
+  c.connect("verteiler.out1", "s.in1");
+  c.connect("verteiler.out2", "g.in1");
+  c.connect("g.out1", "c.in2");
+  c.connect("s.out1", "det_s.in");
+  c.connect("c.out1", "det_c.in");
+  return c;
+}
+
+Circuit reference_ripple_adder(int bits) {
+  if (bits < 1 || bits > 16) throw CircuitError("Addierer: 1 bis 16 Bit");
+  Circuit c;
+  c.name = bits == 1 ? "Volladdierer (MZI-Schalter, Directed Logic)"
+                     : std::to_string(bits) + "-Bit-Addierer (MZI-Schalter, Directed Logic)";
+  c.add("laser", "laser", {{"power", 10e-3}}, 0, 0);
+  c.add("koppler_ein", "grating_coupler", {}, 6, 0);
+  c.connect("laser.out", "koppler_ein.fiber");
+  // Verteiler: Koppler k gibt 1/(bits + 1 - k) des Restes ab, jede Speisung bekommt gleich viel Leistung
+  auto bit_x = [](int i) { return 30 + 21 * i; };
+  std::string bus = "koppler_ein.wg";
+  for (int k = 0; k < bits; ++k) {
+    const std::string name = "verteiler" + std::to_string(k);
+    c.add(name, "coupler", {{"power_coupling", 1.0 / (bits + 1 - k)}}, k == 0 ? 13 : bit_x(k - 1) - 7, 0);
+    c.connect(bus, name + ".in1");
+    bus = name + ".out1";
+  }
+  // Übertrag am Eingang als zwei Lichtschienen: c0 hell bei Cin = 1, n0 hell bei Cin = 0
+  c.add("cin", "mzi_switch", {}, 20, 4);
+  c.connect("verteiler0.out2", "cin.in1");
+  std::string carry = "cin.out1", not_carry = "cin.out2";
+  for (int i = 0; i < bits; ++i) {
+    const std::string n = std::to_string(i);
+    const int x = bit_x(i);
+    c.add("g" + n, "mzi_switch", {}, x, 4);  // Erzeugen: g hell bei A = 1, ng hell bei A = 0
+    c.add("tap_c" + n, "coupler", {{"power_coupling", 0.1}}, x, 9);
+    c.add("tap_n" + n, "coupler", {{"power_coupling", 0.1}}, x, 14);
+    c.add("c" + n, "mzi_switch", {}, x + 7, 7);  // A xor B: Übertrag durchreichen, sonst g
+    c.add("n" + n, "mzi_switch", {}, x + 7, 13);
+    c.add("s" + n, "mzi_switch", {}, x + 7, 19);  // Summe = Übertrag xor A xor B
+    c.add("det_s" + n, "photodiode", {}, x + 14, 21);
+    c.connect(i + 1 < bits ? "verteiler" + std::to_string(i + 1) + ".out2" : bus, "g" + n + ".in1");
+    c.connect(carry, "tap_c" + n + ".in1");
+    c.connect(not_carry, "tap_n" + n + ".in1");
+    c.connect("tap_c" + n + ".out1", "c" + n + ".in1");
+    c.connect("g" + n + ".out1", "c" + n + ".in2");
+    c.connect("tap_n" + n + ".out1", "n" + n + ".in1");
+    c.connect("g" + n + ".out2", "n" + n + ".in2");
+    c.connect("tap_c" + n + ".out2", "s" + n + ".in1");
+    c.connect("tap_n" + n + ".out2", "s" + n + ".in2");
+    c.connect("s" + n + ".out2", "det_s" + n + ".in");
+    carry = "c" + n + ".out1";
+    not_carry = "n" + n + ".out1";
+  }
+  c.add("det_cout", "photodiode", {}, bit_x(bits), 7);
+  c.connect(carry, "det_cout.in");
+  return c;
+}
+
 std::vector<std::string> reference_design_names() {
   return {"mzi",          "mzi_unbalanced",   "ring_allpass",
           "ring_adddrop", "xor_interference", "and_interference",
           "xor_directed", "ring_kerr",        "ring_modulator",
-          "mzi_heater",   "pcm_memory"};
+          "mzi_heater",   "pcm_memory",       "half_adder",
+          "full_adder",   "adder2",           "adder4",
+          "adder8"};
 }
 
 Circuit reference_design(std::string_view name) {
@@ -213,6 +287,11 @@ Circuit reference_design(std::string_view name) {
   if (name == "ring_modulator") return reference_ring_modulator();
   if (name == "mzi_heater") return reference_mzi_heater();
   if (name == "pcm_memory") return reference_pcm_memory();
+  if (name == "half_adder") return reference_half_adder();
+  if (name == "full_adder") return reference_ripple_adder(1);
+  if (name == "adder2") return reference_ripple_adder(2);
+  if (name == "adder4") return reference_ripple_adder(4);
+  if (name == "adder8") return reference_ripple_adder(8);
   throw CircuitError("Unbekanntes Referenz-Design '" + std::string(name) + "'");
 }
 
@@ -233,6 +312,11 @@ ReferenceSetup reference_setup(std::string_view name) {
     setup.monte_carlo.variations = {{"pcm_cell", "confinement", 0.1, true, false}};
   } else if (name == "and_interference") {
     setup.monte_carlo.variations = {{"laser", "power", 0.05, true, false}};
+  } else if (name.find("adder") != std::string_view::npos) {
+    // Breitbandig (keine Resonanzen): Koppler-Streuung und Heizer-Wirkungsgrad je Schalter
+    setup.sweep = {1500e-9, 1600e-9, 201};
+    setup.monte_carlo.variations = {{"mzi_switch", "power_coupling", 0.01, false, false},
+                                    {"mzi_switch", "thermal_resistance", 0.03, true, false}};
   } else {
     // Ringe: schmale Resonanzen brauchen einen feinen Sweep (5 pm Schrittweite)
     setup.sweep = {1540e-9, 1560e-9, 4001};

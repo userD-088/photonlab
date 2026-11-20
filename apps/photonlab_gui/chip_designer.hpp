@@ -36,6 +36,7 @@ class ChipDesigner {
   static constexpr const char* window_spectrum = "Spektrum";
   static constexpr const char* window_curve = "Kennlinie";
   static constexpr const char* window_monte_carlo = "Monte-Carlo";
+  static constexpr const char* window_logic = "Logik";
 
   ChipDesigner(ThreadPool& pool, SDL_Window* window, float ui_scale);
   ~ChipDesigner();
@@ -47,8 +48,11 @@ class ChipDesigner {
   void request_quit();  // fragt bei ungespeicherten Änderungen nach
   bool quit_confirmed() const { return quit_confirmed_; }
 
-  // Zugriff für andere Arbeitsbereiche (Logik-Labor), die dieselbe Schaltung auswerten
+  // Zugriff für andere Arbeitsbereiche und Fenster (Logik, Bauteil-Labor), die dasselbe Projekt nutzen
   io::Project& project() { return project_; }
+  // Messgrößen der Live-Lösung bei der Arbeitswellenlänge (leer, wenn die Schaltung nicht lösbar ist)
+  const std::vector<circuit::InstanceMeasurement>& measurements() const { return measurements_; }
+  void select_instance(const std::string& name) { selected_ = name, rename_buffer_ = name; }
   std::uint64_t project_generation() const {
     return generation_;
   }  // zählt bei jedem neu geladenen Projekt hoch

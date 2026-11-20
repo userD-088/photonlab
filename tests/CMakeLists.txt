@@ -18,9 +18,7 @@ add_executable(photonlab_tests
   test_layout.cpp
   test_io_project.cpp
   test_kerr_cavity.cpp
-  test_link.cpp
   test_logic.cpp
-  test_logic_sim.cpp
   test_modes.cpp
   test_nonlinear_field.cpp
   test_pcm.cpp
@@ -28,9 +26,8 @@ add_executable(photonlab_tests
   test_photonic_crystal.cpp
   test_phc_field.cpp
   test_pwe.cpp
-  test_quantum.cpp
   test_sparameters.cpp)
-target_link_libraries(photonlab_tests PRIVATE photonlab::core photonlab::circuit photonlab::logic photonlab::field photonlab::modes photonlab::pwe photonlab::signal photonlab::quantum photonlab::io photonlab::layout doctest::doctest)
+target_link_libraries(photonlab_tests PRIVATE photonlab::core photonlab::circuit photonlab::logic photonlab::field photonlab::modes photonlab::pwe photonlab::io photonlab::layout doctest::doctest)
 target_compile_definitions(photonlab_tests PRIVATE
   PHOTONLAB_EXAMPLES_DIR="${PROJECT_SOURCE_DIR}/examples"
   PHOTONLAB_EXAMPLE_PLUGIN="$<TARGET_FILE:photonlab_example_plugin>")
@@ -38,5 +35,5 @@ add_dependencies(photonlab_tests photonlab_example_plugin)
 photonlab_warnings(photonlab_tests)
 add_test(NAME photonlab_tests COMMAND photonlab_tests)
 
-# Validierung über die Kommandozeile (Bauplan Abschnitt 16)
+# Validierung über die Kommandozeile
 add_test(NAME cli_validate COMMAND photonlab_cli validate)

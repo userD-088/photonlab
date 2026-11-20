@@ -1,5 +1,5 @@
-// PhotonLab GUI: Fenster, Docking und die vier Arbeitsbereiche. Chip-Designer (Phase 1 und 2) und
-// Logik-Labor (Phase 3) sind nutzbar, Bauteil-Labor und Quanten-Modus sind noch Platzhalter.
+// PhotonLab GUI: Fenster, Docking und die zwei Arbeitsbereiche Bauteil-Labor (Feld) und Chip-Designer
+// (Schaltung, mit dem Fenster Logik).
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
@@ -12,28 +12,23 @@
 #include <vector>
 
 #include "chip_designer.hpp"
-#include "eye_view.hpp"
 #include "field_lab.hpp"
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
 #include "imgui_internal.h"  // DockBuilder für das Standard-Layout
 #include "implot.h"
-#include "logic_lab.hpp"
+#include "logic_view.hpp"
 #include "photonlab/circuit/plugin.hpp"
 #include "photonlab/circuit/registry.hpp"
 #include "photonlab/core/thread_pool.hpp"
 #include "photonlab/field/gpu.hpp"
-#include "quantum_view.hpp"
 
 namespace {
 
 using photonlab::gui::ChipDesigner;
-using photonlab::gui::EyeView;
 
 const char* window_field = photonlab::gui::FieldLab::window_name;
-const char* window_logic = photonlab::gui::LogicLab::window_name;
-const char* window_quantum = "Quanten-Modus";
 
 void apply_style(float ui_scale) {
   ImGui::StyleColorsDark();
@@ -79,13 +74,11 @@ void build_default_layout(ImGuiID dock_id, ImVec2 size) {
   ImGui::DockBuilderDockWindow(ChipDesigner::window_library, left);
   ImGui::DockBuilderDockWindow(ChipDesigner::window_properties, right);
   ImGui::DockBuilderDockWindow(ChipDesigner::window_spectrum, bottom);
+  ImGui::DockBuilderDockWindow(ChipDesigner::window_logic, bottom);
   ImGui::DockBuilderDockWindow(ChipDesigner::window_monte_carlo, bottom_right);
   ImGui::DockBuilderDockWindow(ChipDesigner::window_curve, bottom_right);
-  ImGui::DockBuilderDockWindow(EyeView::window_name, bottom_right);
   ImGui::DockBuilderDockWindow(window_field, center);
   ImGui::DockBuilderDockWindow(ChipDesigner::window_canvas, center);
-  ImGui::DockBuilderDockWindow(window_logic, center);
-  ImGui::DockBuilderDockWindow(window_quantum, center);
   ImGui::DockBuilderFinish(dock_id);
 }
 
@@ -209,9 +202,7 @@ int main(int argc, char** argv) {
   {
     photonlab::ThreadPool pool;
     ChipDesigner chip_designer(pool, window, ui_scale);
-    photonlab::gui::LogicLab logic_lab(pool, chip_designer);
-    photonlab::gui::EyeView eye_view(pool, chip_designer);
-    photonlab::gui::QuantumView quantum_view(chip_designer);
+    photonlab::gui::LogicView logic_view(pool, chip_designer);
     photonlab::gui::FieldLab field_lab(pool, chip_designer, renderer, ui_scale);
     if (!project_path.empty() && !chip_designer.open_file(project_path) && automated) exit_code = 1;
 
@@ -246,7 +237,7 @@ int main(int argc, char** argv) {
         SDL_SetWindowFullscreen(window, (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) == 0);
       if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Datei")) {
-          chip_designer.draw_file_menu([&] { logic_lab.draw_examples_menu(); });
+          chip_designer.draw_file_menu();
           ImGui::Separator();
           if (ImGui::MenuItem("Beenden")) chip_designer.request_quit();
           ImGui::EndMenu();
@@ -274,9 +265,7 @@ int main(int argc, char** argv) {
 
       field_lab.draw();
       chip_designer.draw();
-      logic_lab.draw();
-      if (chip_designer.show_side_window(EyeView::window_name)) eye_view.draw();  // gehört zum Chip-Designer
-      quantum_view.draw();
+      if (chip_designer.show_side_window(ChipDesigner::window_logic)) logic_view.draw();
       // Beim Start liegt der Chip-Designer vorn (einziger schon nutzbarer Arbeitsbereich)
       if (frame_count == 2) ImGui::SetWindowFocus(ChipDesigner::window_curve);
       if (frame_count == 3) {

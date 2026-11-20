@@ -1,0 +1,1384 @@
+{
+  "format": "photonlab.project",
+  "version": 1,
+  "units": "SI",
+  "circuit": {
+    "name": "8-Bit-Addierer (MZI-Schalter, Directed Logic)",
+    "instances": [
+      {
+        "name": "laser",
+        "type": "laser",
+        "params": {
+          "power": 0.01
+        },
+        "grid": [
+          0,
+          0
+        ]
+      },
+      {
+        "name": "koppler_ein",
+        "type": "grating_coupler",
+        "params": {},
+        "grid": [
+          6,
+          0
+        ]
+      },
+      {
+        "name": "verteiler0",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1111111111111111
+        },
+        "grid": [
+          13,
+          0
+        ]
+      },
+      {
+        "name": "verteiler1",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.125
+        },
+        "grid": [
+          23,
+          0
+        ]
+      },
+      {
+        "name": "verteiler2",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.14285714285714285
+        },
+        "grid": [
+          44,
+          0
+        ]
+      },
+      {
+        "name": "verteiler3",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.16666666666666666
+        },
+        "grid": [
+          65,
+          0
+        ]
+      },
+      {
+        "name": "verteiler4",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.2
+        },
+        "grid": [
+          86,
+          0
+        ]
+      },
+      {
+        "name": "verteiler5",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.25
+        },
+        "grid": [
+          107,
+          0
+        ]
+      },
+      {
+        "name": "verteiler6",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.3333333333333333
+        },
+        "grid": [
+          128,
+          0
+        ]
+      },
+      {
+        "name": "verteiler7",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.5
+        },
+        "grid": [
+          149,
+          0
+        ]
+      },
+      {
+        "name": "cin",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          20,
+          4
+        ]
+      },
+      {
+        "name": "g0",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          30,
+          4
+        ]
+      },
+      {
+        "name": "tap_c0",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          30,
+          9
+        ]
+      },
+      {
+        "name": "tap_n0",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          30,
+          14
+        ]
+      },
+      {
+        "name": "c0",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          37,
+          7
+        ]
+      },
+      {
+        "name": "n0",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          37,
+          13
+        ]
+      },
+      {
+        "name": "s0",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          37,
+          19
+        ]
+      },
+      {
+        "name": "det_s0",
+        "type": "photodiode",
+        "params": {},
+        "grid": [
+          44,
+          21
+        ]
+      },
+      {
+        "name": "g1",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          51,
+          4
+        ]
+      },
+      {
+        "name": "tap_c1",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          51,
+          9
+        ]
+      },
+      {
+        "name": "tap_n1",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          51,
+          14
+        ]
+      },
+      {
+        "name": "c1",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          58,
+          7
+        ]
+      },
+      {
+        "name": "n1",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          58,
+          13
+        ]
+      },
+      {
+        "name": "s1",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          58,
+          19
+        ]
+      },
+      {
+        "name": "det_s1",
+        "type": "photodiode",
+        "params": {},
+        "grid": [
+          65,
+          21
+        ]
+      },
+      {
+        "name": "g2",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          72,
+          4
+        ]
+      },
+      {
+        "name": "tap_c2",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          72,
+          9
+        ]
+      },
+      {
+        "name": "tap_n2",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          72,
+          14
+        ]
+      },
+      {
+        "name": "c2",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          79,
+          7
+        ]
+      },
+      {
+        "name": "n2",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          79,
+          13
+        ]
+      },
+      {
+        "name": "s2",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          79,
+          19
+        ]
+      },
+      {
+        "name": "det_s2",
+        "type": "photodiode",
+        "params": {},
+        "grid": [
+          86,
+          21
+        ]
+      },
+      {
+        "name": "g3",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          93,
+          4
+        ]
+      },
+      {
+        "name": "tap_c3",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          93,
+          9
+        ]
+      },
+      {
+        "name": "tap_n3",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          93,
+          14
+        ]
+      },
+      {
+        "name": "c3",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          100,
+          7
+        ]
+      },
+      {
+        "name": "n3",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          100,
+          13
+        ]
+      },
+      {
+        "name": "s3",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          100,
+          19
+        ]
+      },
+      {
+        "name": "det_s3",
+        "type": "photodiode",
+        "params": {},
+        "grid": [
+          107,
+          21
+        ]
+      },
+      {
+        "name": "g4",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          114,
+          4
+        ]
+      },
+      {
+        "name": "tap_c4",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          114,
+          9
+        ]
+      },
+      {
+        "name": "tap_n4",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          114,
+          14
+        ]
+      },
+      {
+        "name": "c4",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          121,
+          7
+        ]
+      },
+      {
+        "name": "n4",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          121,
+          13
+        ]
+      },
+      {
+        "name": "s4",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          121,
+          19
+        ]
+      },
+      {
+        "name": "det_s4",
+        "type": "photodiode",
+        "params": {},
+        "grid": [
+          128,
+          21
+        ]
+      },
+      {
+        "name": "g5",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          135,
+          4
+        ]
+      },
+      {
+        "name": "tap_c5",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          135,
+          9
+        ]
+      },
+      {
+        "name": "tap_n5",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          135,
+          14
+        ]
+      },
+      {
+        "name": "c5",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          142,
+          7
+        ]
+      },
+      {
+        "name": "n5",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          142,
+          13
+        ]
+      },
+      {
+        "name": "s5",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          142,
+          19
+        ]
+      },
+      {
+        "name": "det_s5",
+        "type": "photodiode",
+        "params": {},
+        "grid": [
+          149,
+          21
+        ]
+      },
+      {
+        "name": "g6",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          156,
+          4
+        ]
+      },
+      {
+        "name": "tap_c6",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          156,
+          9
+        ]
+      },
+      {
+        "name": "tap_n6",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          156,
+          14
+        ]
+      },
+      {
+        "name": "c6",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          163,
+          7
+        ]
+      },
+      {
+        "name": "n6",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          163,
+          13
+        ]
+      },
+      {
+        "name": "s6",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          163,
+          19
+        ]
+      },
+      {
+        "name": "det_s6",
+        "type": "photodiode",
+        "params": {},
+        "grid": [
+          170,
+          21
+        ]
+      },
+      {
+        "name": "g7",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          177,
+          4
+        ]
+      },
+      {
+        "name": "tap_c7",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          177,
+          9
+        ]
+      },
+      {
+        "name": "tap_n7",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1
+        },
+        "grid": [
+          177,
+          14
+        ]
+      },
+      {
+        "name": "c7",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          184,
+          7
+        ]
+      },
+      {
+        "name": "n7",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          184,
+          13
+        ]
+      },
+      {
+        "name": "s7",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          184,
+          19
+        ]
+      },
+      {
+        "name": "det_s7",
+        "type": "photodiode",
+        "params": {},
+        "grid": [
+          191,
+          21
+        ]
+      },
+      {
+        "name": "det_cout",
+        "type": "photodiode",
+        "params": {},
+        "grid": [
+          198,
+          7
+        ]
+      }
+    ],
+    "connections": [
+      {
+        "from": "laser.out",
+        "to": "koppler_ein.fiber"
+      },
+      {
+        "from": "koppler_ein.wg",
+        "to": "verteiler0.in1"
+      },
+      {
+        "from": "verteiler0.out1",
+        "to": "verteiler1.in1"
+      },
+      {
+        "from": "verteiler1.out1",
+        "to": "verteiler2.in1"
+      },
+      {
+        "from": "verteiler2.out1",
+        "to": "verteiler3.in1"
+      },
+      {
+        "from": "verteiler3.out1",
+        "to": "verteiler4.in1"
+      },
+      {
+        "from": "verteiler4.out1",
+        "to": "verteiler5.in1"
+      },
+      {
+        "from": "verteiler5.out1",
+        "to": "verteiler6.in1"
+      },
+      {
+        "from": "verteiler6.out1",
+        "to": "verteiler7.in1"
+      },
+      {
+        "from": "verteiler0.out2",
+        "to": "cin.in1"
+      },
+      {
+        "from": "verteiler1.out2",
+        "to": "g0.in1"
+      },
+      {
+        "from": "cin.out1",
+        "to": "tap_c0.in1"
+      },
+      {
+        "from": "cin.out2",
+        "to": "tap_n0.in1"
+      },
+      {
+        "from": "tap_c0.out1",
+        "to": "c0.in1"
+      },
+      {
+        "from": "g0.out1",
+        "to": "c0.in2"
+      },
+      {
+        "from": "tap_n0.out1",
+        "to": "n0.in1"
+      },
+      {
+        "from": "g0.out2",
+        "to": "n0.in2"
+      },
+      {
+        "from": "tap_c0.out2",
+        "to": "s0.in1"
+      },
+      {
+        "from": "tap_n0.out2",
+        "to": "s0.in2"
+      },
+      {
+        "from": "s0.out2",
+        "to": "det_s0.in"
+      },
+      {
+        "from": "verteiler2.out2",
+        "to": "g1.in1"
+      },
+      {
+        "from": "c0.out1",
+        "to": "tap_c1.in1"
+      },
+      {
+        "from": "n0.out1",
+        "to": "tap_n1.in1"
+      },
+      {
+        "from": "tap_c1.out1",
+        "to": "c1.in1"
+      },
+      {
+        "from": "g1.out1",
+        "to": "c1.in2"
+      },
+      {
+        "from": "tap_n1.out1",
+        "to": "n1.in1"
+      },
+      {
+        "from": "g1.out2",
+        "to": "n1.in2"
+      },
+      {
+        "from": "tap_c1.out2",
+        "to": "s1.in1"
+      },
+      {
+        "from": "tap_n1.out2",
+        "to": "s1.in2"
+      },
+      {
+        "from": "s1.out2",
+        "to": "det_s1.in"
+      },
+      {
+        "from": "verteiler3.out2",
+        "to": "g2.in1"
+      },
+      {
+        "from": "c1.out1",
+        "to": "tap_c2.in1"
+      },
+      {
+        "from": "n1.out1",
+        "to": "tap_n2.in1"
+      },
+      {
+        "from": "tap_c2.out1",
+        "to": "c2.in1"
+      },
+      {
+        "from": "g2.out1",
+        "to": "c2.in2"
+      },
+      {
+        "from": "tap_n2.out1",
+        "to": "n2.in1"
+      },
+      {
+        "from": "g2.out2",
+        "to": "n2.in2"
+      },
+      {
+        "from": "tap_c2.out2",
+        "to": "s2.in1"
+      },
+      {
+        "from": "tap_n2.out2",
+        "to": "s2.in2"
+      },
+      {
+        "from": "s2.out2",
+        "to": "det_s2.in"
+      },
+      {
+        "from": "verteiler4.out2",
+        "to": "g3.in1"
+      },
+      {
+        "from": "c2.out1",
+        "to": "tap_c3.in1"
+      },
+      {
+        "from": "n2.out1",
+        "to": "tap_n3.in1"
+      },
+      {
+        "from": "tap_c3.out1",
+        "to": "c3.in1"
+      },
+      {
+        "from": "g3.out1",
+        "to": "c3.in2"
+      },
+      {
+        "from": "tap_n3.out1",
+        "to": "n3.in1"
+      },
+      {
+        "from": "g3.out2",
+        "to": "n3.in2"
+      },
+      {
+        "from": "tap_c3.out2",
+        "to": "s3.in1"
+      },
+      {
+        "from": "tap_n3.out2",
+        "to": "s3.in2"
+      },
+      {
+        "from": "s3.out2",
+        "to": "det_s3.in"
+      },
+      {
+        "from": "verteiler5.out2",
+        "to": "g4.in1"
+      },
+      {
+        "from": "c3.out1",
+        "to": "tap_c4.in1"
+      },
+      {
+        "from": "n3.out1",
+        "to": "tap_n4.in1"
+      },
+      {
+        "from": "tap_c4.out1",
+        "to": "c4.in1"
+      },
+      {
+        "from": "g4.out1",
+        "to": "c4.in2"
+      },
+      {
+        "from": "tap_n4.out1",
+        "to": "n4.in1"
+      },
+      {
+        "from": "g4.out2",
+        "to": "n4.in2"
+      },
+      {
+        "from": "tap_c4.out2",
+        "to": "s4.in1"
+      },
+      {
+        "from": "tap_n4.out2",
+        "to": "s4.in2"
+      },
+      {
+        "from": "s4.out2",
+        "to": "det_s4.in"
+      },
+      {
+        "from": "verteiler6.out2",
+        "to": "g5.in1"
+      },
+      {
+        "from": "c4.out1",
+        "to": "tap_c5.in1"
+      },
+      {
+        "from": "n4.out1",
+        "to": "tap_n5.in1"
+      },
+      {
+        "from": "tap_c5.out1",
+        "to": "c5.in1"
+      },
+      {
+        "from": "g5.out1",
+        "to": "c5.in2"
+      },
+      {
+        "from": "tap_n5.out1",
+        "to": "n5.in1"
+      },
+      {
+        "from": "g5.out2",
+        "to": "n5.in2"
+      },
+      {
+        "from": "tap_c5.out2",
+        "to": "s5.in1"
+      },
+      {
+        "from": "tap_n5.out2",
+        "to": "s5.in2"
+      },
+      {
+        "from": "s5.out2",
+        "to": "det_s5.in"
+      },
+      {
+        "from": "verteiler7.out2",
+        "to": "g6.in1"
+      },
+      {
+        "from": "c5.out1",
+        "to": "tap_c6.in1"
+      },
+      {
+        "from": "n5.out1",
+        "to": "tap_n6.in1"
+      },
+      {
+        "from": "tap_c6.out1",
+        "to": "c6.in1"
+      },
+      {
+        "from": "g6.out1",
+        "to": "c6.in2"
+      },
+      {
+        "from": "tap_n6.out1",
+        "to": "n6.in1"
+      },
+      {
+        "from": "g6.out2",
+        "to": "n6.in2"
+      },
+      {
+        "from": "tap_c6.out2",
+        "to": "s6.in1"
+      },
+      {
+        "from": "tap_n6.out2",
+        "to": "s6.in2"
+      },
+      {
+        "from": "s6.out2",
+        "to": "det_s6.in"
+      },
+      {
+        "from": "verteiler7.out1",
+        "to": "g7.in1"
+      },
+      {
+        "from": "c6.out1",
+        "to": "tap_c7.in1"
+      },
+      {
+        "from": "n6.out1",
+        "to": "tap_n7.in1"
+      },
+      {
+        "from": "tap_c7.out1",
+        "to": "c7.in1"
+      },
+      {
+        "from": "g7.out1",
+        "to": "c7.in2"
+      },
+      {
+        "from": "tap_n7.out1",
+        "to": "n7.in1"
+      },
+      {
+        "from": "g7.out2",
+        "to": "n7.in2"
+      },
+      {
+        "from": "tap_c7.out2",
+        "to": "s7.in1"
+      },
+      {
+        "from": "tap_n7.out2",
+        "to": "s7.in2"
+      },
+      {
+        "from": "s7.out2",
+        "to": "det_s7.in"
+      },
+      {
+        "from": "c7.out1",
+        "to": "det_cout.in"
+      }
+    ]
+  },
+  "simulation": {
+    "wavelength": 1.55e-06,
+    "sweep": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 201
+    },
+    "monte_carlo": {
+      "samples": 500,
+      "seed": 1,
+      "variations": [
+        {
+          "type": "mzi_switch",
+          "param": "power_coupling",
+          "sigma": 0.01,
+          "relative": false,
+          "correlated": false
+        },
+        {
+          "type": "mzi_switch",
+          "param": "thermal_resistance",
+          "sigma": 0.03,
+          "relative": true,
+          "correlated": false
+        }
+      ]
+    }
+  },
+  "logic": {
+    "name": "8-Bit-Addierer",
+    "inputs": [
+      {
+        "name": "A7",
+        "instance": "g7",
+        "param": "power_a",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "c7",
+          "n7",
+          "s7"
+        ]
+      },
+      {
+        "name": "A6",
+        "instance": "g6",
+        "param": "power_a",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "c6",
+          "n6",
+          "s6"
+        ]
+      },
+      {
+        "name": "A5",
+        "instance": "g5",
+        "param": "power_a",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "c5",
+          "n5",
+          "s5"
+        ]
+      },
+      {
+        "name": "A4",
+        "instance": "g4",
+        "param": "power_a",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "c4",
+          "n4",
+          "s4"
+        ]
+      },
+      {
+        "name": "A3",
+        "instance": "g3",
+        "param": "power_a",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "c3",
+          "n3",
+          "s3"
+        ]
+      },
+      {
+        "name": "A2",
+        "instance": "g2",
+        "param": "power_a",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "c2",
+          "n2",
+          "s2"
+        ]
+      },
+      {
+        "name": "A1",
+        "instance": "g1",
+        "param": "power_a",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "c1",
+          "n1",
+          "s1"
+        ]
+      },
+      {
+        "name": "A0",
+        "instance": "g0",
+        "param": "power_a",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "c0",
+          "n0",
+          "s0"
+        ]
+      },
+      {
+        "name": "B7",
+        "instance": "c7",
+        "param": "power_b",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "n7",
+          "s7"
+        ]
+      },
+      {
+        "name": "B6",
+        "instance": "c6",
+        "param": "power_b",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "n6",
+          "s6"
+        ]
+      },
+      {
+        "name": "B5",
+        "instance": "c5",
+        "param": "power_b",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "n5",
+          "s5"
+        ]
+      },
+      {
+        "name": "B4",
+        "instance": "c4",
+        "param": "power_b",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "n4",
+          "s4"
+        ]
+      },
+      {
+        "name": "B3",
+        "instance": "c3",
+        "param": "power_b",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "n3",
+          "s3"
+        ]
+      },
+      {
+        "name": "B2",
+        "instance": "c2",
+        "param": "power_b",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "n2",
+          "s2"
+        ]
+      },
+      {
+        "name": "B1",
+        "instance": "c1",
+        "param": "power_b",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "n1",
+          "s1"
+        ]
+      },
+      {
+        "name": "B0",
+        "instance": "c0",
+        "param": "power_b",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "n0",
+          "s0"
+        ]
+      },
+      {
+        "name": "Cin",
+        "instance": "cin",
+        "param": "power_a",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "Cout",
+        "instance": "det_cout",
+        "measurement": "Leistung",
+        "expected": [],
+        "threshold": 9.5207e-05
+      },
+      {
+        "name": "S7",
+        "instance": "det_s7",
+        "measurement": "Leistung",
+        "expected": [],
+        "threshold": 1.0579e-05
+      },
+      {
+        "name": "S6",
+        "instance": "det_s6",
+        "measurement": "Leistung",
+        "expected": [],
+        "threshold": 1.1754e-05
+      },
+      {
+        "name": "S5",
+        "instance": "det_s5",
+        "measurement": "Leistung",
+        "expected": [],
+        "threshold": 1.306e-05
+      },
+      {
+        "name": "S4",
+        "instance": "det_s4",
+        "measurement": "Leistung",
+        "expected": [],
+        "threshold": 1.4511e-05
+      },
+      {
+        "name": "S3",
+        "instance": "det_s3",
+        "measurement": "Leistung",
+        "expected": [],
+        "threshold": 1.6123e-05
+      },
+      {
+        "name": "S2",
+        "instance": "det_s2",
+        "measurement": "Leistung",
+        "expected": [],
+        "threshold": 1.7915e-05
+      },
+      {
+        "name": "S1",
+        "instance": "det_s1",
+        "measurement": "Leistung",
+        "expected": [],
+        "threshold": 1.9905e-05
+      },
+      {
+        "name": "S0",
+        "instance": "det_s0",
+        "measurement": "Leistung",
+        "expected": [],
+        "threshold": 2.2117e-05
+      }
+    ]
+  },
+  "field": {
+    "name": "",
+    "width": 0.0,
+    "height": 0.0,
+    "cell_size": 2.5e-08,
+    "background_index": 1.0,
+    "polarization": "ez",
+    "boundary_x": "pml",
+    "boundary_y": "pml",
+    "pml_cells": 12,
+    "courant": 0.99,
+    "duration": 0.0,
+    "shapes": [],
+    "sources": [],
+    "monitors": [],
+    "ports": [],
+    "sparameters": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 51,
+      "source_offset": 3e-07,
+      "decay": 1e-05,
+      "max_time": 5e-12
+    }
+  },
+  "cross_section": {
+    "core": "Si",
+    "lower": "SiO2",
+    "upper": "SiO2",
+    "width": 5e-07,
+    "height": 2.2e-07,
+    "slab_height": 0.0,
+    "margin_x": 1e-06,
+    "margin_y": 8e-07,
+    "cell_size": 2e-08,
+    "wavelength": 1.55e-06,
+    "polarization": "quasi_te",
+    "modes": 4
+  },
+  "sparameters": []
+}

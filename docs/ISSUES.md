@@ -37,7 +37,7 @@ Offen aus Phase 2 (Folge-Issues):
 ## Phase 3 – Logik-Labor (linear)
 - [x] #23 `libs/logic`: Codierungen (Intensität, Phase, elektrisch), Wahrheitstabellen-Läufer auf Schaltungs-Ebene
 - [x] #24 Schwellwert-Analyse und Kontrastverhältnis CR = 10·log10(P1_min / P0_max)
-- [x] #25 Gatter-Zeugnis mit Ampeln (Kriterien aus Bauplan 7.8), Kaskaden-Test
+- [x] #25 Gatter-Zeugnis mit Ampeln (Kriterien nach Miller 2010), Kaskaden-Test
 - [x] #26 Referenz-Design Interferenz-XOR/XNOR; Abnahme: CR > 20 dB im Idealfall, fehlende Regeneration wird markiert
 - [x] #27 Ring-Directed-Logic (elektrisch abgestimmte Add-Drop-Ringe, XOR/XNOR)
 - [x] #28 Logik-Labor in der GUI: Gatter-Definition, Wahrheitstabelle mit Messwerten, Zeugnis
@@ -45,7 +45,7 @@ Offen aus Phase 2 (Folge-Issues):
 - [x] #30 Export des charakterisierten Gatters als `.gate.json`
 
 Offen aus Phase 3 (Folge-Issues):
-- [ ] #31 Wellenlängen-Codierung (Mehrkanal-Löser, Bauplan 5.5) und Polarisations-Codierung
+- [ ] #31 Wellenlängen-Codierung (Mehrkanal-Löser) und Polarisations-Codierung
 - [ ] #32 Toleranz gegen Rauschen als Statistik (Monte-Carlo über die Wahrheitstabelle, Ausbeute des Gatters)
 - [ ] #33 Weitere Referenz-Gatter: NOT/OR mit Bias-Strahl, Directed-Logic AND/OR
 - [ ] #34 Logik-Labor: eigenes Fensterlayout je Arbeitsbereich (Platz für Tabelle und Zeugnis)
@@ -75,11 +75,11 @@ Offen aus Phase 4 (Folge-Issues):
 
 Offen aus Phase 5 (Folge-Issues):
 - [ ] #51 Vollvektorieller Modenlöser (Ex und Ey gekoppelt), damit stark führende Si-Drähte genauer werden
-- [ ] #52 Vergleich mit Meep/MPB als Validierungsbericht (Bauplan, Abnahme Phase 5)
+- [ ] #52 Vergleich mit Meep/MPB als Validierungsbericht
 - [ ] #53 Dispersionskurve n_eff(lambda) und Breiten-Sweep als Plot; Zuordnung der Moden über Feldüberlapp
 - [x] #54a Einseitig strahlende Modenquelle (zweite Stromschicht, Rückwärts 3e-6 bzw. 2e-4)
 - [ ] #54 Richtungsgetrennter Modenmonitor
-- [ ] #55 Materialdispersion im FDTD (Lorentz-Pole per ADE, Bauplan 4.4)
+- [ ] #55 Materialdispersion im FDTD (Lorentz-Pole per ADE)
 
 ## Phase 6 – Brücke 1: vom Bauteil zum Chip
 - [x] #56 S-Parameter-Extraktion: Breitband-Modenpuls je Port, laufende DFT an allen Ports, Zerlegung in Laufrichtungen
@@ -124,7 +124,7 @@ Offen aus Phase 6 (Folge-Issues):
 - [x] #87 Photodiode mit Schrot- und thermischem Rauschen, SNR
 - [x] #88 Zeitbereich der Strecke: PRBS, Treiber, Ring (Coupled-Mode) und MZM, Empfänger, Augendiagramm, Q, BER (`libs/signal`)
 - [x] #89 PCM-Speicherzelle (GST): Pulsmodell, Programmieren mit Nachlesen, Zwischenstufen; Handlungen im Chip-Designer
-- [ ] #90 Zeitbereich für beliebige Schaltungen (Vector Fitting der S-Parameter, Bauplan 5.3)
+- [ ] #90 Zeitbereich für beliebige Schaltungen (Vector Fitting der S-Parameter)
 - [ ] #91 PN-Überlapp mit dem Modenlöser statt gleichmäßiger Verteilung; Wanderwellen-Elektrode für lange MZM
 - [ ] #92 Thermische Zeitkonstante und Übersprechen der Heizer; Laser-RIN-Spektrum statt weiß
 

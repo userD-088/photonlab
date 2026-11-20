@@ -123,7 +123,7 @@ struct Port {
   bool operator==(const Port&) const = default;
 };
 
-// Einstellungen der S-Parameter-Extraktion (Bauplan Abschnitt 6).
+// Einstellungen der S-Parameter-Extraktion.
 struct SParameterSettings {
   double wavelength_start = 1500e-9;  // [m]
   double wavelength_stop = 1600e-9;   // [m]

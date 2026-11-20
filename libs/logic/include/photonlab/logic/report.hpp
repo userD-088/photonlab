@@ -1,5 +1,5 @@
 #pragma once
-// Gatter-Zeugnis (Bauplan 7.8): misst an einer Schaltung, welche Anforderungen an ein Logikelement
+// Gatter-Zeugnis: misst an einer Schaltung, welche Anforderungen an ein Logikelement
 // erfüllt sind, und bewertet jede mit einer Ampel. Messvorschriften und Schwellen: docs/physics/logic.md
 #include <string>
 #include <vector>

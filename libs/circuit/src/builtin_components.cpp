@@ -501,6 +501,44 @@ class Heater final : public Component {
   double length_, power_, r_th_, dn_dt_;
 };
 
+// MZI-Schalter: Koppler - zwei Arme mit je einem Heizer - Koppler. Gleiche Arme (gleiche Heizleistung)
+// koppeln über (in1 -> out2), eine Phasendifferenz pi schaltet auf Durchgang (in1 -> out1). Mit je einem
+// Steuersignal pro Arm ist der Zustand das XOR der beiden Signale (Directed Logic).
+class MziSwitch final : public Component {
+ public:
+  explicit MziSwitch(const ParamMap& p)
+      : path_(p),
+        length_(p.at("length")),
+        power_a_(p.at("power_a")),
+        power_b_(p.at("power_b")),
+        r_th_(p.at("thermal_resistance")),
+        dn_dt_(p.at("dn_dT")),
+        kappa2_(p.at("power_coupling")),
+        excess_loss_db_(p.at("excess_loss_db")) {}
+  int port_count() const override { return 4; }
+  CMatrix s_matrix(double wavelength) const override {
+    const double a = amplitude_from_loss_db(excess_loss_db_);
+    const cplx t = a * std::sqrt(1.0 - kappa2_), ik = a * I * std::sqrt(kappa2_);
+    const cplx arm = path_.transmission(wavelength, length_);
+    const cplx ea = arm * expi(heater_phase(wavelength, length_, dn_dt_, r_th_, power_a_));
+    const cplx eb = arm * expi(heater_phase(wavelength, length_, dn_dt_, r_th_, power_b_));
+    // M = C diag(ea, eb) C mit C = [[t, ik], [ik, t]]; Portreihenfolge in1, in2, out1, out2
+    const cplx m11 = t * ea * t + ik * eb * ik, m12 = t * ea * ik + ik * eb * t;
+    const cplx m21 = ik * ea * t + t * eb * ik, m22 = ik * ea * ik + t * eb * t;
+    CMatrix s = CMatrix::Zero(4, 4);
+    s(2, 0) = m11, s(2, 1) = m12, s(3, 0) = m21, s(3, 1) = m22;
+    s(0, 2) = m11, s(1, 2) = m12, s(0, 3) = m21, s(1, 3) = m22;  // reziprok
+    return s;
+  }
+  std::vector<Measurement> measure(const CVector& /*a*/, const CVector& /*b*/) const override {
+    return {{"Heizleistung", power_a_ + power_b_, "W"}};
+  }
+
+ private:
+  GuidedPath path_;
+  double length_, power_a_, power_b_, r_th_, dn_dt_, kappa2_, excess_loss_db_;
+};
+
 PnSection pn_section(const ParamMap& p) {
   PnSection pn;
   pn.junction.acceptors = p.at("acceptors");
@@ -771,6 +809,24 @@ void register_builtin_components(ComponentRegistry& registry) {
                   {"in", "out"},
                   params,
                   make<Heater>});
+    // MZI-Schalter aus denselben Heizern (P_pi = 24,8 mW je Arm); Koppler wie der Richtkoppler.
+    std::vector<ParamSpec> mzi = {
+        {"power_a", "Heizer Arm 1", 0.0, 0.0, 0.2, "mW", 1e-3},
+        {"power_b", "Heizer Arm 2", 0.0, 0.0, 0.2, "mW", 1e-3},
+        {"length", "Heizerlänge", 61.6e-6, 1e-6, 1e-2, "µm", 1e-6},
+        {"thermal_resistance", "Wärmewiderstand", r_th, 1.0, 1e7, "K/mW", 1e3},
+        {"dn_dT", "Thermo-optischer Koeffizient", dn_dT, -1e-3, 1e-3, "1e-4/K", 1e-4},
+        {"power_coupling", "Kreuzkopplung der Koppler", 0.5, 0.0, 1.0, "", 1.0},
+        {"excess_loss_db", "Zusatzverlust je Koppler", 0.0, 0.0, 60.0, "dB", 1.0}};
+    mzi.insert(mzi.end(), guided.begin(), guided.end());
+    ComponentType type{"mzi_switch",
+                       "MZI-Schalter (2 Heizer)",
+                       "Koppler, zwei Arme mit Heizer, Koppler. Gleiche Heizleistung: Kreuz (in1 -> out2), "
+                       "Unterschied P_pi: Durchgang (in1 -> out1). Stationär, kein Übersprechen der Heizer.",
+                       {"in1", "in2", "out1", "out2"},
+                       mzi,
+                       make<MziSwitch>};
+    registry.add(std::move(type));
   }
   // PN-Übergang: Dotierung 5e17 cm^-3 auf beiden Seiten, Gamma = 0,8, 500 x 220 nm (übliche Werte für
   // Verarmungs-Modulatoren, z. B. Reed u. a., Nature Photonics 4, 518 (2010)); Serienwiderstand 50 Ohm

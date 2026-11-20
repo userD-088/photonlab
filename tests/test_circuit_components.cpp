@@ -91,3 +91,27 @@ TEST_CASE("Laser und Detektor: Leistung, Phase, Photostrom") {
   CHECK(measured[0].value == doctest::Approx(1e-3).epsilon(1e-14));
   CHECK(measured[1].value == doctest::Approx(0.8e-3 + 1e-9).epsilon(1e-14));
 }
+
+TEST_CASE("MZI-Schalter: Kreuz bei gleicher Heizleistung, Durchgang bei P_pi Unterschied") {
+  const double p_pi = 24.77e-3;  // P_pi des Heizers (Harris u. a. 2014), siehe builtin_components.cpp
+  auto transfer = [&](double pa, double pb) {
+    const CMatrix s =
+        reg().create("mzi_switch", {{"power_a", pa}, {"power_b", pb}, {"loss_db_per_cm", 0.0}})->s_matrix(lambda0);
+    CHECK(unitarity_error(s) < 1e-12);
+    CHECK((s - s.transpose()).norm() < 1e-15);
+    return s;
+  };
+  for (const auto& [pa, pb] : {std::pair{0.0, 0.0}, std::pair{p_pi, p_pi}}) {
+    const CMatrix s = transfer(pa, pb);
+    CHECK(std::norm(s(3, 0)) == doctest::Approx(1.0).epsilon(1e-6));  // in1 -> out2
+    CHECK(std::norm(s(2, 0)) < 1e-6);
+  }
+  for (const auto& [pa, pb] : {std::pair{p_pi, 0.0}, std::pair{0.0, p_pi}}) {
+    const CMatrix s = transfer(pa, pb);
+    CHECK(std::norm(s(2, 0)) == doctest::Approx(1.0).epsilon(1e-6));  // in1 -> out1
+    CHECK(std::norm(s(3, 1)) == doctest::Approx(1.0).epsilon(1e-6));  // in2 -> out2
+  }
+  // Dazwischen: |S(out1, in1)|² = sin²(dphi/2) mit dphi = pi * (pa - pb) / P_pi
+  const CMatrix s = transfer(0.3 * p_pi, 0.0);
+  CHECK(std::norm(s(2, 0)) == doctest::Approx(std::pow(std::sin(0.15 * constants::pi), 2)).epsilon(1e-6));
+}

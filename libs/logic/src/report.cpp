@@ -103,7 +103,7 @@ double phase_tolerance(const Circuit& circuit, const ComponentRegistry& registry
         auto clamp = [&](double v) { return std::clamp(v + shift, p.min_value, p.max_value); };
         bool is_input = false;
         for (auto& input : varied_gate.inputs)
-          if (input.instance == p.instance && input.param == p.param) {
+          if (input.param == p.param && std::ranges::count(targets(input), p.instance) > 0) {
             input.value0 = clamp(input.value0);
             input.value1 = clamp(input.value1);
             is_input = true;
@@ -144,7 +144,8 @@ double output_power_at(const Circuit& circuit, const ComponentRegistry& registry
                        std::size_t output) {
   Circuit c = apply_inputs(circuit, gate, row);
   const LogicInput& input = gate.inputs[input_index];
-  c.find_instance(input.instance)->params[input.param] = input.value0 + x * (input.value1 - input.value0);
+  for (const auto& name : targets(input))
+    c.find_instance(name)->params[input.param] = input.value0 + x * (input.value1 - input.value0);
   const CompiledCircuit compiled(c, registry);
   for (const auto& m : compiled.measurements(compiled.solve(wavelength)))
     if (m.instance == gate.outputs[output].instance && m.measurement.name == gate.outputs[output].measurement)
@@ -187,6 +188,11 @@ CascadeResult build_cascade(const Circuit& circuit, const ComponentRegistry& reg
   CascadeResult result;
   const LogicInput& input = gate.inputs.at(input_index);
   const LogicOutput& output = gate.outputs.at(output_index);
+  if (!input.more_instances.empty()) {
+    result.reason = "Eingang '" + input.name + "' schaltet mehrere Bauteile; der Kaskaden-Test braucht eine "
+                    "einzelne Lichtquelle als Eingang.";
+    return result;
+  }
   if (input.encoding != Encoding::intensity) {
     result.reason =
         "Eingang '" + input.name + "' ist " + std::string(adjective(input.encoding)) +
@@ -246,6 +252,7 @@ CascadeResult build_cascade(const Circuit& circuit, const ComponentRegistry& reg
     LogicInput copy = in;
     copy.name = in.name + "1";
     copy.instance = "s1_" + in.instance;
+    for (auto& name : copy.more_instances) name = "s1_" + name;
     two_stage.inputs.push_back(copy);
   }
   for (std::size_t k = 0; k < gate.inputs.size(); ++k) {
@@ -253,6 +260,7 @@ CascadeResult build_cascade(const Circuit& circuit, const ComponentRegistry& reg
     LogicInput copy = gate.inputs[k];
     copy.name += "2";
     copy.instance = "s2_" + copy.instance;
+    for (auto& name : copy.more_instances) name = "s2_" + name;
     two_stage.inputs.push_back(copy);
   }
   if (two_stage.inputs.size() > max_inputs) {
@@ -315,7 +323,10 @@ GateReport characterize(const Circuit& circuit, const ComponentRegistry& registr
       report.worst_extinction_db = std::min(report.worst_extinction_db, a.extinction_db);
     all_expected = all_expected && a.has_expected;
     all_named = all_named && !a.function.empty();
-    functions += (k ? ", " : "") + gate.outputs[k].name + " = " + (a.function.empty() ? "?" : a.function);
+    functions += (k ? ", " : "") + gate.outputs[k].name + " = " +
+                 (!a.function.empty() ? a.function
+                  : a.has_expected  ? std::string(a.separable ? "wie erwartet" : "falsch")
+                                    : "?");
     nominal.bits.push_back(a.bits);
     nominal.threshold.push_back(a.threshold);
     report.outputs.push_back(std::move(a));

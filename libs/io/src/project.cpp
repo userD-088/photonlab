@@ -21,18 +21,24 @@ constexpr const char* gate_format_name = "photonlab.gate";
 
 ordered_json gate_to_json(const logic::GateDefinition& gate) {
   ordered_json inputs = ordered_json::array(), outputs = ordered_json::array();
-  for (const auto& in : gate.inputs)
-    inputs.push_back({{"name", in.name},
+  for (const auto& in : gate.inputs) {
+    ordered_json j = {{"name", in.name},
                       {"instance", in.instance},
                       {"param", in.param},
                       {"value0", in.value0},
                       {"value1", in.value1},
-                      {"encoding", std::string(logic::to_string(in.encoding))}});
-  for (const auto& out : gate.outputs)
-    outputs.push_back({{"name", out.name},
-                       {"instance", out.instance},
-                       {"measurement", out.measurement},
-                       {"expected", out.expected}});
+                      {"encoding", std::string(logic::to_string(in.encoding))}};
+    if (!in.more_instances.empty()) j["more_instances"] = in.more_instances;
+    inputs.push_back(std::move(j));
+  }
+  for (const auto& out : gate.outputs) {
+    ordered_json j = {{"name", out.name},
+                      {"instance", out.instance},
+                      {"measurement", out.measurement},
+                      {"expected", out.expected}};
+    if (out.threshold > 0.0) j["threshold"] = out.threshold;
+    outputs.push_back(std::move(j));
+  }
   return {{"name", gate.name}, {"inputs", std::move(inputs)}, {"outputs", std::move(outputs)}};
 }
 
@@ -41,16 +47,18 @@ logic::GateDefinition gate_from_json(const ordered_json& json) {
   gate.name = json.value("name", "");
   if (json.contains("inputs"))
     for (const auto& in : json.at("inputs"))
-      gate.inputs.push_back({in.at("name").get<std::string>(), in.at("instance").get<std::string>(),
-                             in.at("param").get<std::string>(), in.at("value0").get<double>(),
-                             in.at("value1").get<double>(),
-                             logic::encoding_from_string(in.value("encoding", "intensity"))});
+      gate.inputs.push_back(
+          {in.at("name").get<std::string>(), in.at("instance").get<std::string>(),
+           in.at("param").get<std::string>(), in.at("value0").get<double>(), in.at("value1").get<double>(),
+           logic::encoding_from_string(in.value("encoding", "intensity")),
+           in.value("more_instances", std::vector<std::string>{})});
   if (json.contains("outputs"))
     for (const auto& out : json.at("outputs"))
       gate.outputs.push_back(
           {out.at("name").get<std::string>(), out.at("instance").get<std::string>(),
            out.value("measurement", "Leistung"),
-           out.contains("expected") ? out.at("expected").get<std::vector<int>>() : std::vector<int>{}});
+           out.contains("expected") ? out.at("expected").get<std::vector<int>>() : std::vector<int>{},
+           out.value("threshold", 0.0)});
   return gate;
 }
 
@@ -342,86 +350,6 @@ modes::CrossSection cross_section_from_json(const ordered_json& j) {
 }
 
 // JSON kennt weder unendlich noch NaN: null steht für "nicht messbar bzw. unendlich"
-ordered_json link_to_json(const signal::LinkSettings& l) {
-  return {{"bit_rate", l.bit_rate},
-          {"prbs_order", l.prbs_order},
-          {"bits", l.bits},
-          {"samples_per_bit", l.samples_per_bit},
-          {"seed", l.seed},
-          {"wavelength", l.wavelength},
-          {"laser_power", l.laser_power},
-          {"rin_db_per_hz", l.rin_db_per_hz},
-          {"linewidth", l.linewidth},
-          {"v_low", l.v_low},
-          {"v_high", l.v_high},
-          {"driver_bandwidth", l.driver_bandwidth},
-          {"junction_rc", l.junction_rc},
-          {"series_resistance", l.series_resistance},
-          {"modulator", l.modulator == signal::ModulatorKind::mzm ? "mzm" : "ring"},
-          {"acceptors", l.pn.junction.acceptors},
-          {"donors", l.pn.junction.donors},
-          {"pn_width", l.pn.width},
-          {"pn_height", l.pn.height},
-          {"confinement", l.pn.confinement},
-          {"n_group", l.n_group},
-          {"loss_db_per_cm", l.loss_db_per_cm},
-          {"mzm_length", l.mzm_length},
-          {"mzm_bias_phase", l.mzm_bias_phase},
-          {"ring_radius", l.ring_radius},
-          {"ring_coupling", l.ring_coupling},
-          {"ring_coverage", l.ring_coverage},
-          {"ring_detuning", l.ring_detuning},
-          {"link_loss_db", l.link_loss_db},
-          {"responsivity", l.responsivity},
-          {"dark_current", l.dark_current},
-          {"receiver_bandwidth", l.receiver_bandwidth},
-          {"load_resistance", l.load_resistance},
-          {"temperature", l.temperature},
-          {"noise", l.noise}};
-}
-
-signal::LinkSettings link_from_json(const ordered_json& j) {
-  signal::LinkSettings l;
-  l.bit_rate = j.value("bit_rate", l.bit_rate);
-  l.prbs_order = j.value("prbs_order", l.prbs_order);
-  l.bits = j.value("bits", l.bits);
-  l.samples_per_bit = j.value("samples_per_bit", l.samples_per_bit);
-  l.seed = j.value("seed", l.seed);
-  l.wavelength = j.value("wavelength", l.wavelength);
-  l.laser_power = j.value("laser_power", l.laser_power);
-  l.rin_db_per_hz = j.value("rin_db_per_hz", l.rin_db_per_hz);
-  l.linewidth = j.value("linewidth", l.linewidth);
-  l.v_low = j.value("v_low", l.v_low);
-  l.v_high = j.value("v_high", l.v_high);
-  l.driver_bandwidth = j.value("driver_bandwidth", l.driver_bandwidth);
-  l.junction_rc = j.value("junction_rc", l.junction_rc);
-  l.series_resistance = j.value("series_resistance", l.series_resistance);
-  const std::string kind = j.value("modulator", std::string("ring"));
-  if (kind != "ring" && kind != "mzm") throw IoError("Unbekannter Modulator '" + kind + "' (ring, mzm)");
-  l.modulator = kind == "mzm" ? signal::ModulatorKind::mzm : signal::ModulatorKind::ring;
-  l.pn.junction.acceptors = j.value("acceptors", l.pn.junction.acceptors);
-  l.pn.junction.donors = j.value("donors", l.pn.junction.donors);
-  l.pn.width = j.value("pn_width", l.pn.width);
-  l.pn.height = j.value("pn_height", l.pn.height);
-  l.pn.confinement = j.value("confinement", l.pn.confinement);
-  l.n_group = j.value("n_group", l.n_group);
-  l.loss_db_per_cm = j.value("loss_db_per_cm", l.loss_db_per_cm);
-  l.mzm_length = j.value("mzm_length", l.mzm_length);
-  l.mzm_bias_phase = j.value("mzm_bias_phase", l.mzm_bias_phase);
-  l.ring_radius = j.value("ring_radius", l.ring_radius);
-  l.ring_coupling = j.value("ring_coupling", l.ring_coupling);
-  l.ring_coverage = j.value("ring_coverage", l.ring_coverage);
-  l.ring_detuning = j.value("ring_detuning", l.ring_detuning);
-  l.link_loss_db = j.value("link_loss_db", l.link_loss_db);
-  l.responsivity = j.value("responsivity", l.responsivity);
-  l.dark_current = j.value("dark_current", l.dark_current);
-  l.receiver_bandwidth = j.value("receiver_bandwidth", l.receiver_bandwidth);
-  l.load_resistance = j.value("load_resistance", l.load_resistance);
-  l.temperature = j.value("temperature", l.temperature);
-  l.noise = j.value("noise", l.noise);
-  return l;
-}
-
 ordered_json finite_or_null(double value) {
   return std::isfinite(value) ? ordered_json(value) : ordered_json(nullptr);
 }
@@ -474,11 +402,6 @@ std::string project_to_json(const Project& project) {
                              {"field", scene_to_json(project.field)},
                              {"cross_section", cross_section_to_json(project.cross_section)},
                              {"sparameters", std::move(library)}};
-  if (project.has_link) {
-    ordered_json with_link = root;
-    with_link["link"] = link_to_json(project.link);
-    return with_link.dump(2) + "\n";
-  }
   return root.dump(2) + "\n";
 }
 
@@ -536,10 +459,6 @@ Project project_from_json(std::string_view text) {
       project.cross_section = cross_section_from_json(root.at("cross_section"));
     if (root.contains("sparameters"))
       for (const auto& table : root.at("sparameters")) project.sparameters.push_back(table_from_json(table));
-    if (root.contains("link")) {
-      project.link = link_from_json(root.at("link"));
-      project.has_link = true;
-    }
     return project;
   } catch (const nlohmann::json::exception& e) {
     throw IoError(std::string("Projektdatei fehlerhaft: ") + e.what());
@@ -570,7 +489,6 @@ Project reference_project(std::string_view name) {
   project.sweep = setup.sweep;
   project.monte_carlo = std::move(setup.monte_carlo);
   if (logic::has_reference_gate(name)) project.gate = logic::reference_gate(name);
-  if (name == "ring_modulator") project.has_link = true;  // Augendiagramm mit dem Ring-Modulator
   return project;
 }
 

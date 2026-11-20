@@ -59,18 +59,19 @@ void validate(const GateDefinition& gate, const circuit::Circuit& circuit,
                        " logische Eingänge werden nicht unterstützt");
 
   for (const auto& input : gate.inputs) {
-    const circuit::Instance* instance = circuit.find_instance(input.instance);
-    if (!instance)
-      throw CircuitError("Eingang '" + input.name + "': Instanz '" + input.instance + "' gibt es nicht");
-    const circuit::ComponentType* type = registry.find(instance->type);
-    const circuit::ParamSpec* spec = type ? type->find_param(input.param) : nullptr;
-    if (!spec)
-      throw CircuitError("Eingang '" + input.name + "': '" + input.instance + "' hat keinen Parameter '" +
-                         input.param + "'");
-    for (double value : {input.value0, input.value1})
-      if (!std::isfinite(value) || value < spec->min_value || value > spec->max_value)
-        throw CircuitError("Eingang '" + input.name + "': Wert liegt außerhalb des Bereichs von '" +
+    for (const auto& name : targets(input)) {
+      const circuit::Instance* instance = circuit.find_instance(name);
+      if (!instance) throw CircuitError("Eingang '" + input.name + "': Instanz '" + name + "' gibt es nicht");
+      const circuit::ComponentType* type = registry.find(instance->type);
+      const circuit::ParamSpec* spec = type ? type->find_param(input.param) : nullptr;
+      if (!spec)
+        throw CircuitError("Eingang '" + input.name + "': '" + name + "' hat keinen Parameter '" +
                            input.param + "'");
+      for (double value : {input.value0, input.value1})
+        if (!std::isfinite(value) || value < spec->min_value || value > spec->max_value)
+          throw CircuitError("Eingang '" + input.name + "': Wert liegt außerhalb des Bereichs von '" +
+                             input.param + "'");
+    }
     if (input.value0 == input.value1)
       throw CircuitError("Eingang '" + input.name + "': Bit 0 und Bit 1 haben denselben Wert");
   }
@@ -90,16 +91,30 @@ int input_bit(const GateDefinition& gate, std::size_t row, std::size_t input) {
   return static_cast<int>((row >> (gate.inputs.size() - 1 - input)) & 1u);
 }
 
-circuit::Circuit apply_inputs(const circuit::Circuit& circuit, const GateDefinition& gate, std::size_t row) {
+std::vector<std::string> targets(const LogicInput& input) {
+  std::vector<std::string> names = {input.instance};
+  names.insert(names.end(), input.more_instances.begin(), input.more_instances.end());
+  return names;
+}
+
+circuit::Circuit apply_bits(const circuit::Circuit& circuit, const GateDefinition& gate,
+                            const std::vector<int>& bits) {
   circuit::Circuit result = circuit;
   for (std::size_t k = 0; k < gate.inputs.size(); ++k) {
     const LogicInput& input = gate.inputs[k];
-    circuit::Instance* instance = result.find_instance(input.instance);
-    if (!instance)
-      throw CircuitError("Eingang '" + input.name + "': Instanz '" + input.instance + "' gibt es nicht");
-    instance->params[input.param] = input_bit(gate, row, k) ? input.value1 : input.value0;
+    for (const auto& name : targets(input)) {
+      circuit::Instance* instance = result.find_instance(name);
+      if (!instance) throw CircuitError("Eingang '" + input.name + "': Instanz '" + name + "' gibt es nicht");
+      instance->params[input.param] = k < bits.size() && bits[k] ? input.value1 : input.value0;
+    }
   }
   return result;
+}
+
+circuit::Circuit apply_inputs(const circuit::Circuit& circuit, const GateDefinition& gate, std::size_t row) {
+  std::vector<int> bits(gate.inputs.size());
+  for (std::size_t k = 0; k < bits.size(); ++k) bits[k] = input_bit(gate, row, k);
+  return apply_bits(circuit, gate, bits);
 }
 
 namespace {
@@ -126,6 +141,10 @@ const std::vector<NamedFunction>& named_functions() {
       {"B AND NOT A", 2, {0, 1, 0, 0}},
       {"A OR NOT B", 2, {1, 0, 1, 1}},
       {"B OR NOT A", 2, {1, 1, 0, 1}},
+      {"XOR3", 3, {0, 1, 1, 0, 1, 0, 0, 1}},  // Summe des Volladdierers
+      {"MAJ", 3, {0, 0, 0, 1, 0, 1, 1, 1}},   // Mehrheit: Übertrag des Volladdierers
+      {"AND3", 3, {0, 0, 0, 0, 0, 0, 0, 1}},
+      {"OR3", 3, {0, 1, 1, 1, 1, 1, 1, 1}},
   };
   return functions;
 }

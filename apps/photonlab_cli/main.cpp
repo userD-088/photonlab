@@ -14,6 +14,7 @@
 #include <thread>
 #include <vector>
 
+#include "photonlab/circuit/active_devices.hpp"
 #include "photonlab/circuit/analysis.hpp"
 #include "photonlab/circuit/kerr_cavity.hpp"
 #include "photonlab/circuit/monte_carlo.hpp"
@@ -39,15 +40,11 @@
 #include "photonlab/layout/gds.hpp"
 #include "photonlab/layout/layout.hpp"
 #include "photonlab/logic/field_gate.hpp"
-#include "photonlab/logic/logic_sim.hpp"
 #include "photonlab/logic/reference_gates.hpp"
 #include "photonlab/logic/report.hpp"
 #include "photonlab/materials/material.hpp"
 #include "photonlab/modes/cross_section.hpp"
 #include "photonlab/pwe/pwe.hpp"
-#include "photonlab/quantum/experiments.hpp"
-#include "photonlab/quantum/mesh.hpp"
-#include "photonlab/signal/link.hpp"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -99,20 +96,8 @@ void print_usage() {
       "Hysterese\n"
       "                                               (--detuning in halben Linienbreiten; Bistabilitaet ab "
       "1,73)\n"
-      "  photonlab_cli run <datei> --eye [--csv <aus.csv>]  Augendiagramm der Übertragungsstrecke der Datei\n"
       "  photonlab_cli pcm                            PCM-Speicherzelle: Schreiben, Lesen, Löschen, "
       "Zwischenstufen\n"
-      "  photonlab_cli logic-sim <design> [--family ideal|regeneriert|passiv]\n"
-      "                                               Logik-Ebene: half_adder, full_adder, adder4, sr_latch "
-      "mit allen\n"
-      "                                               Eingangsvektoren (Flip-Flop: Setz-/Rücksetzfolge)\n"
-      "  photonlab_cli quantum hom|cnot|boson         Quanten-Experimente (Hong-Ou-Mandel, CNOT, Boson "
-      "Sampling)\n"
-      "  photonlab_cli mesh [--size N] [--phase-sigma rad] [--coupler-sigma x]\n"
-      "                                               MZI-Gitter: Clements-Zerlegung, Fehler, Kalibrierung, "
-      "Netz-Demo\n"
-      "  photonlab_cli run <datei> --unitary          Übertragungsmatrix Laser -> Detektoren, "
-      "Zwei-Photonen-Koinzidenzen\n"
       "  photonlab_cli fdtd3d [--slab] [--core Si] [--width-nm 500] [--height-nm 220] [--cell-nm 20]\n"
       "                    [--threads N] [--csv <aus.csv>]\n"
       "                                               3D-FDTD eines geraden Wellenleiters: n_eff gegen "
@@ -313,7 +298,7 @@ int cmd_monte_carlo(const std::string& file, const std::string& csv_path) {
   return 0;
 }
 
-// Referenzfall Ring (Bauplan Abschnitt 16 und Abnahme Phase 2): FSR, Güte und Extinktion gegen die Formeln.
+// Referenzfall Ring (Abnahme Phase 2): FSR, Güte und Extinktion gegen die Formeln.
 bool validate_ring(const std::string& out_dir) {
   const auto& registry = circuit::ComponentRegistry::builtin();
   const circuit::Circuit ring = circuit::reference_ring_allpass();
@@ -834,37 +819,6 @@ int cmd_bistability(const std::string& q_text, const std::string& detuning_text,
   return 0;
 }
 
-// Augendiagramm der Übertragungsstrecke eines Projekts (Abschnitt "link"; ohne: Standard-Ring-Modulator)
-int cmd_eye(const std::string& file, const std::string& csv_path) {
-  const io::Project project = io::load_project(file);
-  const signal::LinkSettings settings = project.has_link ? project.link : signal::LinkSettings{};
-  if (!project.has_link) std::printf("Datei enthält keine Strecke: Standard-Ring-Modulator\n");
-  const signal::LinkResult r = signal::simulate_link(settings);
-  std::printf("%s, %.2f Gbit/s, PRBS %d, %d Bits\n",
-              settings.modulator == signal::ModulatorKind::ring ? "Ring-Modulator" : "Mach-Zehnder",
-              settings.bit_rate / 1e9, settings.prbs_order, settings.bits);
-  std::printf("  Pegel: 1 = %.4g uA (sigma %.3g uA), 0 = %.4g uA (sigma %.3g uA)\n", r.mean1 / 1e-6,
-              r.sigma1 / 1e-6, r.mean0 / 1e-6, r.sigma0 / 1e-6);
-  std::printf("  Q = %.2f, BER = %.2e, Extinktion %.2f dB, Augenöffnung ohne Rauschen %.0f %%\n", r.q_factor,
-              r.ber, r.extinction_db, 100.0 * r.eye_opening);
-  std::printf("  Rauschbandbreite %.2f GHz, erwartete Streuung 1: %.3g uA, 0: %.3g uA\n",
-              r.noise_bandwidth / 1e9, r.noise_sigma_expected1 / 1e-6, r.noise_sigma_expected0 / 1e-6);
-  if (!csv_path.empty()) {
-    std::ofstream csv(csv_path);
-    csv << "zeit_s";
-    for (std::size_t e = 0; e < r.eye.size(); ++e) csv << ",spur" << e;
-    csv << "\n";
-    csv.precision(8);
-    for (std::size_t k = 0; k < r.eye.front().size(); ++k) {
-      csv << static_cast<double>(k) * r.sample_interval;
-      for (const auto& trace : r.eye) csv << ',' << trace[k];
-      csv << '\n';
-    }
-    std::printf("Augendiagramm (%zu Spuren) nach %s geschrieben\n", r.eye.size(), csv_path.c_str());
-  }
-  return 0;
-}
-
 // PCM-Speicherzelle: Schreib-Lese-Lösch-Folge mit Programmieren und Nachlesen
 int cmd_pcm() {
   circuit::PcmCell cell;
@@ -891,7 +845,7 @@ int cmd_pcm() {
   return 0;
 }
 
-// Phase 9: P_pi des Heizers, V_pi*L des PN-Phasenschiebers, PCM schreib- und lesbar, Empfängerrauschen
+// Phase 9: P_pi des Heizers, V_pi*L des PN-Phasenschiebers, PCM schreib- und lesbar
 bool validate_active() {
   bool ok = true;
   const circuit::PnSection pn;
@@ -918,197 +872,7 @@ bool validate_active() {
   std::printf("PCM-Zelle: amorph %.3f, kristallin %.3f; Schreiben %s, Löschen %s, Zwischenstufe 0,5 %s\n",
               t_a, t_c, set ? "ok" : "FEHLER", reset ? "ok" : "FEHLER", level ? "ok" : "FEHLER");
   ok = ok && set && reset && level && t_a - t_c > 0.2;
-  signal::LinkSettings s;
-  s.modulator = signal::ModulatorKind::mzm;
-  s.bits = 2000;
-  s.prbs_order = 9;
-  s.laser_power = 0.2e-3;
-  s.junction_rc = false;
-  const signal::LinkResult r = signal::simulate_link(s);
-  const double q_expected = std::abs(r.mean1 - r.mean0) / (r.noise_sigma_expected1 + r.noise_sigma_expected0);
-  std::printf(
-      "Empfängerrauschen: Q gemessen %.2f, aus Schrot- und thermischem Rauschen %.2f (Toleranz 10 %%)\n",
-      r.q_factor, q_expected);
-  ok = ok && std::abs(r.q_factor / q_expected - 1.0) < 0.1;
   return ok;
-}
-
-// Folge für das Flip-Flop: setzen, halten, rücksetzen, halten, zweimal
-std::vector<std::vector<int>> latch_sequence() {
-  return {{0, 0}, {1, 0}, {0, 0}, {0, 0}, {0, 1}, {0, 0}, {1, 0}, {0, 0}, {0, 1}, {0, 0}};
-}
-
-// Logik-Ebene: Design mit einer Gatter-Familie durchrechnen, Prüfung und Ergebnis ausgeben
-int cmd_logic_sim(const std::string& name, const std::string& family_text) {
-  const logic::Family family = logic::family_from_string(family_text.empty() ? "ideal" : family_text);
-  const logic::LogicCircuit c = logic::design(name);
-  const auto vectors = name == "sr_latch" ? latch_sequence() : logic::all_vectors(c.inputs.size());
-  logic::SimSettings settings;
-  settings.keep_traces = false;
-  settings.check_idle_only = name == "sr_latch";
-  const logic::SimResult r = logic::simulate(c, family, vectors, settings);
-  std::printf("%s mit Gattern \"%s\": %d Blöcke, %zu Eingangsvektoren\n", c.name.c_str(),
-              std::string(logic::label(family)).c_str(), r.block_count, vectors.size());
-  int errors = 0, warnings = 0;
-  for (const auto& i : r.static_issues) {
-    if (i.severity == logic::Issue::Severity::error) ++errors;
-    if (i.severity == logic::Issue::Severity::warning) ++warnings;
-  }
-  std::printf("Statische Prüfung: %d Fehler, %d Warnungen\n", errors, warnings);
-  int shown = 0;
-  for (const auto& i : r.static_issues) {
-    if (i.severity == logic::Issue::Severity::info || shown >= 12) continue;
-    std::printf("  %s %s: %s\n", i.severity == logic::Issue::Severity::error ? "FEHLER " : "Warnung",
-                i.where.c_str(), i.text.c_str());
-    ++shown;
-  }
-  if (errors + warnings > shown) std::printf("  ... (%d weitere)\n", errors + warnings - shown);
-  std::printf(
-      "Ergebnis: %d von %d bewerteten Vektoren richtig; Laufzeit (längster Pfad) %.0f ps; Energie je Vektor "
-      "%.3g pJ\n",
-      r.correct, r.checked, r.latency / 1e-12, r.energy_per_vector / 1e-12);
-  int listed = 0;
-  for (const auto& v : r.vectors) {
-    if (v.correct || listed >= 5) continue;
-    std::string in, exp, got;
-    for (const int x : v.inputs) in += static_cast<char>('0' + x);
-    for (const int x : v.expected) exp += static_cast<char>('0' + x);
-    for (const int x : v.decoded) got += static_cast<char>('0' + x);
-    std::printf("  Eingang %s: erwartet %s, gelesen %s - erste Ursache: %s\n", in.c_str(), exp.c_str(),
-                got.c_str(), v.first_error.c_str());
-    ++listed;
-  }
-  return r.correct == r.checked ? 0 : 3;
-}
-
-// Phase 10: 4-Bit-Addierer regeneriert korrekt, passiv mit gemeldeten Kaskadierungsproblemen
-bool validate_logic_level() {
-  const logic::LogicCircuit adder = logic::ripple_adder(4);
-  logic::SimSettings settings;
-  settings.keep_traces = false;
-  const logic::SimResult regen =
-      logic::simulate(adder, logic::Family::regenerated, logic::all_vectors(9), settings);
-  const logic::SimResult passive =
-      logic::simulate(adder, logic::Family::passive, logic::all_vectors(9), settings);
-  int explained = 0, wrong = 0, errors = 0;
-  for (const auto& v : passive.vectors)
-    if (!v.correct) ++wrong, explained += v.first_error.empty() ? 0 : 1;
-  for (const auto& i : passive.static_issues) errors += i.severity == logic::Issue::Severity::error ? 1 : 0;
-  std::printf(
-      "4-Bit-Addierer: regeneriert %d/%d richtig (%.0f ps); passiv %d/%d, %d Prüffehler, %d/%d Fehler mit "
-      "Ursache\n",
-      regen.correct, regen.checked, regen.latency / 1e-12, passive.correct, passive.checked, errors,
-      explained, wrong);
-  return regen.correct == 512 && errors > 0 && explained == wrong;
-}
-
-int cmd_quantum(const std::string& what) {
-  if (what == "hom") {
-    for (const double v : {1.0, 0.9, 0.5}) {
-      quantum::HomSettings s;
-      s.indistinguishability = v;
-      const quantum::HomResult r = quantum::hong_ou_mandel(s, 3);
-      std::printf(
-          "HOM 50:50, Ununterscheidbarkeit %.2f: Koinzidenz %.4f (unterscheidbar %.4f), Sichtbarkeit %.4f\n",
-          v, r.coincidence, r.coincidence_far, r.visibility);
-    }
-    quantum::HomSettings s;
-    s.multiphoton = 0.02;
-    s.detectors.efficiency = 0.8;
-    s.detectors.dark_count = 1e-4;
-    const quantum::HomResult r = quantum::hong_ou_mandel(s, 3);
-    std::printf("HOM mit Mehrphotonen 2 %%, Effizienz 80 %%, Dunkel 1e-4: Sichtbarkeit %.4f\n", r.visibility);
-    return 0;
-  }
-  if (what == "cnot") {
-    const quantum::CnotResult r = quantum::linear_optical_cnot();
-    std::printf("Linear-optisches CNOT (R = 1/3, nachselektiert):\n");
-    const char* names[4] = {"00", "01", "10", "11"};
-    for (int in = 0; in < 4; ++in) {
-      std::printf("  |%s> Erfolg %.4f (1/9 = %.4f):", names[in], r.success[static_cast<std::size_t>(in)],
-                  1.0 / 9.0);
-      for (int out = 0; out < 4; ++out)
-        std::printf("  %s %.3f", names[out],
-                    r.truth[static_cast<std::size_t>(in)][static_cast<std::size_t>(out)]);
-      std::printf("\n");
-    }
-    std::printf("  Wahrheitstabellen-Güte %.4f, Bell-Zustand Phi+ Güte %.4f\n", r.fidelity, r.bell_fidelity);
-    std::printf("  mit Ununterscheidbarkeit 0,9: Güte %.4f\n",
-                quantum::linear_optical_cnot(1.0 / 3.0, 0.9).fidelity);
-    return 0;
-  }
-  if (what == "boson") {
-    const quantum::BosonSamplingResult r = quantum::boson_sampling(6, 3, 42, 20000);
-    std::printf("Boson Sampling: 3 Photonen in 6 Moden, %zu Ergebnisse, %d Stichproben\n", r.outcomes.size(),
-                r.samples);
-    std::printf("  totale Variation Stichprobe - Permanenten %.4f, unterscheidbar - Permanenten %.4f\n",
-                r.tvd_sampled, r.tvd_distinguishable);
-    return 0;
-  }
-  std::printf("quantum hom | cnot | boson\n");
-  return 2;
-}
-
-int cmd_mesh(const std::string& size_text, const std::string& phase_text, const std::string& coupler_text) {
-  const int n = size_text.empty() ? 8 : std::atoi(size_text.c_str());
-  quantum::MeshErrors e;
-  e.phase_sigma = phase_text.empty() ? 0.05 : std::atof(phase_text.c_str());
-  e.coupler_sigma = coupler_text.empty() ? 0.02 : std::atof(coupler_text.c_str());
-  const quantum::Matrix u = quantum::random_unitary(n, 2024);
-  const quantum::MeshDecomposition mesh = quantum::clements_decompose(u);
-  std::printf("Clements-Gitter %d x %d: %zu MZIs, Rekonstruktionsfehler %.2e\n", n, n, mesh.mzis.size(),
-              (quantum::reconstruct(mesh) - u).norm());
-  const double f0 = quantum::fidelity(u, quantum::realize(mesh, e));
-  const double f1 = quantum::fidelity(u, quantum::realize(quantum::calibrate(mesh, e, u, 60), e));
-  std::printf("Fehler: Phasen %.3f rad, Koppler %.3f -> Güte %.5f, nach Kalibrierung %.5f\n", e.phase_sigma,
-              e.coupler_sigma, f0, f1);
-  const quantum::NeuralDemoResult r = quantum::neural_network_demo(e);
-  std::printf(
-      "Neuronales Netz (%d Proben, 4 -> |W1 x|^2 -> 3): Genauigkeit ideal %.1f %%, gefertigt %.1f %%, "
-      "kalibriert %.1f %%\n",
-      r.samples, 100.0 * r.accuracy_ideal, 100.0 * r.accuracy_fabricated, 100.0 * r.accuracy_calibrated);
-  return 0;
-}
-
-int cmd_unitary(const std::string& file) {
-  const io::Project project = io::load_project(file);
-  const quantum::CircuitTransfer t =
-      quantum::circuit_transfer(project.circuit, *io::make_registry(project), project.wavelength);
-  std::printf("Übertragungsmatrix bei %.3f nm (Zeile = Detektor, Spalte = Laser):\n",
-              project.wavelength / units::nm);
-  for (int i = 0; i < t.u.rows(); ++i) {
-    std::printf("  %-10s", t.outputs[static_cast<std::size_t>(i)].c_str());
-    for (int j = 0; j < t.u.cols(); ++j) std::printf("  %+.4f%+.4fi", t.u(i, j).real(), t.u(i, j).imag());
-    std::printf("\n");
-  }
-  if (t.u.cols() >= 2 && t.u.rows() >= 2) {
-    quantum::Pattern in(static_cast<std::size_t>(t.u.cols()), 0);
-    in[0] = in[1] = 1;
-    std::printf("Je ein Photon in %s und %s:\n", t.inputs[0].c_str(), t.inputs[1].c_str());
-    for (const auto& [p, prob] : quantum::distribution(t.u, in)) {
-      std::printf("  ");
-      for (std::size_t k = 0; k < p.size(); ++k) std::printf("%s=%d ", t.outputs[k].c_str(), p[k]);
-      std::printf(": %.4f\n", prob);
-    }
-  }
-  return 0;
-}
-
-// Phase 11: HOM-Sichtbarkeit 1, CNOT-Erfolg 1/9, Gitter erzeugt die Zielmatrix
-bool validate_quantum() {
-  const quantum::HomResult hom = quantum::hong_ou_mandel(quantum::HomSettings{}, 3);
-  const quantum::CnotResult cnot = quantum::linear_optical_cnot();
-  double worst = 0.0;
-  for (int n = 2; n <= 8; ++n) {
-    const quantum::Matrix u = quantum::random_unitary(n, static_cast<std::uint64_t>(n));
-    worst = std::max(worst, (quantum::reconstruct(quantum::clements_decompose(u)) - u).norm());
-  }
-  std::printf(
-      "Quanten: HOM-Sichtbarkeit %.6f (1), CNOT-Erfolg %.6f (1/9 = 0.111111), Wahrheitstabelle %.6f; "
-      "Clements bis 8 x 8: Fehler %.1e\n",
-      hom.visibility, cnot.success[0], cnot.fidelity, worst);
-  return std::abs(hom.visibility - 1.0) < 1e-9 && std::abs(cnot.success[0] - 1.0 / 9.0) < 1e-9 &&
-         worst < 1e-10;
 }
 
 bool validate_modes(const std::string& out_dir) {
@@ -1266,7 +1030,7 @@ bool validate_xor() {
   return contrast_ok && regeneration_flagged;
 }
 
-// Referenzfall MZI (Bauplan Abschnitt 16): Ausgänge folgen sin²/cos² der Phasendifferenz, Energie bleibt
+// Referenzfall MZI: Ausgänge folgen sin²/cos² der Phasendifferenz, Energie bleibt
 // erhalten.
 bool validate_fdtd3d();   // weiter unten (Phase 12)
 bool validate_phase13();  // weiter unten (Phase 13)
@@ -1316,8 +1080,6 @@ int cmd_validate(const std::string& out_dir) {
   ok = validate_pwe() && ok;
   ok = validate_phc_bend() && ok;
   ok = validate_active() && ok;
-  ok = validate_logic_level() && ok;
-  ok = validate_quantum() && ok;
   ok = validate_fdtd3d() && ok;
   ok = validate_phase13() && ok;
   ok = validate_sparameters(out_dir) && ok;
@@ -1696,13 +1458,7 @@ int main(int argc, char** argv) {
     if (command == "materials")
       return cmd_materials(args.size() >= 2 ? std::atof(args[1].c_str()) * units::nm : 1550e-9);
     if (command == "run" && args.size() >= 2 && flag("--modes")) return cmd_modes(args[1]);
-    if (command == "run" && args.size() >= 2 && flag("--eye")) return cmd_eye(args[1], option("--csv"));
     if (command == "pcm") return cmd_pcm();
-    if (command == "quantum") return cmd_quantum(args.size() >= 2 ? args[1] : "");
-    if (command == "mesh")
-      return cmd_mesh(option("--size"), option("--phase-sigma"), option("--coupler-sigma"));
-    if (command == "run" && args.size() >= 2 && flag("--unitary")) return cmd_unitary(args[1]);
-    if (command == "logic-sim" && args.size() >= 2) return cmd_logic_sim(args[1], option("--family"));
     if (command == "run" && args.size() >= 2 && flag("--sparam"))
       return cmd_sparam(args[1], option("--out"), option("--name"));
     if (command == "run" && args.size() >= 2 && flag("--field")) return cmd_field(args[1], option("--csv"));

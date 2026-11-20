@@ -101,4 +101,4 @@ beiden Laufrichtungen nicht.
 | Modenquelle, Ez und Hz | Amplitude A, Leistung nach Formel, höhere Moden klein | 3 %, 4 %, < 2 % |
 
 Die Literaturwerte für den Streifen stammen aus Chrostowski/Hochberg, *Silicon Photonics Design*
-(2015), Kap. 3. Ein Vergleich mit Meep/MPB (Bauplan, Abnahme Phase 5) steht noch aus.
+(2015), Kap. 3. Ein Vergleich mit Meep/MPB steht noch aus.

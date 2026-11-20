@@ -1,5 +1,5 @@
 #pragma once
-// Referenz-Szenen der Feld-Ebene (Bauplan Abschnitt 11). Jede ist Demo und Ausgangspunkt für eigene Versuche.
+// Referenz-Szenen der Feld-Ebene. Jede ist Demo und Ausgangspunkt für eigene Versuche.
 #include <string>
 #include <string_view>
 #include <vector>

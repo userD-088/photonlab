@@ -1,8 +1,10 @@
-# Logik-Labor: Wahrheitstabelle, Kontrast und Gatter-Zeugnis (Phase 3)
+# Logik: Wahrheitstabelle, Kontrast und Gatter-Zeugnis
 
-Code: `libs/logic` · Tests: `tests/test_logic.cpp` · CLI: `photonlab_cli run <datei> --logic`
+Code: `libs/logic` · Tests: `tests/test_logic.cpp` · CLI: `photonlab_cli run <datei> --logic` · Oberfläche:
+Fenster „Logik“ des Chip-Designers (Bits von Hand schalten, Wahrheitstabelle, Zeugnis) und Reiter „Logik
+prüfen“ im Bauteil-Labor (Feld-Gatter).
 
-Das Logik-Labor rechnet auf der Schaltungs-Ebene: stationär, monochromatisch, linear
+Die Logik der Schaltungs-Ebene rechnet stationär, monochromatisch, linear
 (siehe [`circuit_solver.md`](circuit_solver.md)). Alles hier Gesagte gilt für diesen Modellstand.
 
 ## Gatter-Definition
@@ -10,10 +12,16 @@ Das Logik-Labor rechnet auf der Schaltungs-Ebene: stationär, monochromatisch, l
 - **Eingang**: ein Parameter einer Instanz, der für Bit 0 und Bit 1 zwei Werte annimmt.
   Codierung Intensität (Laserleistung 0 / P), Phase (0 / π bei konstanter Leistung) oder elektrisch
   (Steuergröße eines Modulators, z. B. die Abstimmphase eines Rings).
+  Ein Eingang darf denselben Parameter an **mehreren Instanzen** setzen (`more_instances`): eine Steuerleitung,
+  die auf dem Chip mehrere Heizer treibt.
 - **Ausgang**: die optische Leistung an einem Detektor. Der Ausgang ist damit immer intensitätscodiert.
+  Optional eine feste **Schwelle** (W) für das Schalten von Hand; ohne sie gilt der Entscheidungspegel der
+  Wahrheitstabelle.
 - **Erwartung**: optional die Wahrheitstabelle der gewünschten Funktion.
 
-Die Tabelle hat 2^n Zeilen; der erste Eingang ist das höchstwertige Bit (A B = 00, 01, 10, 11).
+Die Tabelle hat 2^n Zeilen; der erste Eingang ist das höchstwertige Bit (A B = 00, 01, 10, 11). Tabelle und
+Zeugnis gibt es bis 6 Eingänge; größere Schaltungen (4- und 8-Bit-Addierer) prüft man von Hand mit Zahlen oder
+im Test mit Zufallsaufgaben.
 
 ## Schwellwert und Kontrast
 
@@ -30,7 +38,7 @@ der größten Lücke und benennt die Funktion, falls sie zu den bekannten gehör
 
 ## Referenz-Gatter und ihre analytischen Pegel
 
-**Interferenz-XOR/XNOR** (Bauplan Abb. 3). Zwei Laser gleicher Leistung P mit Phasen φ_A, φ_B ∈ {0, π},
+**Interferenz-XOR/XNOR**. Zwei Laser gleicher Leistung P mit Phasen φ_A, φ_B ∈ {0, π},
 Bias π/2 im Arm B, Koppler `[[t, iκ], [iκ, t]]`:
 
     b_xor  = √P·(t·e^{iφ_A} − κ·e^{iφ_B})        b_xnor = i·√P·(κ·e^{iφ_A} + t·e^{iφ_B})
@@ -42,10 +50,36 @@ Mit ungleichem Koppler: `CR = 20·log10((t + κ)/(t − κ))`. Mit Bias-Fehler �
 **Interferenz-AND** (gleicher Aufbau, Intensitätscodierung, Bias −π/2). Am Ausgang überlagern sich die
 Felder gleichphasig: `P = (√P_A + √P_B)²/2`, also die Pegel 0, P/2, P/2, 2P und `CR = 10·log10(4) = 6 dB`.
 
-**Directed Logic** (Bauplan 7.4, Prinzip 1). Zwei Add-Drop-Ringe als Weichen: in Resonanz (Bit 0)
+**Directed Logic**. Zwei Add-Drop-Ringe als Weichen: in Resonanz (Bit 0)
 koppelt ein Ring über, um die Abstimmphase π/2 verstimmt (Bit 1) lässt er durch. `A.through → B.in`,
 `A.drop → B.add`; an `B.through` erscheint XNOR, an `B.drop` XOR. Der Kontrast ist endlich, weil ein
 verstimmter Ring noch etwas überkoppelt (Lorentz-Ausläufer) und sich die Leckpfade kohärent addieren.
+
+## Addierer aus MZI-Schaltern (Directed Logic, Chip-Designer)
+
+Baubar in einem Standard-Siliziumprozess: Gitterkoppler, Richtkoppler, thermo-optische MZI-Schalter
+(`mzi_switch`, siehe `active.md`), Ge-Photodioden. Die Summanden sind **elektrische** Heizleistungen
+(Bit 1 = P_π an einem Arm); nur der Übertrag läuft als Licht. Ein Schalter mit A am einen und B am anderen
+Arm steht auf Durchgang genau bei P = A xor B.
+
+- **Halbaddierer**: Laser → Gitterkoppler → 50:50. Zweig 1 durch Schalter s(A, B): S = A xor B am Durchgang.
+  Zweig 2 durch g(A) (hell bei A = 1) in den Eingang 2 von c(A, B): c koppelt über, wenn A = B, also
+  C = A und B.
+- **Volladdierer/Ripple-Carry**: Der Übertrag läuft auf **zwei Schienen** (c hell bei 1, n hell bei 0), genau
+  eine ist immer hell. Je Bit: g(A) erzeugt g (hell bei A) und ng; c(A, B) reicht bei A xor B die Schiene c
+  durch, sonst g (bei A = B ist der Übertrag A); n(A, B) entsprechend mit n und ng. Für die Summe zweigen
+  Koppler 10 % beider Schienen ab, s(A, B) tauscht sie bei A xor B: S = C xor A xor B am Ausgang out2.
+  Alle Speisungen kommen über eine Kette von Kopplern (κ² = 1/(N + 1 − k)) aus einem Laser.
+- **Pegel** (ideal, 50:50-Koppler): Speisung P_s = P_Chip/(N + 1). Der schlechteste Übertrag stammt aus Cin
+  und läuft durch alle N Abgriffe: 0,9^N · P_s; die schlechteste Summe an Bit i: 0,1 · 0,9^i · P_s. Die
+  Nullen sind im Ideal exakt 0 (Kontrast > 100 dB); Koppler-Abweichungen (Monte-Carlo) heben sie an.
+- **Schwellen (Festlegung)**: halbe schlechteste 1 nach diesen Formeln, auf nW gerundet; Halbaddierer
+  P_Chip/4. Laser 10 mW, Gitterkoppler 4 dB.
+- **Grenzen**: stationär (Heizer schalten in µs, nicht in ps), ohne thermisches Übersprechen, ohne
+  Reflexionen; die Leistung für die Heizer (bis 4 · 24,8 mW je Bit A) ist der eigentliche Preis.
+  Unterätzte Heizer brauchen unter 1 mW.
+- **Prüfung**: Halb-, Voll- und 2-Bit-Addierer mit voller Tabelle (Kontrast > 60 dB), 8-Bit-Addierer mit
+  200 Zufallsaufgaben und den festen Schwellen (`test_logic.cpp`).
 
 ## Zeugnis: Messvorschriften
 
@@ -89,7 +123,7 @@ gemeinsam um ±δ verschoben, mit den ungünstigsten Vorzeichen (alle 2^k Kombin
 64 feste Zufalls-Kombinationen). Gesucht ist das größte δ eines geometrischen Rasters (Faktor 1,23,
 bis 90°), bei dem jede Zeile noch richtig entschieden wird. Entsprechend die größte Verstimmung der
 Wellenlänge (1 pm bis 20 nm). Zum Vergleich: ein Silizium-Ring driftet thermisch um etwa
-`λ·(dn/dT)/n_g ≈ 1550 nm · 1,8·10⁻⁴ K⁻¹ / 4,2 ≈ 0,07 nm/K` (dn/dT nach Bauplan 4.4).
+`λ·(dn/dT)/n_g ≈ 1550 nm · 1,8·10⁻⁴ K⁻¹ / 4,2 ≈ 0,07 nm/K`.
 
 ## Gatter auf Feld-Ebene: Messung und Stufen
 

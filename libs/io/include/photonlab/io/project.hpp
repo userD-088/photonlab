@@ -17,7 +17,6 @@
 #include "photonlab/logic/gate.hpp"
 #include "photonlab/logic/report.hpp"
 #include "photonlab/modes/cross_section.hpp"
-#include "photonlab/signal/link.hpp"
 
 namespace photonlab::io {
 
@@ -34,10 +33,7 @@ struct Project {
   modes::CrossSection cross_section;  // Wellenleiter-Querschnitt für den Modenlöser (immer vorhanden)
   // Bauteilbibliothek: gemessene S-Matrizen, im Chip-Designer als Bauteile "sparam:<name>" verfügbar
   std::vector<circuit::SParameterTable> sparameters;
-  logic::GateDefinition gate;  // Gatter-Definition des Logik-Labors; leer, wenn die Schaltung kein Gatter ist
-  // Übertragungsstrecke im Zeitbereich (Augendiagramm); nur gespeichert, wenn has_link
-  signal::LinkSettings link;
-  bool has_link = false;
+  logic::GateDefinition gate;  // Logik der Schaltung (Eingänge, Ausgänge); leer, wenn sie kein Gatter ist
 };
 
 // Projekt aus einem Referenz-Design der Schaltungs-Ebene (photonlab/circuit/reference_designs.hpp) oder
@@ -65,7 +61,7 @@ circuit::SParameterTable make_sparameter_table(const field::FieldScene& scene,
                                                const field::SParameterResult& result,
                                                const std::string& name);
 
-// Eigene Datei .sparam.json: Tabelle und die Szene, aus der sie stammt (Bauplan Abschnitt 6).
+// Eigene Datei .sparam.json: Tabelle und die Szene, aus der sie stammt.
 std::string sparameter_to_json(const circuit::SParameterTable& table,
                                const field::FieldScene* scene = nullptr);
 circuit::SParameterTable sparameter_from_json(std::string_view text);  // wirft IoError
@@ -74,7 +70,7 @@ void save_sparameters(const circuit::SParameterTable& table, const field::FieldS
 circuit::SParameterTable load_sparameters(const std::filesystem::path& path);
 
 // Charakterisiertes Gatter als .gate.json: Definition, gemessene Wahrheitstabelle und Zeugnis.
-// Grundlage für die Logik-Ebene (Brücke 2, Bauplan 8.1).
+// Grundlage für die Logik-Ebene.
 std::string gate_report_to_json(const logic::GateDefinition& gate, const logic::GateReport& report);
 void save_gate_report(const logic::GateDefinition& gate, const logic::GateReport& report,
                       const std::filesystem::path& path);

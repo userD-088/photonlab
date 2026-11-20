@@ -1,5 +1,5 @@
 #pragma once
-// Wahrheitstabellen-Läufer und Schwellwert-Analyse (Bauplan 7.9).
+// Wahrheitstabellen-Läufer und Schwellwert-Analyse.
 // Definitionen und Annahmen: docs/physics/logic.md
 #include <string>
 #include <vector>

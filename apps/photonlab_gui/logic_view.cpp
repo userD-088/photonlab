@@ -1,15 +1,15 @@
-#include "logic_lab.hpp"
+#include "logic_view.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <exception>
+#include <map>
 
 #include "file_dialog.hpp"
-#include "implot.h"
 #include "photonlab/core/units.hpp"
-#include "photonlab/logic/reference_gates.hpp"
 #include "ui_util.hpp"
 
 // Hinweis: Alle Texte bleiben im Latin-1-Zeichenvorrat (eingebaute ImGui-Schrift).
@@ -42,13 +42,6 @@ void traffic_light(logic::Rating rating) {
   ImGui::Dummy(ImVec2(size, size));
 }
 
-const circuit::ParamSpec* find_spec(const circuit::Circuit& circuit, const std::string& instance_name,
-                                    const std::string& param) {
-  const circuit::Instance* instance = circuit.find_instance(instance_name);
-  const circuit::ComponentType* type = instance ? registry().find(instance->type) : nullptr;
-  return type ? type->find_param(param) : nullptr;
-}
-
 // Auswahlliste aller Instanzen; gibt true zurück, wenn sich die Auswahl geändert hat
 bool instance_combo(const char* id, const circuit::Circuit& circuit, std::string* selected,
                     bool need_params) {
@@ -68,10 +61,47 @@ bool instance_combo(const char* id, const circuit::Circuit& circuit, std::string
   return changed;
 }
 
+
+double param_of(const circuit::Instance& instance, const std::string& param) {
+  const auto it = instance.params.find(param);
+  if (it != instance.params.end()) return it->second;
+  const circuit::ComponentType* type = registry().find(instance.type);
+  const circuit::ParamSpec* spec = type ? type->find_param(param) : nullptr;
+  return spec ? spec->default_value : 0.0;
+}
+
+// Mehrbit-Wörter aus Namen wie A0 ... A7: Buchstaben-Vorsilbe plus Stellenzahl. Namen ohne Zahl (Cin, Cout)
+// bleiben einzelne Bits.
+struct Word {
+  std::string name;
+  std::vector<std::pair<int, std::size_t>> bits;  // (Stelle, Index), höchste Stelle zuerst
+};
+template <class Item>
+std::vector<Word> words_of(const std::vector<Item>& items) {
+  std::vector<Word> words;
+  std::map<std::string, std::size_t> by_prefix;
+  for (std::size_t k = 0; k < items.size(); ++k) {
+    const std::string& name = items[k].name;
+    std::size_t split = name.size();
+    while (split > 0 && std::isdigit(static_cast<unsigned char>(name[split - 1]))) --split;
+    if (split == 0 || split == name.size() || name.size() - split > 2) {
+      words.push_back({name, {{0, k}}});
+      continue;
+    }
+    const std::string prefix = name.substr(0, split);
+    const int place = std::atoi(name.c_str() + split);
+    const auto [it, fresh] = by_prefix.emplace(prefix, words.size());
+    if (fresh) words.push_back({prefix, {}});
+    words[it->second].bits.push_back({place, k});
+  }
+  for (auto& w : words)
+    std::sort(w.bits.begin(), w.bits.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+  return words;
+}
+
 }  // namespace
 
-LogicLab::LogicLab(ThreadPool& pool, ChipDesigner& designer)
-    : pool_(pool), designer_(designer), field_gate_view_(pool, designer), logic_sim_view_(pool) {
+LogicView::LogicView(ThreadPool& pool, ChipDesigner& designer) : pool_(pool), designer_(designer) {
   designer_.on_save_gate = [this](const std::string& path) {
     if (result_.key.empty() || !result_.error.empty()) {
       designer_.show_status("Kein gültiges Zeugnis zum Exportieren.", true);
@@ -86,13 +116,13 @@ LogicLab::LogicLab(ThreadPool& pool, ChipDesigner& designer)
   };
 }
 
-LogicLab::~LogicLab() {
+LogicView::~LogicView() {
   designer_.on_save_gate = nullptr;
   if (future_.valid()) future_.wait();
 }
 
 // Alles, wovon das Zeugnis abhängt: Schaltung (über die Revision), Wellenlänge und Gatter-Definition
-std::string LogicLab::key() const {
+std::string LogicView::key() const {
   const io::Project& project = designer_.project();
   char buffer[64];
   std::snprintf(buffer, sizeof buffer, "%llu/%.17g", static_cast<unsigned long long>(designer_.revision()),
@@ -102,6 +132,7 @@ std::string LogicLab::key() const {
     std::snprintf(buffer, sizeof buffer, "/%.17g/%.17g/%d", in.value0, in.value1,
                   static_cast<int>(in.encoding));
     key += "|" + in.name + "/" + in.instance + "/" + in.param + buffer;
+    for (const auto& more : in.more_instances) key += "+" + more;
   }
   for (const auto& out : project.gate.outputs) {
     key += "|" + out.name + "/" + out.instance + "/" + out.measurement + "/";
@@ -110,13 +141,14 @@ std::string LogicLab::key() const {
   return key;
 }
 
-void LogicLab::update() {
+void LogicView::update() {
   if (future_.valid() && future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
     result_ = future_.get();
   if (future_.valid()) return;
   const io::Project& project = designer_.project();
   const std::string current = key();
-  if (project.gate.empty() || result_.key == current) return;
+  // Wahrheitstabelle und Zeugnis nur bis max_inputs Eingänge (2^n Rechnungen plus Toleranzen)
+  if (project.gate.empty() || project.gate.inputs.size() > logic::max_inputs || result_.key == current) return;
 
   // Die Charakterisierung läuft als Job; er besitzt Kopien von Schaltung und Definition.
   future_ = pool_.submit([circuit = project.circuit, gate = project.gate, wavelength = project.wavelength,
@@ -133,85 +165,66 @@ void LogicLab::update() {
   });
 }
 
-void LogicLab::draw() {
+void LogicView::draw() {
   update();
-  ImGui::Begin(window_name);
-  // Zwei Ansichten: Gatter aus der Schaltung des Chip-Designers und Gatter auf Feld-Ebene (Kristall)
-  if (ImGui::BeginTabBar("logik_ansichten")) {
-    if (ImGui::BeginTabItem("Schaltung")) {
-      draw_circuit_tab();
-      ImGui::EndTabItem();
-    }
-    if (ImGui::BeginTabItem("Logikschaltung", nullptr,
-                            pending_tab_ == 2 ? ImGuiTabItemFlags_SetSelected : 0)) {
-      logic_sim_view_.draw();
-      ImGui::EndTabItem();
-    }
-    if (ImGui::BeginTabItem("Feld-Gatter (Kristall)", nullptr,
-                            pending_tab_ == 3 ? ImGuiTabItemFlags_SetSelected : 0)) {
-      field_gate_view_.draw();
-      ImGui::EndTabItem();
-    }
-    ImGui::EndTabBar();
-    pending_tab_ = 0;
+  // Neues Projekt mit Logik: Fenster nach vorn holen
+  if (designer_.project_generation() != seen_generation_) {
+    seen_generation_ = designer_.project_generation();
+    if (!designer_.project().gate.empty()) ImGui::SetWindowFocus(ChipDesigner::window_logic);
+  }
+  if (!ImGui::Begin(ChipDesigner::window_logic)) {
+    ImGui::End();
+    return;
+  }
+  io::Project& project = designer_.project();
+  if (project.gate.empty()) {
+    draw_empty_state();
+    ImGui::End();
+    return;
+  }
+  // Links: Bits schalten und Definition; rechts: Wahrheitstabelle und Zeugnis. Ohne Tabelle (zu viele
+  // Eingänge) bekommt die Eingabe die ganze Breite.
+  const bool table = project.gate.inputs.size() <= logic::max_inputs;
+  const float width = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x;
+  ImGui::BeginChild("live", ImVec2(table ? width * 0.5f : 0.0f, 0.0f), ImGuiChildFlags_Borders);
+  draw_live();
+  if (!table) {
+    ImGui::Spacing();
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled(
+        "%zu Eingänge: die volle Wahrheitstabelle hätte %.0f Zeilen. Tabelle und Zeugnis gibt es bis %zu "
+        "Eingänge; größere Schaltungen hier mit Zahlen prüfen (jede Eingabe rechnet die ganze Schaltung).",
+        project.gate.inputs.size(), std::ldexp(1.0, static_cast<int>(project.gate.inputs.size())),
+        logic::max_inputs);
+    ImGui::PopTextWrapPos();
+  }
+  ImGui::Spacing();
+  if (show_definition_) ImGui::SetNextItemOpen(true);
+  show_definition_ = false;
+  if (ImGui::CollapsingHeader("Definition bearbeiten (Eingänge, Ausgänge)")) draw_definition();
+  ImGui::EndChild();
+  if (table) {
+    ImGui::SameLine();
+    ImGui::BeginChild("tabelle", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
+    draw_truth_table();
+    ImGui::Spacing();
+    draw_report();
+    ImGui::EndChild();
   }
   ImGui::End();
 }
 
-void LogicLab::draw_examples_menu() {
-  if (!ImGui::BeginMenu("Beispiele: Logik (Logik-Labor)")) return;
-  ImGui::SeparatorText("Logikschaltung");
-  for (int d = 0; d < LogicSimView::design_count(); ++d)
-    if (ImGui::MenuItem(LogicSimView::design_label(d))) {
-      logic_sim_view_.select_design(d);
-      pending_tab_ = 2;
-      ImGui::SetWindowFocus(window_name);
-    }
-  ImGui::SeparatorText("Gatter auf Feld-Ebene");
-  const auto names = logic::field_gate_names();
-  for (int g = 0; g < static_cast<int>(names.size()); ++g)
-    if (ImGui::MenuItem(logic::field_gate_label(names[static_cast<std::size_t>(g)]).c_str())) {
-      field_gate_view_.select_gate(g);
-      pending_tab_ = 3;
-      ImGui::SetWindowFocus(window_name);
-    }
-  ImGui::EndMenu();
-}
-
-void LogicLab::draw_circuit_tab() {
+void LogicView::draw_empty_state() {
   io::Project& project = designer_.project();
-  if (project.gate.empty()) {
-    draw_empty_state();
-    return;
-  }
-
-  // Links Definition, Messung und Optimierer untereinander (scrollbar), rechts das Zeugnis
-  const float width = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x;
-  ImGui::BeginChild("definition", ImVec2(width * 0.56f, 0.0f), ImGuiChildFlags_Borders);
-  draw_definition();
-  ImGui::Spacing();
-  draw_truth_table();
-  draw_optimizer();
-  ImGui::EndChild();
-  ImGui::SameLine();
-  ImGui::BeginChild("zeugnis", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
-  draw_report();
-  ImGui::EndChild();
-}
-
-void LogicLab::draw_empty_state() {
-  io::Project& project = designer_.project();
-  ImGui::PushTextWrapPos(ImGui::GetFontSize() * 40.0f);
-  ImGui::TextUnformatted("Das Logik-Labor prüft, ob die Schaltung des Chip-Designers als Logikgatter taugt.");
+  ImGui::PushTextWrapPos(0.0f);
+  ImGui::TextUnformatted("Logik: rechnet die Schaltung als Logikgatter.");
   ImGui::TextDisabled(
-      "Ein logischer Eingang schaltet einen Parameter zwischen zwei Werten um (zum Beispiel die Phase oder "
-      "Leistung "
-      "eines Lasers), ein Ausgang ist die Leistung an einem Detektor. PhotonLab simuliert alle "
-      "Kombinationen, "
-      "misst das Kontrastverhältnis und stellt ein Zeugnis nach den Anforderungen an ein Logikelement aus.");
+      "Ein Eingang schaltet einen Parameter zwischen Bit 0 und Bit 1 (Heizleistung, Laserphase, "
+      "Laserleistung ...), ein Ausgang ist die Leistung an einem Detektor. Hier lassen sich die Bits von Hand "
+      "schalten; bis 6 Eingänge rechnet PhotonLab die ganze Wahrheitstabelle und ein Zeugnis.");
   ImGui::PopTextWrapPos();
   ImGui::Spacing();
-  if (ImGui::Button("Eigenes Gatter aus dieser Schaltung definieren")) {
+  if (ImGui::Button("Logik für diese Schaltung festlegen")) {
     project.gate.name = project.circuit.name;
     designer_.mark_dirty();
     // sinnvolle Vorbelegung: erster Laser als Eingang, erster Detektor als Ausgang
@@ -219,24 +232,29 @@ void LogicLab::draw_empty_state() {
       const circuit::ComponentType* type = registry().find(instance.type);
       if (!type) continue;
       if (project.gate.inputs.empty() && type->find_param("power") && type->port_names.size() == 1)
-        project.gate.inputs.push_back({"A", instance.name, "power", 0.0,
-                                       type->find_param("power")->default_value, logic::Encoding::intensity});
-      if (project.gate.outputs.empty() && instance.type == "detector")
-        project.gate.outputs.push_back({"Y", instance.name, "Leistung", {}});
+        project.gate.inputs.push_back({"A", instance.name, "power", 0.0, type->find_param("power")->default_value,
+                                       logic::Encoding::intensity, {}});
+      if (project.gate.outputs.empty() && (instance.type == "detector" || instance.type == "photodiode"))
+        project.gate.outputs.push_back({"Y", instance.name, "Leistung", {}, 0.0});
     }
     if (project.gate.inputs.empty() && project.gate.outputs.empty()) project.gate.name = "Gatter";
+    show_definition_ = true;
   }
   ImGui::Spacing();
-  ImGui::SeparatorText("Beispiele laden");
+  ImGui::SeparatorText("Beispiele mit Logik");
   struct Example {
     const char* key;
     const char* label;
     const char* text;
   };
   const Example examples[] = {
-      {"xor_interference", "Interferenz-XOR/XNOR", "Phasencodiert, hoher Kontrast, nicht kaskadierbar."},
-      {"and_interference", "Interferenz-AND", "Intensitätscodiert, nur 6 dB Kontrast: ein Negativbeispiel."},
-      {"xor_directed", "Directed Logic mit Ringen", "Elektrisch gesteuert, realistisch, aber schmalbandig."}};
+      {"half_adder", "Halbaddierer", "3 MZI-Schalter mit Heizern; A und B sind Heizleistungen."},
+      {"full_adder", "Volladdierer", "Übertrag als Licht auf zwei Schienen; baubar in Silizium."},
+      {"adder2", "2-Bit-Addierer", "Zwei Volladdierer hintereinander, volle Wahrheitstabelle."},
+      {"adder4", "4-Bit-Addierer", "Zahlen 0 bis 15 addieren."},
+      {"adder8", "8-Bit-Addierer", "Zahlen 0 bis 255 addieren, 66 Bauteile."},
+      {"xor_directed", "XOR mit Ringen", "Directed Logic, schmalbandig."},
+      {"xor_interference", "Interferenz-XOR", "Phasencodiert, nicht kaskadierbar."}};
   for (const auto& example : examples) {
     if (ImGui::Button(example.label)) designer_.load_example(example.key);
     ImGui::SameLine();
@@ -244,13 +262,179 @@ void LogicLab::draw_empty_state() {
   }
 }
 
-void LogicLab::draw_definition() {
+int LogicView::input_bit(std::size_t input) const {
+  const io::Project& project = designer_.project();
+  const logic::LogicInput& in = project.gate.inputs[input];
+  const circuit::Instance* instance = project.circuit.find_instance(in.instance);
+  if (!instance) return 0;
+  const double value = param_of(*instance, in.param);
+  return std::abs(value - in.value1) < std::abs(value - in.value0) ? 1 : 0;
+}
+
+void LogicView::set_input_bit(std::size_t input, int bit) {
+  io::Project& project = designer_.project();
+  const logic::LogicInput& in = project.gate.inputs[input];
+  for (const auto& name : logic::targets(in))
+    if (circuit::Instance* instance = project.circuit.find_instance(name))
+      instance->params[in.param] = bit ? in.value1 : in.value0;
+  designer_.touch_circuit();
+}
+
+double LogicView::output_threshold(std::size_t output) const {
+  const logic::GateDefinition& gate = designer_.project().gate;
+  if (gate.outputs[output].threshold > 0.0) return gate.outputs[output].threshold;
+  // sonst aus der gemessenen Wahrheitstabelle (dieselbe Definition, Eingangswerte spielen dort keine Rolle)
+  if (result_.error.empty() && result_.report.outputs.size() == gate.outputs.size() &&
+      result_.gate.outputs.size() == gate.outputs.size() && result_.gate.outputs[output].instance == gate.outputs[output].instance)
+    return result_.report.outputs[output].threshold;
+  return 0.0;
+}
+
+void LogicView::draw_live() {
+  io::Project& project = designer_.project();
+  const logic::GateDefinition& gate = project.gate;
+  ImGui::SeparatorText(gate.name.empty() ? "Logik" : gate.name.c_str());
+
+  // --- Eingänge: Wörter als Zahl und Bits, einzelne Bits als Schalter ---
+  ImGui::TextDisabled("Eingänge schalten die Bauteile der Schaltung (siehe Zeichenfläche)");
+  std::map<std::string, long long> input_values;
+  for (const Word& word : words_of(gate.inputs)) {
+    ImGui::PushID(word.name.c_str());
+    if (word.bits.size() == 1 && word.bits[0].first == 0 && word.name == gate.inputs[word.bits[0].second].name) {
+      const std::size_t k = word.bits[0].second;
+      bool on = input_bit(k) != 0;
+      if (ImGui::Checkbox(word.name.c_str(), &on)) set_input_bit(k, on ? 1 : 0);
+      if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+        std::string list;
+        for (const auto& name : logic::targets(gate.inputs[k])) list += (list.empty() ? "" : ", ") + name;
+        ImGui::SetTooltip("%s an %s", gate.inputs[k].param.c_str(), list.c_str());
+      }
+      input_values[word.name] = on ? 1 : 0;
+      ImGui::PopID();
+      continue;
+    }
+    long long value = 0;
+    for (const auto& [place, k] : word.bits)
+      if (input_bit(k)) value += 1LL << place;
+    input_values[word.name] = value;
+    int shown = static_cast<int>(value);
+    const int top = static_cast<int>((1LL << (word.bits.front().first + 1)) - 1);
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("%s =", word.name.c_str());
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
+    if (ImGui::InputInt("##zahl", &shown, 1, 10)) {
+      shown = std::clamp(shown, 0, top);
+      for (const auto& [place, k] : word.bits) {
+        const int bit = (shown >> place) & 1;
+        if (bit != input_bit(k)) set_input_bit(k, bit);
+      }
+    }
+    for (const auto& [place, k] : word.bits) {
+      ImGui::SameLine(0.0f, 2.0f);
+      bool on = input_bit(k) != 0;
+      ImGui::PushID(static_cast<int>(k));
+      if (ImGui::Checkbox("##bit", &on)) set_input_bit(k, on ? 1 : 0);
+      if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip("%s (Stelle %d)", gate.inputs[k].name.c_str(), place);
+      ImGui::PopID();
+    }
+    ImGui::PopID();
+  }
+
+  // --- Ausgänge: Bits nach der Schwelle, Wörter als Zahl, darunter die Leistungen ---
+  ImGui::Spacing();
+  ImGui::TextDisabled("Ausgänge (Bit = Leistung am Detektor über der Schwelle)");
+  const auto& measurements = designer_.measurements();
+  std::vector<double> power(gate.outputs.size(), -1.0), threshold(gate.outputs.size(), 0.0);
+  std::vector<int> out_bits(gate.outputs.size(), -1);
+  for (std::size_t k = 0; k < gate.outputs.size(); ++k) {
+    for (const auto& m : measurements)
+      if (m.instance == gate.outputs[k].instance && m.measurement.name == gate.outputs[k].measurement)
+        power[k] = m.measurement.value;
+    threshold[k] = output_threshold(k);
+    if (power[k] >= 0.0 && threshold[k] > 0.0) out_bits[k] = power[k] > threshold[k] ? 1 : 0;
+  }
+  auto bit_box = [&](std::size_t k) {
+    const char* text = out_bits[k] < 0 ? "?" : out_bits[k] ? "1" : "0";
+    const ImVec4 color = out_bits[k] > 0 ? ui_color_good : ui_color_neutral;
+    ImGui::PushStyleColor(ImGuiCol_Button, out_bits[k] > 0 ? ImVec4(color.x * 0.45f, color.y * 0.45f, color.z * 0.45f, 1.0f)
+                                                           : ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
+    ImGui::PushID(static_cast<int>(k));
+    ImGui::SmallButton(text);
+    ImGui::PopID();
+    ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+      ImGui::SetTooltip("%s: %s (Schwelle %s)", gate.outputs[k].name.c_str(),
+                        power[k] >= 0.0 ? format_si(power[k], "W").c_str() : "-",
+                        threshold[k] > 0.0 ? format_si(threshold[k], "W").c_str() : "unbekannt");
+  };
+  std::map<std::string, long long> output_values;
+  bool complete = true;
+  for (const Word& word : words_of(gate.outputs)) {
+    long long value = 0;
+    for (const auto& [place, k] : word.bits) {
+      if (out_bits[k] < 0) complete = false;
+      if (out_bits[k] > 0) value += 1LL << place;
+    }
+    output_values[word.name] = value;
+    ImGui::AlignTextToFramePadding();
+    if (word.bits.size() > 1)
+      ImGui::Text("%s = %lld", word.name.c_str(), value);
+    else
+      ImGui::TextUnformatted(word.name.c_str());
+    for (const auto& [place, k] : word.bits) {
+      ImGui::SameLine(0.0f, 2.0f);
+      bit_box(k);
+    }
+  }
+  // Addierer (Wörter A, B, S, dazu Cin und Cout): Probe A + B + Cin
+  if (complete && input_values.count("A") && input_values.count("B") && output_values.count("S") &&
+      output_values.count("Cout")) {
+    int width = 0;
+    for (const Word& word : words_of(gate.outputs))
+      if (word.name == "S") width = static_cast<int>(word.bits.size());
+    const long long cin = input_values.count("Cin") ? input_values["Cin"] : 0;
+    const long long expected = input_values["A"] + input_values["B"] + cin;
+    const long long got = output_values["S"] + (output_values["Cout"] << width);
+    ImGui::Text("Ergebnis Cout S = %lld", got);
+    ImGui::SameLine();
+    if (got == expected)
+      ImGui::TextColored(ui_color_good, "= %lld + %lld%s, stimmt", input_values["A"], input_values["B"],
+                         cin ? " + 1" : "");
+    else
+      ImGui::TextColored(ui_color_bad, "FALSCH, erwartet %lld", expected);
+  }
+  if (!complete) ImGui::TextDisabled("Ohne Schwelle kein Bit: Schwelle in der Definition setzen.");
+
+  if (!ImGui::TreeNodeEx("Leistungen und Schwellen",
+                         gate.outputs.size() <= 3 ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None))
+    return;
+  if (ImGui::BeginTable("ausgaenge_live", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
+    ImGui::TableSetupColumn("Ausgang", ImGuiTableColumnFlags_WidthStretch, 0.8f);
+    ImGui::TableSetupColumn("Leistung", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+    ImGui::TableSetupColumn("Schwelle", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+    ImGui::TableHeadersRow();
+    for (std::size_t k = 0; k < gate.outputs.size(); ++k) {
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      ImGui::TextUnformatted(gate.outputs[k].name.c_str());
+      ImGui::TableNextColumn();
+      ImGui::TextUnformatted(power[k] >= 0.0 ? format_si(power[k], "W").c_str() : "-");
+      ImGui::TableNextColumn();
+      ImGui::TextDisabled("%s", threshold[k] > 0.0 ? format_si(threshold[k], "W").c_str() : "unbekannt");
+    }
+    ImGui::EndTable();
+  }
+  ImGui::TreePop();
+}
+
+void LogicView::draw_definition() {
   io::Project& project = designer_.project();
   logic::GateDefinition& gate = project.gate;
   const circuit::Circuit& circuit = project.circuit;
   bool changed = false;
 
-  ImGui::SeparatorText("Gatter-Definition");
   char name[96];
   std::snprintf(name, sizeof name, "%s", gate.name.c_str());
   ImGui::SetNextItemWidth(-ImGui::GetFontSize() * 4.0f);
@@ -290,7 +474,32 @@ void LogicLab::draw_definition() {
         in.param = spec.name;
         in.value0 = spec.min_value > 0.0 ? spec.min_value : 0.0;
         in.value1 = spec.default_value != in.value0 ? spec.default_value : spec.max_value;
+        in.more_instances.clear();
         changed = true;
+      }
+
+      // weitere Bauteile am selben Steuersignal (z. B. alle Heizer eines Bits)
+      if (!in.more_instances.empty()) {
+        ImGui::SameLine(0.0f, 2.0f);
+        ImGui::TextDisabled("+%zu", in.more_instances.size());
+      }
+      if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort) || ImGui::IsItemClicked())
+        ImGui::OpenPopup("weitere");
+      if (ImGui::BeginPopup("weitere")) {
+        ImGui::TextDisabled("Dieses Bit setzt '%s' auch an:", in.param.c_str());
+        for (const auto& other : circuit.instances) {
+          const circuit::ComponentType* other_type = registry().find(other.type);
+          if (other.name == in.instance || !other_type || !other_type->find_param(in.param)) continue;
+          bool on = std::ranges::count(in.more_instances, other.name) > 0;
+          if (ImGui::Checkbox(other.name.c_str(), &on)) {
+            if (on)
+              in.more_instances.push_back(other.name);
+            else
+              std::erase(in.more_instances, other.name);
+            changed = true;
+          }
+        }
+        ImGui::EndPopup();
       }
 
       const circuit::Instance* instance = circuit.find_instance(in.instance);
@@ -353,7 +562,7 @@ void LogicLab::draw_definition() {
     for (auto& out : gate.outputs) out.expected.clear();  // die Tabellen passen nicht mehr zur Eingangszahl
     changed = true;
   }
-  if (gate.inputs.size() < logic::max_inputs && ImGui::SmallButton("+ Eingang")) {
+  if (ImGui::SmallButton("+ Eingang")) {
     logic::LogicInput in;
     in.name = std::string(1, static_cast<char>('A' + gate.inputs.size()));
     for (const auto& instance : circuit.instances) {
@@ -379,10 +588,11 @@ void LogicLab::draw_definition() {
   ImGui::TextDisabled("Ausgänge: Leistung an einem Detektor");
   int remove_output = -1;
   const std::vector<std::string> functions = logic::function_names(gate.inputs.size());
-  if (ImGui::BeginTable("ausgaenge", 4, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_RowBg)) {
+  if (ImGui::BeginTable("ausgaenge", 5, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_RowBg)) {
     ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, 0.8f);
     ImGui::TableSetupColumn("Bauteil", ImGuiTableColumnFlags_WidthStretch, 1.6f);
     ImGui::TableSetupColumn("Erwartete Funktion", ImGuiTableColumnFlags_WidthStretch, 1.8f);
+    ImGui::TableSetupColumn("Schwelle", ImGuiTableColumnFlags_WidthStretch, 1.2f);
     ImGui::TableSetupColumn("##x", ImGuiTableColumnFlags_WidthFixed);
     ImGui::TableHeadersRow();
     for (int i = 0; i < static_cast<int>(gate.outputs.size()); ++i) {
@@ -401,6 +611,7 @@ void LogicLab::draw_definition() {
       const std::string current =
           out.expected.empty() ? std::string("(erkennen)") : logic::identify_function(out.expected);
       ImGui::SetNextItemWidth(-1.0f);
+      ImGui::BeginDisabled(gate.inputs.size() > logic::max_inputs);
       if (ImGui::BeginCombo("##funktion", current.empty() ? "(eigene Tabelle)" : current.c_str())) {
         if (ImGui::Selectable("(erkennen)", out.expected.empty()) && !out.expected.empty()) {
           out.expected.clear();
@@ -413,6 +624,18 @@ void LogicLab::draw_definition() {
           }
         ImGui::EndCombo();
       }
+      ImGui::EndDisabled();
+      ImGui::TableNextColumn();
+      double threshold_uw = out.threshold / 1e-6;
+      const double zero = 0.0, big = 1e6;
+      ImGui::SetNextItemWidth(-1.0f);
+      if (ImGui::DragScalar("##schwelle", ImGuiDataType_Double, &threshold_uw, 1.0f, &zero, &big,
+                            threshold_uw > 0.0 ? "%.3g µW" : "aus Tabelle", ImGuiSliderFlags_AlwaysClamp)) {
+        out.threshold = threshold_uw * 1e-6;
+        changed = true;
+      }
+      if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip("Entscheidungsschwelle für das Schalten von Hand; 0 = aus der Wahrheitstabelle.");
       ImGui::TableNextColumn();
       if (ImGui::SmallButton("x")) remove_output = i;
       ImGui::PopID();
@@ -430,7 +653,7 @@ void LogicLab::draw_definition() {
       const bool used =
           std::any_of(gate.outputs.begin(), gate.outputs.end(),
                       [&](const logic::LogicOutput& other) { return other.instance == instance.name; });
-      if (instance.type == "detector" && !used) {
+      if ((instance.type == "detector" || instance.type == "photodiode") && !used) {
         out.instance = instance.name;
         break;
       }
@@ -446,144 +669,7 @@ void LogicLab::draw_definition() {
   if (changed) designer_.mark_dirty();
 }
 
-void LogicLab::draw_optimizer() {
-  io::Project& project = designer_.project();
-  if (project.gate.empty()) return;
-  const circuit::Circuit& circuit = project.circuit;
-  ImGui::Spacing();
-  ImGui::SeparatorText("Optimierer");
-  ImGui::TextDisabled("Stimmt einen Parameter auf den besten Kontrast ab");
-
-  // Vorbelegung: erster Phasen-Parameter, der kein logischer Eingang ist
-  auto is_input = [&](const std::string& instance, const std::string& param) {
-    return std::any_of(
-        project.gate.inputs.begin(), project.gate.inputs.end(),
-        [&](const logic::LogicInput& in) { return in.instance == instance && in.param == param; });
-  };
-  if (!find_spec(circuit, optimize_instance_, optimize_param_)) {
-    optimize_instance_.clear();
-    // zuerst Bauteile, die kein logischer Eingang sind (typisch: die Bias-Phase), dann alle
-    for (bool skip_input_instances : {true, false})
-      for (const auto& instance : circuit.instances) {
-        const circuit::ComponentType* type = registry().find(instance.type);
-        const bool drives_input =
-            std::any_of(project.gate.inputs.begin(), project.gate.inputs.end(),
-                        [&](const logic::LogicInput& in) { return in.instance == instance.name; });
-        if (!type || (skip_input_instances && drives_input)) continue;
-        for (const auto& p : type->params)
-          if (optimize_instance_.empty() && !is_input(instance.name, p.name) &&
-              (p.display_unit == "rad" || instance.type == "coupler")) {
-            optimize_instance_ = instance.name;
-            optimize_param_ = p.name;
-          }
-      }
-    if (optimize_instance_.empty()) {
-      ImGui::TextDisabled("Kein abstimmbarer Parameter gefunden.");
-      return;
-    }
-  }
-
-  const float half = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
-  ImGui::SetNextItemWidth(half);
-  if (instance_combo("##optinstanz", circuit, &optimize_instance_, true))
-    optimize_param_ = registry().find(circuit.find_instance(optimize_instance_)->type)->params.front().name;
-  const circuit::ComponentType* type = registry().find(circuit.find_instance(optimize_instance_)->type);
-  const circuit::ParamSpec* spec = type->find_param(optimize_param_);
-  if (!spec) {
-    spec = &type->params.front();
-    optimize_param_ = spec->name;
-  }
-  ImGui::SameLine();
-  ImGui::SetNextItemWidth(half);
-  if (ImGui::BeginCombo("##optparameter", spec->label.c_str())) {
-    for (const auto& p : type->params)
-      if (ImGui::Selectable(p.label.c_str(), p.name == optimize_param_)) optimize_param_ = p.name;
-    ImGui::EndCombo();
-  }
-  spec = type->find_param(optimize_param_);
-
-  // Suchbereich in Anzeige-Einheiten; Vorschlag wie bei der Kennlinie
-  const std::string owner = optimize_instance_ + "/" + optimize_param_;
-  const double scale = spec->display_scale;
-  if (owner != optimize_range_owner_) {
-    optimize_range_owner_ = owner;
-    const double low = spec->min_value / scale, high = spec->max_value / scale;
-    const double current = param_value(*circuit.find_instance(optimize_instance_), *spec) / scale;
-    if (spec->display_unit == "rad") {
-      optimize_min_ = -constants::pi, optimize_max_ = constants::pi;
-    } else if (high - low <= 1000.0) {
-      optimize_min_ = low, optimize_max_ = high;
-    } else {
-      optimize_min_ = std::max(low, 0.5 * current), optimize_max_ = std::min(high, 1.5 * current);
-    }
-  }
-  const float field = ImGui::GetFontSize() * 5.5f;
-  const float speed = static_cast<float>(std::max((optimize_max_ - optimize_min_) * 0.005, 1e-4));
-  ImGui::SetNextItemWidth(field);
-  ImGui::DragScalar("von", ImGuiDataType_Double, &optimize_min_, speed, nullptr, nullptr, "%.4g");
-  ImGui::SameLine();
-  ImGui::SetNextItemWidth(field);
-  ImGui::DragScalar("bis", ImGuiDataType_Double, &optimize_max_, speed, nullptr, nullptr, "%.4g");
-  ImGui::SameLine();
-  ImGui::TextDisabled("%s", spec->display_unit.c_str());
-  ImGui::SameLine();
-  if (ImGui::SmallButton("Optimieren")) {
-    optimize_error_.clear();
-    optimize_result_ = {};
-    optimize_result_owner_ = owner;
-    try {
-      const double low = std::max(optimize_min_ * scale, spec->min_value);
-      const double high = std::min(optimize_max_ * scale, spec->max_value);
-      optimize_result_ = logic::optimize_parameter(circuit, registry(), project.gate, project.wavelength,
-                                                   optimize_instance_, optimize_param_, low, high);
-      if (!optimize_result_.found) optimize_error_ = "In diesem Bereich stimmt die Logik nirgends.";
-      fit_optimizer_ = true;
-    } catch (const std::exception& e) {
-      optimize_error_ = e.what();
-    }
-  }
-  if (!optimize_error_.empty()) {
-    ImGui::PushTextWrapPos(0.0f);
-    ImGui::TextColored(ui_color_bad, "%s", optimize_error_.c_str());
-    ImGui::PopTextWrapPos();
-  }
-
-  if (optimize_result_owner_ == owner && !optimize_result_.x.empty()) {
-    if (optimize_result_.found) {
-      char label[128];
-      std::snprintf(label, sizeof label, "Optimum übernehmen: %.5g %s (%s)", optimize_result_.best_x / scale,
-                    spec->display_unit.c_str(), logic::format_db(optimize_result_.best_contrast_db).c_str());
-      if (ImGui::Button(label)) {
-        project.circuit.find_instance(optimize_instance_)->params[optimize_param_] =
-            std::clamp(optimize_result_.best_x, spec->min_value, spec->max_value);
-        designer_.touch_circuit();
-      }
-    }
-    static std::vector<double> xs;
-    xs.resize(optimize_result_.x.size());
-    std::transform(optimize_result_.x.begin(), optimize_result_.x.end(), xs.begin(),
-                   [&](double x) { return x / scale; });
-    if (ImPlot::BeginPlot("##optimierer", ImVec2(-1.0f, ImGui::GetFontSize() * 11.0f),
-                          ImPlotFlags_NoLegend)) {
-      const std::string x_label =
-          spec->display_unit.empty() ? spec->label : spec->label + " [" + spec->display_unit + "]";
-      ImPlot::SetupAxes(x_label.c_str(), "Kontrast [dB]");
-      // feste Achsen nach jeder neuen Rechnung: ganzer Suchbereich, 0 bis 100 dB
-      ImPlot::SetupAxesLimits(xs.front(), xs.back(), 0.0, 105.0,
-                              fit_optimizer_ ? ImPlotCond_Always : ImPlotCond_Once);
-      fit_optimizer_ = false;
-      // Lücken (NaN) zeigen, wo die Logik nicht stimmt
-      ImPlot::PlotLine("##kontrast", xs.data(), optimize_result_.contrast_db.data(),
-                       static_cast<int>(xs.size()));
-      const double current = param_value(*circuit.find_instance(optimize_instance_), *spec) / scale;
-      ImPlot::PlotInfLines("##aktuell", &current, 1);
-      ImPlot::EndPlot();
-    }
-    ImGui::TextDisabled("Kurve auf 100 dB begrenzt; Lücken: Logik stimmt dort nicht.");
-  }
-}
-
-void LogicLab::draw_truth_table() {
+void LogicView::draw_truth_table() {
   ImGui::SeparatorText("Wahrheitstabelle");
   const bool stale = result_.key != key();
   if (result_.key.empty()) {
@@ -696,7 +782,7 @@ void LogicLab::draw_truth_table() {
   }
 }
 
-void LogicLab::draw_report() {
+void LogicView::draw_report() {
   ImGui::SeparatorText("Gatter-Zeugnis");
   if (result_.key.empty()) {
     ImGui::TextDisabled("Wird gerechnet ...");

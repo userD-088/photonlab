@@ -1,5 +1,5 @@
 #pragma once
-// S-Parameter-Extraktion aus dem 2D-FDTD (Brücke 1, Bauplan Abschnitt 6): je Port eine Anregung mit
+// S-Parameter-Extraktion aus dem 2D-FDTD (Brücke Feld -> Schaltung): je Port eine Anregung mit
 // breitbandigem Modenpuls, an allen Ports laufende Fourier-Transformation von Skalarfeld und Querfeld,
 // Zerlegung in ein- und auslaufende Mode. Herleitung und Grenzen: docs/physics/sparameters.md
 #include <complex>

@@ -129,7 +129,12 @@ TEST_CASE("Projekt: Beispieldateien entsprechen den Referenz-Designs") {
         std::pair{"23_phc_mirror_fdtd.plab.json", "field_phc_mirror"},
         std::pair{"24_phc_cavity_fdtd.plab.json", "field_phc_cavity"},
         std::pair{"25_phc_rods_fdtd.plab.json", "field_phc_rods"},
-        std::pair{"26_volladdierer_optisch_fdtd.plab.json", "field_fulladder_optical"}}) {
+        std::pair{"26_volladdierer_optisch_fdtd.plab.json", "field_fulladder_optical"},
+        std::pair{"27_halbaddierer_chip.plab.json", "half_adder"},
+        std::pair{"28_volladdierer_chip.plab.json", "full_adder"},
+        std::pair{"29_addierer_2bit_chip.plab.json", "adder2"},
+        std::pair{"30_addierer_4bit_chip.plab.json", "adder4"},
+        std::pair{"31_addierer_8bit_chip.plab.json", "adder8"}}) {
     CHECK(io::project_to_json(io::load_project(dir / file)) ==
           io::project_to_json(io::reference_project(name)));
   }

@@ -10,7 +10,7 @@
 
 namespace photonlab::logic {
 
-// Wie ein Bit im Signal steckt (Bauplan 7.1). Der Ausgang eines Gatters ist hier immer eine
+// Wie ein Bit im Signal steckt. Der Ausgang eines Gatters ist hier immer eine
 // Detektorleistung, also intensitätscodiert.
 enum class Encoding {
   intensity,   // kein Licht / Licht
@@ -30,8 +30,12 @@ struct LogicInput {
   double value0 = 0.0;
   double value1 = 1.0;
   Encoding encoding = Encoding::intensity;
+  // weitere Instanzen, deren Parameter param das Bit gleichzeitig setzt (eine Steuerleitung an mehreren
+  // Heizern, wie auf einem echten Chip)
+  std::vector<std::string> more_instances;
   bool operator==(const LogicInput&) const = default;
 };
+std::vector<std::string> targets(const LogicInput& input);  // instance und more_instances
 
 // Logischer Ausgang: eine Messgröße in Watt (üblich: "Leistung" eines Detektors).
 struct LogicOutput {
@@ -41,6 +45,8 @@ struct LogicOutput {
   // Erwartete Bits für alle 2^n Eingangskombinationen (Zeile = Eingänge als Binärzahl, erster Eingang
   // ist das höchstwertige Bit). Leer = keine Erwartung, die Funktion wird aus den Pegeln erkannt.
   std::vector<int> expected;
+  // Entscheidungsschwelle für einzelne Rechnungen [W]; 0 = aus der Wahrheitstabelle (bis max_inputs)
+  double threshold = 0.0;
   bool operator==(const LogicOutput&) const = default;
 };
 
@@ -65,6 +71,9 @@ int input_bit(const GateDefinition& gate, std::size_t row, std::size_t input);
 
 // Schaltung mit den Parameterwerten der Tabellenzeile row.
 circuit::Circuit apply_inputs(const circuit::Circuit& circuit, const GateDefinition& gate, std::size_t row);
+// Dasselbe mit einem Bit je Eingang (beliebig viele Eingänge, z. B. 17 beim 8-Bit-Addierer).
+circuit::Circuit apply_bits(const circuit::Circuit& circuit, const GateDefinition& gate,
+                            const std::vector<int>& bits);
 
 // Bekannte Funktionen mit einem oder zwei Eingängen: Namen und Wahrheitstabellen.
 std::vector<std::string> function_names(std::size_t input_count);

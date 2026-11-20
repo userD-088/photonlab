@@ -30,7 +30,7 @@ unabhängig vom Compiler).
 Der Knick führt also nur im Einmoden-Bereich der Defektmode fast verlustfrei; darüber wandelt er in die zweite
 Mode um und verliert den größten Teil. Die Zahlen gelten für 2D mit festem n; Streuung nach oben/unten fehlt.
 
-## Gatter (Familie B, Bauplan 7.3)
+## Gatter (Familie B)
 
 Y-Kombinierer: drei W1-Arme unter 0°, 120°, 240° treffen sich an einem Gitterpunkt. Eingänge A und B sind
 Punktquellen in den Armen, 4 Gitterschritte vom Knoten, Ausgang ist der Flussmonitor 6 a hinter dem Knoten.

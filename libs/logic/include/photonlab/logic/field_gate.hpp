@@ -1,5 +1,5 @@
 #pragma once
-// Gatter auf Feld-Ebene (Bauplan 7.3, Familie B): Eingänge sind Quellen einer FDTD-Szene (Bit 1 = Quelle an,
+// Gatter auf Feld-Ebene: Eingänge sind Quellen einer FDTD-Szene (Bit 1 = Quelle an,
 // Bit 0 = aus), Ausgänge sind Flussmonitore im stationären Zustand. Die Wahrheitstabelle entsteht aus je
 // einer Rechnung pro Eingangskombination; Auswertung (Kontrastverhältnis, Pegel) wie auf der
 // Schaltungs-Ebene über TruthTable und analyze_output. Die Leistung ist der zeitlich gemittelte

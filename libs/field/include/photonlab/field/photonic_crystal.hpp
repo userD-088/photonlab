@@ -1,5 +1,5 @@
 #pragma once
-// Geometrie-Generatoren für photonische Kristalle (Bauplan 4.7): Dreiecks- und Quadratgitter von Löchern,
+// Geometrie-Generatoren für photonische Kristalle: Dreiecks- und Quadratgitter von Löchern,
 // Liniendefekte (gerade, 60°-Knick, Y-Verzweigung) und Punktdefekte. Das Ergebnis sind gewöhnliche Formen
 // der Feld-Szene; der Generator selbst bleibt parametrisch (Gitterkonstante, Radius, Defektpfad), damit
 // Sweeps und später inverses Design möglich sind. Koordinaten wie in der Szene (y nach unten).

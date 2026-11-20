@@ -70,7 +70,7 @@ const std::vector<Material>& library() {
       // C. D. Salzberg, J. J. Villa, "Infrared refractive indexes of silicon, germanium and modified
       // selenium glass", J. Opt. Soc. Am. 47, 244-246 (1957); Sellmeier-Anpassung nach B. Tatian,
       // Appl. Opt. 23, 4477-4485 (1984). Gültig 1,36 bis 11 µm.
-      // dn/dT: 1,8e-4 1/K bei 1550 nm (Bauplan 4.4); vgl. Komma et al., Appl. Phys. Lett. 101, 041905 (2012).
+      // dn/dT: 1,8e-4 1/K bei 1550 nm; vgl. Komma et al., Appl. Phys. Lett. 101, 041905 (2012).
       {"Si",
        "Si (Silizium)",
        "Salzberg/Villa, J. Opt. Soc. Am. 47, 244 (1957); Tatian, Appl. Opt. 23, 4477 (1984)",
