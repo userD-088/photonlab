@@ -127,8 +127,9 @@ Materialbibliothek bei der Wellenlänge der ersten Quelle.
   `S_x = ½(E_y[i] + E_y[i+1]) H_z − ½(E_z[i] + E_z[i+1]) H_y` am Ort von H (i + ½), entsprechend S_y;
   Mittel über die letzte Periode der ersten Quelle. Modenmonitore zählen in 3D den ganzen Fluss.
   Einheit W (Quelle mit Amplitude 1 V/m); aussagekräftig sind die Verhältnisse der Monitore.
-- **Nicht in 3D**: Regeneratoren (bleiben aus), Kerr/TPA (linear gerechnet), periodische Ränder (Randschicht),
-  Grafikkarte.
+- **Nicht in 3D**: Regeneratoren (bleiben aus), Kerr/TPA (linear gerechnet), periodische Ränder (Randschicht).
+- **Grafikkarte**: mit Ansicht > Grafikkarte rechnet die 3D-Szene dort (bitgleich, docs/performance.md); die
+  3D-S-Parameter bleiben auf dem Prozessor.
 
 **Prüfung** (`tests/test_extrude3d.cpp`): Brechzahlen des Aufbaus an Kern, Mantel, Substrat; gerader
 Si-Wellenleiter 500 × 220 nm (Gitter 50 nm): Fluss B/A = 0,99 (Toleranz 2 %) zwischen zwei Flächen 1,6 und

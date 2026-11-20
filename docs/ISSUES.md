@@ -152,7 +152,7 @@ Offen aus Phase 6 (Folge-Issues):
 - [x] #109 Abnahme 3D-Wellenleiter = Modenlöser: Schicht 0,05 % zur analytischen Lösung, Si-Draht 0,2 % zum vollvektoriellen Literaturwert
 - [x] #110 `photonlab_cli bench` (mit Referenzkern von Phase 11), `photonlab_cli fdtd3d`, Reiter 3D-Wellenleiter, Option PHOTONLAB_NATIVE
 - [x] #111 GPU-Backend: OpenCL für das 2D-FDTD (Ez, Hz, Randschichten, Quellen, Regeneratoren, Monitore), bitgleich zum Prozessor auf PoCL; OpenCL-Bibliothek zur Laufzeit geladen
-- [ ] #111b S-Parameter-Extraktion auf der Grafikkarte (Fourier-Monitor in den Kernen), Kerr-Zellen auf der Grafikkarte, 3D-FDTD auf der Grafikkarte
+- [ ] #111b S-Parameter-Extraktion auf der Grafikkarte (Fourier-Monitor in den Kernen), Kerr-Zellen auf der Grafikkarte (3D-FDTD: #165 erledigt)
 - [ ] #112 Zeitliches Blocken und float-Variante des FDTD (weniger Speicherverkehr, ändert Ergebnisse im letzten Bit)
 - [ ] #113 3D: Dispersion, Verluste, Nichtlinearität; geneigte und gekrümmte Formen mit Mittelung (Subpixel)
 - [ ] #114 3D-Szenen im Editor und im Dateiformat (.plab.json), Feldbilder live
@@ -232,7 +232,7 @@ echter Chip baubar), Bauteil-Labor aufräumen, eigene Bauteile in den Chip-Desig
 - [x] #162 3D-Rechnung der Szene (`extrude3d`): Schichtaufbau aus der Materialbibliothek, Querschnittsmode als Quelle, Flussflächen, Draufsicht und Seitenansicht live; `run --field3d`
 - [x] #163 Hilfe-Fenster (F1): Überblick, Erste Schritte, Bauteil-Labor, Chip-Designer, Tastenkürzel, Physik und Grenzen, Kommandozeile
 - [x] #164 (Zwei-Ebenen-Zerlegung, Referenz mit gerader Zuleitung, Schichtaufbau in der Szene gespeichert) S-Parameter-Extraktion in 3D (Bauteil-Designer wahlweise mit 3D-Messung)
-- [ ] #165 3D-FDTD auf der Grafikkarte (OpenCL-Kerne wie in 2D, bitgleich zum Prozessor)
+- [x] #165 (Kerne h3/e3/pml3/src3/gather3, Monitore als Proben; bitgleich auf PoCL; 3D-S-Parameter bleiben auf dem Prozessor, auf einer echten Grafikkarte noch nicht gemessen) 3D-FDTD auf der Grafikkarte (OpenCL-Kerne wie in 2D, bitgleich zum Prozessor)
 - [x] #166 (Entwurf: Zellen je Bauteil, Platzierung nach Raster, Wege mit Bögen und eigenen Bahnen, Kreuzungen gemeldet; offen: Bondflächen, DRC, Meander) Vom Chip-Designer zum Layout: Bauteile als Zellen (MZI-Schalter, Koppler, Gitterkoppler, Photodiode) platzieren, Wellenleiter routen, Heizer-Pads; GDSII für die Fertigung
 - [x] #167 (Bauteil sub:<name>, Bibliothek: anlegen aus der Schaltung, bearbeiten, Logik-Eingänge werden Parameter; Beispiel 8-Bit-Addierer aus Zellen) Hierarchie im Chip-Designer: Unterschaltungen (Volladdierer-Zelle 8-mal), Steuerleitungen als eigene Netze
 - [x] #168 (Übersprechen, Schaltzeit als Messwert, Knöpfe Standard/unterätzt, Heizleistung und P_pi-Prüfung im Logik-Fenster; Zeitverhalten bleibt stationär) Heizer realistischer: thermisches Übersprechen benachbarter Arme, Zeitkonstante, unterätzte Heizer (P_pi unter 1 mW) als Variante

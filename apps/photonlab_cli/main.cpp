@@ -28,8 +28,8 @@
 #include "photonlab/core/step_team.hpp"
 #include "photonlab/core/thread_pool.hpp"
 #include "photonlab/core/units.hpp"
-#include "photonlab/field/fdtd.hpp"
 #include "photonlab/field/extrude3d.hpp"
+#include "photonlab/field/fdtd.hpp"
 #include "photonlab/field/fdtd3d.hpp"
 #include "photonlab/field/gpu.hpp"
 #include "photonlab/field/inverse_design.hpp"
@@ -81,7 +81,8 @@ void print_usage() {
       "  photonlab_cli run <datei> --logic [--gate <aus.gate.json>]  Wahrheitstabelle und Gatter-Zeugnis\n"
       "  photonlab_cli run <datei> --field [--csv <aus.csv>]         2D-FDTD der Feld-Szene über ihre "
       "Laufzeit\n"
-      "  photonlab_cli run <datei> --field3d [--cell-nm 40]      Feld-Szene als 220-nm-Si-Schicht im 3D-FDTD\n"
+      "  photonlab_cli run <datei> --field3d [--cell-nm 40]      Feld-Szene als 220-nm-Si-Schicht im "
+      "3D-FDTD\n"
       "  photonlab_cli run <datei> --modes            Moden des Wellenleiter-Querschnitts der Datei\n"
       "  photonlab_cli run <datei> --sparam [--3d] [--out <aus.sparam.json>] [--name <name>]\n"
       "                                               S-Parameter der Feld-Szene an ihren Ports extrahieren\n"
@@ -468,7 +469,8 @@ int cmd_sparam(const std::string& file, const std::string& out_path, const std::
     std::printf("3D-Rechnung im Schichtaufbau (%.0f nm %s auf %s); Abstrahlung erscheint als Verlust.\n",
                 scene.stack.thickness / units::nm, scene.stack.core.c_str(), scene.stack.substrate.c_str());
   else
-    std::printf("Hinweis: 2D-Rechnung; Abstrahlung nach oben und unten fehlt, Brechzahlen ohne Dispersion.\n");
+    std::printf(
+        "Hinweis: 2D-Rechnung; Abstrahlung nach oben und unten fehlt, Brechzahlen ohne Dispersion.\n");
 
   const std::size_t n = result.port_count();
   const std::size_t stride = std::max<std::size_t>(1, result.wavelengths.size() / 5);
@@ -933,8 +935,9 @@ int cmd_field3d(const std::string& file, const std::string& cell_text) {
   field::Stack3d stack;
   if (!cell_text.empty()) stack.cell_size = std::atof(cell_text.c_str()) * units::nm;
   const field::Extent3d e = field::extent_3d(project.field, stack);
-  std::printf("%s in 3D: %d x %d x %d Zellen (%.0f nm), %zu Schritte, etwa %.2f GB\n", project.field.name.c_str(),
-              e.nx, e.ny, e.nz, stack.cell_size / units::nm, e.steps, e.memory_bytes / 1e9);
+  std::printf("%s in 3D: %d x %d x %d Zellen (%.0f nm), %zu Schritte, etwa %.2f GB\n",
+              project.field.name.c_str(), e.nx, e.ny, e.nz, stack.cell_size / units::nm, e.steps,
+              e.memory_bytes / 1e9);
   field::Extruded3d sim(project.field, stack);
   for (const auto& w : sim.warnings()) std::printf("Hinweis: %s\n", w.c_str());
   const auto start = std::chrono::steady_clock::now();
@@ -947,7 +950,8 @@ int cmd_field3d(const std::string& file, const std::string& cell_text) {
               sim.indices().substrate, sim.indices().cladding, seconds);
   for (const auto& m : sim.monitors()) {
     if (m.flux)
-      std::printf("  %-16s Fluss %.4e W  relativ %.4f\n", m.name.c_str(), m.mean, reference ? m.mean / reference->mean : 0.0);
+      std::printf("  %-16s Fluss %.4e W  relativ %.4f\n", m.name.c_str(), m.mean,
+                  reference ? m.mean / reference->mean : 0.0);
     else
       std::printf("  %-16s Amplitude %.4e V/m\n", m.name.c_str(), m.mean);
   }
@@ -1251,6 +1255,18 @@ int cmd_bench(const std::string& size_text, const std::string& threads_text) {
       std::printf("3D 120^3 mit Randschicht, %2d Thread(s):     %8.1f Mio. Zellen/s\n", sim.threads(),
                   static_cast<double>(sim.cell_count()) * steps3 / seconds / 1e6);
     }
+    field::Fdtd3d sim(scene);
+    if (field::gpu::enabled() && sim.use_gpu(true)) {
+      const int steps3 = 200;
+      sim.run(2);
+      (void)sim.energy();  // warten, bis die Grafikkarte fertig ist
+      const auto start = std::chrono::steady_clock::now();
+      sim.run(static_cast<std::size_t>(steps3));
+      (void)sim.energy();
+      const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+      std::printf("3D 120^3 mit Randschicht, Grafikkarte:      %8.1f Mio. Zellen/s\n",
+                  static_cast<double>(sim.cell_count()) * steps3 / seconds / 1e6);
+    }
   }
   std::printf(
       "Hinweis: Die Rechnung ist durch die Speicherbandbreite begrenzt; mehr Threads helfen nur, solange "
@@ -1515,7 +1531,8 @@ int main(int argc, char** argv) {
     if (command == "pcm") return cmd_pcm();
     if (command == "run" && args.size() >= 2 && flag("--sparam"))
       return cmd_sparam(args[1], option("--out"), option("--name"), flag("--3d"));
-    if (command == "run" && args.size() >= 2 && flag("--field3d")) return cmd_field3d(args[1], option("--cell-nm"));
+    if (command == "run" && args.size() >= 2 && flag("--field3d"))
+      return cmd_field3d(args[1], option("--cell-nm"));
     if (command == "run" && args.size() >= 2 && flag("--field")) return cmd_field(args[1], option("--csv"));
     if (command == "run" && args.size() >= 2 && flag("--logic")) return cmd_logic(args[1], option("--gate"));
     if (command == "run" && args.size() >= 2 && flag("--resonances")) return cmd_resonances(args[1]);

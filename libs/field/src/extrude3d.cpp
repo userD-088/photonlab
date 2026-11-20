@@ -5,6 +5,7 @@
 
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/fdtd.hpp"
+#include "photonlab/field/gpu.hpp"
 #include "photonlab/materials/material.hpp"
 #include "photonlab/modes/fde.hpp"
 #include "photonlab/modes/profile.hpp"
@@ -304,6 +305,21 @@ Extruded3d::Extruded3d(const FieldScene& input, const Stack3d& stack)
     planes_.push_back(std::move(plane));
     monitors_.push_back(std::move(data));
   }
+  // Werte je Schritt für record: je Flusszelle sechs Komponenten, danach die Punkte
+  const auto row = static_cast<std::size_t>(f.nx());
+  using C = Component3d;
+  for (const FluxPlane& plane : planes_)
+    for (std::size_t c : plane.cells) {
+      if (plane.normal_x)  // Sx = Ey Hz - Ez Hy an (i + 1/2)
+        probe_list_.insert(probe_list_.end(),
+                           {{C::ey, c}, {C::ey, c + 1}, {C::hz, c}, {C::ez, c}, {C::ez, c + 1}, {C::hy, c}});
+      else  // Sy = Ez Hx - Ex Hz an (j + 1/2)
+        probe_list_.insert(
+            probe_list_.end(),
+            {{C::ez, c}, {C::ez, c + row}, {C::hx, c}, {C::ex, c}, {C::ex, c + row}, {C::hz, c}});
+    }
+  for (const Probe& probe : probes_) probe_list_.push_back({main_, probe.cell});
+  if (gpu::enabled()) fdtd_->use_gpu(true);
 }
 
 double Extruded3d::index_in_layer(double x, double y) const {
@@ -326,11 +342,19 @@ std::size_t Extruded3d::steps_for(double duration) const {
 
 void Extruded3d::run(std::size_t steps, JobControl* control,
                      const std::function<void(const Fdtd3d&)>& each_step) {
-  for (std::size_t s = 0; s < steps; ++s) {
-    if (control && (s & 7u) == 0 && control->cancel_requested) return;
-    fdtd_->step();
-    record();
+  if (each_step) fdtd_->use_gpu(false);  // braucht nach jedem Schritt alle Felder
+  const std::size_t m = probe_list_.size();
+  std::vector<double> values;
+  for (std::size_t done = 0; done < steps;) {
+    const std::size_t n = each_step ? 1 : std::min<std::size_t>(256, steps - done);
+    const std::size_t before = fdtd_->step_count();
+    values.clear();
+    fdtd_->run_probed(n, probe_list_, &values, control);
+    const std::size_t ran = fdtd_->step_count() - before;
+    for (std::size_t s = 0; s < ran; ++s) record(values.data() + s * m);
+    if (ran < n) return;  // abgebrochen
     if (each_step) each_step(*fdtd_);
+    done += n;
   }
 }
 
@@ -389,28 +413,15 @@ Extruded3d::PlaneMode Extruded3d::plane_mode(double x1, double y1, double x2, do
   return m;
 }
 
-void Extruded3d::record() {
-  const Fdtd3d& f = *fdtd_;
-  const double area = f.cell_size() * f.cell_size();
-  const auto& Ex = f.component(Component3d::ex);
-  const auto& Ey = f.component(Component3d::ey);
-  const auto& Ez = f.component(Component3d::ez);
-  const auto& Hx = f.component(Component3d::hx);
-  const auto& Hy = f.component(Component3d::hy);
-  const auto& Hz = f.component(Component3d::hz);
-  const std::size_t nx = static_cast<std::size_t>(f.nx());
+void Extruded3d::record(const double* v) {
+  const double area = fdtd_->cell_size() * fdtd_->cell_size();
   for (const FluxPlane& plane : planes_) {
     double sum = 0.0;
-    if (plane.normal_x) {
-      for (std::size_t c : plane.cells)  // Sx = Ey Hz - Ez Hy an (i + 1/2)
-        sum += 0.5 * (Ey[c] + Ey[c + 1]) * Hz[c] - 0.5 * (Ez[c] + Ez[c + 1]) * Hy[c];
-    } else {
-      for (std::size_t c : plane.cells)  // Sy = Ez Hx - Ex Hz an (j + 1/2)
-        sum += 0.5 * (Ez[c] + Ez[c + nx]) * Hx[c] - 0.5 * (Ex[c] + Ex[c + nx]) * Hz[c];
-    }
+    for (std::size_t n = 0; n < plane.cells.size(); ++n, v += 6)
+      sum += 0.5 * (v[0] + v[1]) * v[2] - 0.5 * (v[3] + v[4]) * v[5];
     monitors_[plane.monitor].value.push_back(sum * area);
   }
-  for (const Probe& probe : probes_) monitors_[probe.monitor].value.push_back(f.component(main_)[probe.cell]);
+  for (const Probe& probe : probes_) monitors_[probe.monitor].value.push_back(*v++);
   for (auto& m : monitors_) {
     const std::size_t n = std::min(period_steps_, m.value.size());
     double sum = 0.0;

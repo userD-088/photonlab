@@ -1,10 +1,12 @@
-// 2D-FDTD auf der Grafikkarte über OpenCL (docs/performance.md). Die Kerne rechnen dieselben Formeln in
-// derselben Reihenfolge wie fdtd.cpp, in doppelter Genauigkeit und ohne zusammengezogene Multiplikation
-// (FP_CONTRACT OFF); Quellen, Regeneratoren und Monitore laufen mit, damit nur selten Daten zurückkommen.
-// Die OpenCL-Bibliothek des Treibers wird zur Laufzeit geladen: ohne sie bleibt alles auf dem Prozessor.
+// 2D- und 3D-FDTD auf der Grafikkarte über OpenCL (docs/performance.md). Die Kerne rechnen dieselben Formeln
+// in derselben Reihenfolge wie fdtd.cpp bzw. fdtd3d.cpp, in doppelter Genauigkeit und ohne zusammengezogene
+// Multiplikation (FP_CONTRACT OFF); Quellen, Regeneratoren und Monitore laufen mit, damit nur selten Daten
+// zurückkommen. Die OpenCL-Bibliothek des Treibers wird zur Laufzeit geladen: ohne sie bleibt alles auf dem
+// Prozessor.
 #include "photonlab/field/gpu.hpp"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cstdlib>
 #include <cstring>
@@ -16,6 +18,7 @@
 
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/fdtd.hpp"
+#include "photonlab/field/fdtd3d.hpp"
 
 #ifdef PHOTONLAB_HAVE_OPENCL
 #include <CL/cl.h>
@@ -52,6 +55,12 @@ void Fdtd::GpuStateDeleter::operator()(GpuState* state) const { delete state; }
 bool Fdtd::use_gpu(bool) { return false; }
 void Fdtd::gpu_step() {}
 void Fdtd::gpu_sync() const {}
+struct Fdtd3d::GpuState {};
+void Fdtd3d::GpuStateDeleter::operator()(GpuState* state) const { delete state; }
+bool Fdtd3d::use_gpu(bool) { return false; }
+void Fdtd3d::gpu_step() {}
+void Fdtd3d::gpu_sync() const {}
+void Fdtd3d::gpu_run_probed(std::size_t, const std::vector<Probe3d>&, std::vector<double>*, JobControl*) {}
 
 #else
 
@@ -307,6 +316,101 @@ __kernel void record(__global const double* f, __global const double* fp, __glob
 }
 )CLC";
 
+// 3D (Fdtd3d): gleiche Formeln und Reihenfolge wie update_h, update_e, pml_plane und die Quellen in
+// fdtd3d.cpp. Ein Arbeitselement je Zelle (i, j, k); Randschicht-Terme je Term ein Aufruf über dessen
+// Schicht, in der Reihenfolge von pml_terms_ (eine Zelle kann von zwei Termen etwas bekommen).
+const char* kernel_source_3d = R"CLC(
+__kernel void h3(__global const double* ex, __global const double* ey, __global const double* ez,
+                 __global double* hx, __global double* hy, __global double* hz, int nx, int ny, int nz,
+                 double cm) {
+  const int i = get_global_id(0), j = get_global_id(1), k = get_global_id(2);
+  if (i >= nx) return;
+  const size_t sj = (size_t)nx, sk = (size_t)nx * (size_t)ny;
+  const size_t c = (size_t)i + sj * (size_t)j + sk * (size_t)k;
+  const int top_i = i + 1 >= nx, top_j = j + 1 >= ny, top_k = k + 1 >= nz;
+  const double ez_j1 = top_j ? 0.0 : ez[c + sj], ex_j1 = top_j ? 0.0 : ex[c + sj];
+  const double ex_k1 = top_k ? 0.0 : ex[c + sk], ey_k1 = top_k ? 0.0 : ey[c + sk];
+  const double ez_i1 = top_i ? 0.0 : ez[c + 1], ey_i1 = top_i ? 0.0 : ey[c + 1];
+  hx[c] -= cm * ((ez_j1 - ez[c]) - (ey_k1 - ey[c]));
+  hy[c] -= cm * ((ex_k1 - ex[c]) - (ez_i1 - ez[c]));
+  hz[c] -= cm * ((ey_i1 - ey[c]) - (ex_j1 - ex[c]));
+}
+
+__kernel void e3(__global double* ex, __global double* ey, __global double* ez, __global const double* hx,
+                 __global const double* hy, __global const double* hz, __global const double* cx,
+                 __global const double* cy, __global const double* cz, int nx, int ny, double inv) {
+  const int i = get_global_id(0), j = get_global_id(1), k = get_global_id(2);
+  if (i >= nx) return;
+  const size_t sj = (size_t)nx, sk = (size_t)nx * (size_t)ny;
+  const size_t c = (size_t)i + sj * (size_t)j + sk * (size_t)k;
+  if (j > 0 && k > 0) ex[c] += cx[c] * inv * ((hz[c] - hz[c - sj]) - (hy[c] - hy[c - sk]));
+  if (k > 0 && i > 0) ey[c] += cy[c] * inv * ((hx[c] - hx[c - sk]) - (hz[c] - hz[c - 1]));
+  if (j > 0 && i > 0) ez[c] += cz[c] * inv * ((hy[c] - hy[c - 1]) - (hx[c] - hx[c - sj]));
+}
+
+// Ein Randschicht-Term; die Ableitungsrichtung axis läuft nur über die Schicht (2*pml Plätze)
+__kernel void pml3(__global const double* src, __global double* dst, __global double* psi,
+                   __global const double* coef, __global const double* b, __global const double* cc,
+                   int nx, int ny, int nz, int pml, int axis, int e_phase, int i_first, int skip_j0,
+                   int skip_k0, double sign, double inv, double cm) {
+  const int g0 = get_global_id(0), g1 = get_global_id(1), g2 = get_global_id(2);
+  const int p2 = 2 * pml;
+  int i = g0, j = g1, k = g2;
+  if (axis == 0) {
+    if (g0 >= p2) return;
+    i = g0 < pml ? g0 : g0 + nx - p2;
+  } else if (i >= nx) {
+    return;
+  }
+  if (axis == 1) j = g1 < pml ? g1 : g1 + ny - p2;
+  if (axis == 2) k = g2 < pml ? g2 : g2 + nz - p2;
+  if (i < i_first || (skip_j0 && j == 0) || (skip_k0 && k == 0)) return;
+  const size_t sj = (size_t)nx, sk = (size_t)nx * (size_t)ny;
+  const size_t c = (size_t)i + sj * (size_t)j + sk * (size_t)k;
+  size_t q;
+  if (axis == 0)
+    q = (size_t)g0 + (size_t)p2 * ((size_t)j + (size_t)ny * (size_t)k);
+  else if (axis == 1)
+    q = (size_t)i + sj * ((size_t)g1 + (size_t)p2 * (size_t)k);
+  else
+    q = (size_t)i + sj * ((size_t)j + (size_t)ny * (size_t)g2);
+  const int u = axis == 0 ? i : (axis == 1 ? j : k);
+  const int count = axis == 0 ? nx : (axis == 1 ? ny : nz);
+  const size_t step = axis == 0 ? 1 : (axis == 1 ? sj : sk);
+  double d;
+  if (e_phase)
+    d = (src[c] - src[c - step]) * inv;
+  else
+    d = ((u + 1 < count ? src[c + step] : 0.0) - src[c]) * inv;
+  const double p = b[u] * psi[q] + cc[u] * d;
+  psi[q] = p;
+  if (e_phase)
+    dst[c] += coef[c] * sign * p;
+  else
+    dst[c] += -cm * sign * p;
+}
+
+// Eine Quelle (Zellen verschieden): f += weight * s
+__kernel void src3(__global double* f, __global const int* cells, __global const double* weights, int count,
+                   double s) {
+  const int u = get_global_id(0);
+  if (u < count) f[cells[u]] += weights[u] * s;
+}
+
+// Proben: Werte aller Proben eines Schritts in die Zeile row
+__kernel void gather3(__global const double* ex, __global const double* ey, __global const double* ez,
+                      __global const double* hx, __global const double* hy, __global const double* hz,
+                      __global const int* comp, __global const int* cells, int count, __global double* out,
+                      int row) {
+  const int u = get_global_id(0);
+  if (u >= count) return;
+  const int c = comp[u];
+  const int n = cells[u];
+  const double v = c == 0 ? ex[n] : c == 1 ? ey[n] : c == 2 ? ez[n] : c == 3 ? hx[n] : c == 4 ? hy[n] : hz[n];
+  out[row + u] = v;
+}
+)CLC";
+
 // --- Gerät, Kontext und Programm (einmal je Prozess) ------------------------------------------------------
 
 struct Shared {
@@ -366,7 +470,8 @@ Shared& shared() {
           cl_int error = CL_SUCCESS;
           cl_context context = cl.clCreateContext(nullptr, 1, &d, nullptr, nullptr, &error);
           if (error != CL_SUCCESS) continue;
-          cl_program program = cl.clCreateProgramWithSource(context, 1, &kernel_source, nullptr, &error);
+          const char* sources[2] = {kernel_source, kernel_source_3d};
+          cl_program program = cl.clCreateProgramWithSource(context, 2, sources, nullptr, &error);
           if (error == CL_SUCCESS) error = cl.clBuildProgram(program, 1, &d, "", nullptr, nullptr);
           if (error != CL_SUCCESS) {
             std::size_t size = 0;
@@ -404,35 +509,18 @@ const gpu::DeviceInfo& gpu::device() { return shared().info; }
 // --- Zustand eines Fdtd-Objekts auf der Grafikkarte
 // ---------------------------------------------------------
 
-struct Fdtd::GpuState {
+namespace {
+// Warteschlange und Puffer eines Lösers auf der Grafikkarte (2D und 3D)
+struct DeviceMemory {
   cl_command_queue queue = nullptr;
-  cl_kernel k_field1 = nullptr, k_field2 = nullptr, k_sources = nullptr, k_record = nullptr;
   std::vector<cl_mem> buffers;  // zum Freigeben
-  cl_mem cur = nullptr, other = nullptr, gx = nullptr, gy = nullptr;
-  cl_mem psi_fx = nullptr, psi_fy = nullptr, psi_gx = nullptr, psi_gy = nullptr;
-  cl_mem coef = nullptr, coef2 = nullptr;  // cf (Ez) bzw. cgx, cgy (Hz)
-  cl_mem bxe = nullptr, cxe = nullptr, bxh = nullptr, cxh = nullptr, bye = nullptr, cye = nullptr,
-         byh = nullptr, cyh = nullptr;
-  // Quellen (je Feldzelle eine Liste) und Monitore
-  int source_count = 0;
-  cl_mem s_cells = nullptr, s_offsets = nullptr, s_slots = nullptr, s_weights = nullptr, signals = nullptr;
-  int monitor_count = 0;
-  cl_mem m_kind = nullptr, m_p0 = nullptr, m_p1 = nullptr, m_p2 = nullptr, m_cells = nullptr,
-         m_weights = nullptr, history = nullptr;
-  std::size_t chunk = 128;    // Schritte je Block (Signale vorab, Messreihen danach)
-  std::size_t position = 0;   // Schritte im laufenden Block
-  std::size_t fetched = 0;    // davon schon zurückgeholte Messwerte
-  std::size_t slots = 0;      // Signalplätze je Schritt (zwei je Quelle)
-  std::size_t global_x = 0;   // auf ein Vielfaches von 64 aufgerundet
-  bool fields_stale = false;  // Felder auf dem Prozessor veraltet
-  std::vector<double> chunk_signals;
-  std::vector<double> chunk_history;
 
-  ~GpuState() {
+  DeviceMemory() = default;
+  DeviceMemory(const DeviceMemory&) = delete;
+  DeviceMemory& operator=(const DeviceMemory&) = delete;
+  ~DeviceMemory() {
     const Api& cl = api();
     for (cl_mem b : buffers) cl.clReleaseMemObject(b);
-    for (cl_kernel k : {k_field1, k_field2, k_sources, k_record})
-      if (k) cl.clReleaseKernel(k);
     if (queue) cl.clReleaseCommandQueue(queue);
   }
   cl_mem make(std::size_t bytes, const void* data) {
@@ -456,6 +544,35 @@ struct Fdtd::GpuState {
     if (error != CL_SUCCESS)
       throw FieldError("Grafikkarte: Feld lässt sich nicht lesen (OpenCL-Fehler " + std::to_string(error) +
                        ")");
+  }
+};
+}  // namespace
+
+struct Fdtd::GpuState : DeviceMemory {
+  cl_kernel k_field1 = nullptr, k_field2 = nullptr, k_sources = nullptr, k_record = nullptr;
+  cl_mem cur = nullptr, other = nullptr, gx = nullptr, gy = nullptr;
+  cl_mem psi_fx = nullptr, psi_fy = nullptr, psi_gx = nullptr, psi_gy = nullptr;
+  cl_mem coef = nullptr, coef2 = nullptr;  // cf (Ez) bzw. cgx, cgy (Hz)
+  cl_mem bxe = nullptr, cxe = nullptr, bxh = nullptr, cxh = nullptr, bye = nullptr, cye = nullptr,
+         byh = nullptr, cyh = nullptr;
+  // Quellen (je Feldzelle eine Liste) und Monitore
+  int source_count = 0;
+  cl_mem s_cells = nullptr, s_offsets = nullptr, s_slots = nullptr, s_weights = nullptr, signals = nullptr;
+  int monitor_count = 0;
+  cl_mem m_kind = nullptr, m_p0 = nullptr, m_p1 = nullptr, m_p2 = nullptr, m_cells = nullptr,
+         m_weights = nullptr, history = nullptr;
+  std::size_t chunk = 128;    // Schritte je Block (Signale vorab, Messreihen danach)
+  std::size_t position = 0;   // Schritte im laufenden Block
+  std::size_t fetched = 0;    // davon schon zurückgeholte Messwerte
+  std::size_t slots = 0;      // Signalplätze je Schritt (zwei je Quelle)
+  std::size_t global_x = 0;   // auf ein Vielfaches von 64 aufgerundet
+  bool fields_stale = false;  // Felder auf dem Prozessor veraltet
+  std::vector<double> chunk_signals;
+  std::vector<double> chunk_history;
+
+  ~GpuState() {
+    for (cl_kernel k : {k_field1, k_field2, k_sources, k_record})
+      if (k) api().clReleaseKernel(k);
   }
 };
 
@@ -684,6 +801,224 @@ void Fdtd::gpu_sync() const {
     g.read(g.gy, gy_);
     g.fields_stale = false;
   }
+}
+
+// --- 3D-FDTD auf der Grafikkarte ---------------------------------------------------------------------------
+
+struct Fdtd3d::GpuState : DeviceMemory {
+  std::vector<cl_kernel> kernels;  // zum Freigeben
+  cl_kernel k_h = nullptr, k_e = nullptr, k_gather = nullptr;
+  std::array<cl_mem, 6> f{};
+  struct Term {
+    cl_kernel kernel = nullptr;
+    bool e_phase = false;
+    std::array<std::size_t, 3> global{};
+  };
+  std::vector<Term> terms;         // Reihenfolge wie pml_terms_
+  std::vector<cl_mem> psi;         // je Term
+  std::vector<cl_kernel> sources;  // je Quelle; Argument 4 = Signal des Schritts
+  std::vector<std::size_t> source_global;
+  std::array<std::size_t, 3> global{};
+  // Proben (Puffer bleiben, solange dieselbe Liste kommt)
+  std::vector<Probe3d> probe_list;
+  cl_mem p_comp = nullptr, p_cells = nullptr, p_out = nullptr;
+  std::size_t probe_chunk = 0;
+  unsigned since_flush = 0;
+  bool fields_stale = false;
+
+  ~GpuState() {
+    for (cl_kernel k : kernels) api().clReleaseKernel(k);
+    for (cl_mem b : {p_comp, p_cells, p_out})
+      if (b) api().clReleaseMemObject(b);
+  }
+  cl_kernel kernel(const char* name) {
+    cl_int error = CL_SUCCESS;
+    cl_kernel k = api().clCreateKernel(shared().program, name, &error);
+    if (error != CL_SUCCESS) throw FieldError(std::string("Grafikkarte: Kern ") + name + " fehlt");
+    kernels.push_back(k);
+    return k;
+  }
+};
+
+void Fdtd3d::GpuStateDeleter::operator()(GpuState* state) const { delete state; }
+
+namespace {
+std::size_t round_up(std::size_t n, std::size_t to) { return (n + to - 1) / to * to; }
+constexpr std::size_t group_3d = 32;  // Arbeitsgruppe entlang x
+}  // namespace
+
+bool Fdtd3d::use_gpu(bool on) {
+  if (!on) {
+    if (!gpu_) return false;
+    gpu_sync();
+    for (std::size_t t = 0; t < pml_terms_.size(); ++t) gpu_->read(gpu_->psi[t], pml_terms_[t].psi);
+    gpu_.reset();
+    return false;
+  }
+  if (gpu_) return true;
+  const Shared& sh = shared();
+  if (!sh.info.available) return false;
+  for (const Source3d& source : sources_) {  // eine Quelle darf eine Zelle nur einmal enthalten
+    auto cells = source.cells;
+    std::sort(cells.begin(), cells.end());
+    if (std::adjacent_find(cells.begin(), cells.end()) != cells.end()) return false;
+  }
+  auto state = std::unique_ptr<GpuState, GpuStateDeleter>(new GpuState);
+  GpuState& g = *state;
+  const Api& cl = api();
+  cl_int error = CL_SUCCESS;
+  g.queue = cl.clCreateCommandQueue(sh.context, sh.device, 0, &error);
+  if (error != CL_SUCCESS) return false;
+  const int nx = nx_, ny = ny_, nz = nz_, pml = pml_;
+  const double inv = 1.0 / dx_;
+  g.global = {round_up(static_cast<std::size_t>(nx), group_3d), static_cast<std::size_t>(ny),
+              static_cast<std::size_t>(nz)};
+  try {
+    for (std::size_t c = 0; c < 6; ++c) g.f[c] = g.upload(f_[c]);
+    std::array<cl_mem, 3> coef{}, be{}, ce{}, bh{}, ch{};
+    for (std::size_t a = 0; a < 3; ++a) {
+      coef[a] = g.upload(coef_[a]);
+      be[a] = g.upload(be_[a]), ce[a] = g.upload(ce_[a]), bh[a] = g.upload(bh_[a]), ch[a] = g.upload(ch_[a]);
+    }
+    g.k_h = g.kernel("h3");
+    for (cl_uint c = 0; c < 6; ++c) arg(g.k_h, c, g.f[c]);
+    arg(g.k_h, 6, nx), arg(g.k_h, 7, ny), arg(g.k_h, 8, nz), arg(g.k_h, 9, dt_ / constants::mu0 / dx_);
+    g.k_e = g.kernel("e3");
+    for (cl_uint c = 0; c < 6; ++c) arg(g.k_e, c, g.f[c]);
+    for (cl_uint c = 0; c < 3; ++c) arg(g.k_e, 6 + c, coef[c]);
+    arg(g.k_e, 9, nx), arg(g.k_e, 10, ny), arg(g.k_e, 11, inv);
+
+    for (const PmlTerm& term : pml_terms_) {
+      const bool is_e = term.target <= 2;
+      const auto axis = static_cast<std::size_t>(term.axis);
+      GpuState::Term t;
+      t.e_phase = is_e;
+      t.global = g.global;
+      t.global[axis] = 2 * static_cast<std::size_t>(pml);
+      if (axis == 0) t.global[0] = round_up(t.global[0], group_3d);
+      g.psi.push_back(g.upload(term.psi));
+      t.kernel = g.kernel("pml3");
+      cl_kernel k = t.kernel;
+      arg(k, 0, g.f[static_cast<std::size_t>(term.source)]),
+          arg(k, 1, g.f[static_cast<std::size_t>(term.target)]);
+      arg(k, 2, g.psi.back()), arg(k, 3, is_e ? coef[static_cast<std::size_t>(term.target)] : coef[0]);
+      arg(k, 4, is_e ? be[axis] : bh[axis]), arg(k, 5, is_e ? ce[axis] : ch[axis]);
+      const int e_phase = is_e ? 1 : 0, i_first = (is_e && term.target != 0) ? 1 : 0;
+      const int skip_j0 = (is_e && term.target != 1) ? 1 : 0, skip_k0 = (is_e && term.target != 2) ? 1 : 0;
+      arg(k, 6, nx), arg(k, 7, ny), arg(k, 8, nz), arg(k, 9, pml), arg(k, 10, term.axis), arg(k, 11, e_phase);
+      arg(k, 12, i_first), arg(k, 13, skip_j0), arg(k, 14, skip_k0), arg(k, 15, term.sign), arg(k, 16, inv);
+      arg(k, 17, dt_ / constants::mu0);
+      g.terms.push_back(t);
+    }
+    for (const Source3d& source : sources_) {
+      std::vector<int> cells(source.cells.begin(), source.cells.end());
+      cl_kernel k = g.kernel("src3");
+      const int count = static_cast<int>(cells.size());
+      arg(k, 0, g.f[static_cast<std::size_t>(source.component)]), arg(k, 1, g.upload(cells));
+      arg(k, 2, g.upload(source.weights)), arg(k, 3, count);
+      g.sources.push_back(k);
+      g.source_global.push_back(round_up(std::max<std::size_t>(cells.size(), 1), 64));
+    }
+    g.k_gather = g.kernel("gather3");
+    for (cl_uint c = 0; c < 6; ++c) arg(g.k_gather, c, g.f[c]);
+  } catch (const FieldError&) {
+    return false;
+  }
+  gpu_ = std::move(state);
+  team_.reset();  // die Threads des Prozessors werden nicht mehr gebraucht
+  return true;
+}
+
+void Fdtd3d::gpu_step() {
+  GpuState& g = *gpu_;
+  const Api& cl = api();
+  const std::size_t local[3] = {group_3d, 1, 1};
+  auto launch = [&](cl_kernel k, const std::array<std::size_t, 3>& global) {
+    check(cl.clEnqueueNDRangeKernel(g.queue, k, 3, nullptr, global.data(), local, 0, nullptr, nullptr));
+  };
+  // wie step(): H mit Randschicht, dann E mit Randschicht, dann Quellen
+  launch(g.k_h, g.global);
+  for (const auto& t : g.terms)
+    if (!t.e_phase) launch(t.kernel, t.global);
+  launch(g.k_e, g.global);
+  for (const auto& t : g.terms)
+    if (t.e_phase) launch(t.kernel, t.global);
+  const double source_time = (static_cast<double>(steps_) + 0.5) * dt_;
+  for (std::size_t q = 0; q < g.sources.size(); ++q) {
+    const double s = Fdtd::signal(sources_[q].signal, source_time);
+    arg(g.sources[q], 4, s);
+    const std::size_t global = g.source_global[q], group = 64;
+    check(cl.clEnqueueNDRangeKernel(g.queue, g.sources[q], 1, nullptr, &global, &group, 0, nullptr, nullptr));
+  }
+  ++steps_;
+  g.fields_stale = true;
+  if (++g.since_flush % 16 == 0) cl.clFlush(g.queue);
+}
+
+void Fdtd3d::gpu_sync() const {
+  if (!gpu_ || !gpu_->fields_stale) return;
+  for (std::size_t c = 0; c < 6; ++c) gpu_->read(gpu_->f[c], f_[c]);
+  gpu_->fields_stale = false;
+}
+
+void Fdtd3d::gpu_run_probed(std::size_t steps, const std::vector<Probe3d>& probes,
+                            std::vector<double>* values, JobControl* control) {
+  GpuState& g = *gpu_;
+  const Api& cl = api();
+  const std::size_t m = probes.size();
+  auto same = [&] {
+    if (g.probe_list.size() != m) return false;
+    for (std::size_t u = 0; u < m; ++u)
+      if (g.probe_list[u].component != probes[u].component || g.probe_list[u].cell != probes[u].cell)
+        return false;
+    return true;
+  };
+  if (m > 0 && !same()) {
+    for (cl_mem b : {g.p_comp, g.p_cells, g.p_out})
+      if (b) cl.clReleaseMemObject(b);
+    g.p_comp = g.p_cells = g.p_out = nullptr;
+    std::vector<int> comp, cells;
+    for (const Probe3d& p : probes) {
+      comp.push_back(static_cast<int>(p.component));
+      cells.push_back(static_cast<int>(p.cell));
+    }
+    g.probe_chunk = std::clamp<std::size_t>((std::size_t{1} << 22) / m, 1, 256);  // höchstens 32 MB je Block
+    cl_int error = CL_SUCCESS;
+    auto buffer = [&](std::size_t bytes, const void* data) {
+      cl_mem b = cl.clCreateBuffer(shared().context, CL_MEM_READ_WRITE | (data ? CL_MEM_COPY_HOST_PTR : 0),
+                                   bytes, const_cast<void*>(data), &error);
+      check(error);
+      return b;
+    };
+    g.p_comp = buffer(comp.size() * sizeof(int), comp.data());
+    g.p_cells = buffer(cells.size() * sizeof(int), cells.data());
+    g.p_out = buffer(g.probe_chunk * m * sizeof(double), nullptr);
+    g.probe_list = probes;
+    const int count = static_cast<int>(m);
+    arg(g.k_gather, 6, g.p_comp), arg(g.k_gather, 7, g.p_cells), arg(g.k_gather, 8, count);
+    arg(g.k_gather, 9, g.p_out);
+  }
+  values->reserve(values->size() + steps * m);
+  std::vector<double> block(g.probe_chunk * m);
+  std::size_t rows = 0;
+  auto fetch = [&] {
+    if (rows == 0 || m == 0) return;
+    check(cl.clEnqueueReadBuffer(g.queue, g.p_out, CL_TRUE, 0, rows * m * sizeof(double), block.data(), 0,
+                                 nullptr, nullptr));
+    values->insert(values->end(), block.begin(), block.begin() + static_cast<std::ptrdiff_t>(rows * m));
+    rows = 0;
+  };
+  for (std::size_t s = 0; s < steps; ++s) {
+    if (control && (s & 7u) == 0 && control->cancel_requested) break;
+    gpu_step();
+    if (m == 0) continue;
+    const int row = static_cast<int>(rows * m);
+    arg(g.k_gather, 10, row);
+    const std::size_t global = round_up(m, 64), group = 64;
+    check(cl.clEnqueueNDRangeKernel(g.queue, g.k_gather, 1, nullptr, &global, &group, 0, nullptr, nullptr));
+    if (++rows == g.probe_chunk) fetch();
+  }
+  fetch();
 }
 
 #endif  // PHOTONLAB_HAVE_OPENCL

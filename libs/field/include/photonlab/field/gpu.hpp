@@ -1,8 +1,9 @@
 #pragma once
-// Grafikkarte für das 2D-FDTD über OpenCL (docs/performance.md). Die OpenCL-Bibliothek des Grafiktreibers
-// wird zur Laufzeit geladen; fehlt sie oder kann das Gerät keine doppelte Genauigkeit, rechnet alles auf dem
-// Prozessor. Fdtd-Objekte, die nach set_enabled(true) entstehen, rechnen auf der Grafikkarte, wenn die Szene
-// es erlaubt (linear: keine Kerr-Formen; inverses Design und S-Parameter bleiben auf dem Prozessor).
+// Grafikkarte für das 2D- und 3D-FDTD über OpenCL (docs/performance.md). Die OpenCL-Bibliothek des
+// Grafiktreibers wird zur Laufzeit geladen; fehlt sie oder kann das Gerät keine doppelte Genauigkeit, rechnet
+// alles auf dem Prozessor. Fdtd- und Extruded3d-Objekte, die nach set_enabled(true) entstehen, rechnen auf der
+// Grafikkarte, wenn die Szene es erlaubt (linear: keine Kerr-Formen; inverses Design und S-Parameter bleiben
+// auf dem Prozessor). Fdtd3d selbst wechselt nur über use_gpu(true).
 #include <string>
 
 namespace photonlab::field::gpu {

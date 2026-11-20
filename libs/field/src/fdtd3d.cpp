@@ -119,7 +119,10 @@ void Fdtd3d::add_source(Source3d source) {
   if (static_cast<int>(source.component) > ez) throw FieldError("3D-Quelle: nur E-Komponenten");
   for (std::size_t c : source.cells)
     if (c >= cell_count()) throw FieldError("3D-Quelle: Zelle außerhalb des Gitters");
+  const bool gpu = on_gpu();
+  use_gpu(false);  // Quellen liegen auf der Grafikkarte fest: neu aufsetzen
   sources_.push_back(std::move(source));
+  if (gpu) use_gpu(true);
 }
 
 void Fdtd3d::set_threads(int threads) {
@@ -148,6 +151,8 @@ void Fdtd3d::for_planes(const Body& body) {
   });
 }
 
+Fdtd3d::~Fdtd3d() = default;
+
 void Fdtd3d::run(std::size_t steps, JobControl* control) {
   for (std::size_t s = 0; s < steps; ++s) {
     if (control && (s & 7u) == 0) {
@@ -159,7 +164,24 @@ void Fdtd3d::run(std::size_t steps, JobControl* control) {
   if (control) control->progress = 1.0f;
 }
 
+void Fdtd3d::run_probed(std::size_t steps, const std::vector<Probe3d>& probes, std::vector<double>* values,
+                        JobControl* control) {
+  for (const Probe3d& p : probes)
+    if (p.cell >= cell_count()) throw FieldError("3D-Probe: Zelle außerhalb des Gitters");
+  if (gpu_) return gpu_run_probed(steps, probes, values, control);
+  values->reserve(values->size() + steps * probes.size());
+  for (std::size_t s = 0; s < steps; ++s) {
+    if (control && (s & 7u) == 0 && control->cancel_requested) return;
+    step();
+    for (const Probe3d& p : probes) values->push_back(f_[static_cast<std::size_t>(p.component)][p.cell]);
+  }
+}
+
 void Fdtd3d::step() {
+  if (gpu_) {
+    gpu_step();
+    return;
+  }
   // H von n - 1/2 nach n + 1/2, dann E von n nach n + 1
   for_planes([&](int k) {
     update_h(k);
@@ -325,6 +347,7 @@ double Fdtd3d::permittivity(Component3d c, std::size_t index) const {
 }
 
 double Fdtd3d::energy() const {
+  gpu_sync();
   double electric = 0.0, magnetic = 0.0;
   for (std::size_t c = 0; c < 3; ++c)
     for (std::size_t n = 0; n < f_[c].size(); ++n) electric += dt_ / coef_[c][n] * f_[c][n] * f_[c][n];

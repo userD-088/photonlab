@@ -135,7 +135,8 @@ void field_lab() {
       "unten. Die Brechzahlen der Formen sind dort effektive Indizes (2,85 steht für 220 nm Silizium). 3D "
       "macht "
       "aus der Szene eine echte Schicht (Dicke, Kernmaterial, Mantel einstellbar) und rechnet alle sechs "
-      "Feldkomponenten; das dauert Minuten. Flüsse in 3D vergleicht man am besten relativ zueinander.");
+      "Feldkomponenten; das dauert Minuten und läuft auch auf der Grafikkarte (Ansicht > Grafikkarte). "
+      "Flüsse in 3D vergleicht man am besten relativ zueinander.");
   heading("Die 3D-Umgebung");
   paragraph(
       "Im 3D-Modus steht die Szene als Chip im Raum: Formen als Körper in der Schicht, darunter das "

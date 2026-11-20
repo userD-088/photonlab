@@ -11,6 +11,7 @@
 
 #include "implot.h"
 #include "photonlab/core/units.hpp"
+#include "photonlab/field/gpu.hpp"
 #include "photonlab/materials/material.hpp"
 #include "ui_util.hpp"
 
@@ -109,6 +110,7 @@ void View3d::start() {
         snap->nx = sim.solver().nx(), snap->ny = sim.solver().ny(), snap->nz = sim.solver().nz();
         snap->layer_k = sim.layer_k();
         snap->layer_bottom = sim.layer_bottom();
+        snap->gpu = sim.solver().on_gpu();
         snap->cell = sim.solver().cell_size();
         snap->total = total;
         snap->warnings = sim.warnings();
@@ -119,7 +121,8 @@ void View3d::start() {
       std::size_t done = 0;
       double last = seconds();
       while (done < total && !control->cancel_requested) {
-        const std::size_t chunk = std::min<std::size_t>(8, total - done);
+        // Grafikkarte: größere Stücke, die Messwerte kommen je Stück zurück
+        const std::size_t chunk = std::min<std::size_t>(sim.solver().on_gpu() ? 64 : 8, total - done);
         sim.run(chunk, control.get());
         done += chunk;
         control->progress = static_cast<float>(done) / static_cast<float>(total);
@@ -253,10 +256,13 @@ void View3d::draw_settings() {
   // Rechenzeit: mit der Rate der letzten Rechnung, sonst grob 50 Mio. Zell-Schritte je Sekunde und Kern
   if (snapshot_) {
     std::lock_guard lock(snapshot_->mutex);
-    if (snapshot_->seconds > 1.0 && snapshot_->step > 0)
+    if (snapshot_->seconds > 1.0 && snapshot_->step > 0) {
       rate_ = static_cast<double>(snapshot_->nx) * snapshot_->ny * snapshot_->nz *
               static_cast<double>(snapshot_->step) / snapshot_->seconds;
+      rate_gpu_ = snapshot_->gpu;
+    }
   }
+  if (rate_gpu_ != field::gpu::enabled()) rate_ = 0.0;  // Ansicht > Grafikkarte umgeschaltet
   const double rate = rate_ > 0.0 ? rate_ : 50e6 * std::max(1u, std::thread::hardware_concurrency());
   const double estimate = cells * static_cast<double>(e.steps) / rate;
   ImGui::SameLine();

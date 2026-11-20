@@ -100,7 +100,7 @@ class Extruded3d {
     std::size_t monitor = 0;
     std::size_t cell = 0;
   };
-  void record();
+  void record(const double* values);  // ein Schritt in der Reihenfolge von probe_list_
   double index_in_layer(double x, double y) const;
 
   FieldScene scene_;
@@ -113,6 +113,7 @@ class Extruded3d {
   std::size_t period_steps_ = 1;
   std::vector<FluxPlane> planes_;
   std::vector<Probe> probes_;
+  std::vector<Probe3d> probe_list_;
   std::vector<Monitor3dData> monitors_;
   std::vector<std::string> warnings_;
 };

@@ -54,14 +54,34 @@ struct Source3d {
 // Prüft die Szene; wirft FieldError mit Klartext.
 void validate(const Scene3d& scene);
 
+// Wert einer Feldkomponente in einer Zelle, nach jedem Schritt mitgeschrieben (Monitore)
+struct Probe3d {
+  Component3d component = Component3d::ey;
+  std::size_t cell = 0;
+};
+
 class Fdtd3d {
  public:
   explicit Fdtd3d(const Scene3d& scene);
+  ~Fdtd3d();
+  Fdtd3d(const Fdtd3d&) = delete;
+  Fdtd3d& operator=(const Fdtd3d&) = delete;
 
   void add_source(Source3d source);
   void step();
   // Rechnet steps Zeitschritte; bricht ab, wenn control->cancel_requested gesetzt wird.
   void run(std::size_t steps, JobControl* control = nullptr);
+  // Wie run, aber ohne Fortschritt; values bekommt nach jedem Schritt die Werte aller Proben angehängt
+  // (Schritt für Schritt hintereinander). Auf der Grafikkarte kommen nur diese Werte zurück, nicht die
+  // Felder.
+  void run_probed(std::size_t steps, const std::vector<Probe3d>& probes, std::vector<double>* values,
+                  JobControl* control = nullptr);
+
+  // Grafikkarte (gpu.hpp, OpenCL): gleiche Formeln in gleicher Reihenfolge wie auf dem Prozessor, bitgleich.
+  // Gibt zurück, ob jetzt dort gerechnet wird. Felder kommen beim Lesen (component, energy) zurück; Schreiben
+  // über component() schaltet auf den Prozessor zurück.
+  bool use_gpu(bool on);
+  bool on_gpu() const { return static_cast<bool>(gpu_); }
   // 0 = automatisch (Kerne, aber mindestens etwa 32000 Zellen je Thread), 1 = seriell
   void set_threads(int threads);
   int threads() const;
@@ -81,8 +101,14 @@ class Fdtd3d {
   }
 
   // Feldkomponente [V/m bzw. A/m]; schreibbar für Anfangsbedingungen in Tests
-  const std::vector<double>& component(Component3d c) const { return f_[static_cast<std::size_t>(c)]; }
-  std::vector<double>& component(Component3d c) { return f_[static_cast<std::size_t>(c)]; }
+  const std::vector<double>& component(Component3d c) const {
+    gpu_sync();
+    return f_[static_cast<std::size_t>(c)];
+  }
+  std::vector<double>& component(Component3d c) {
+    use_gpu(false);
+    return f_[static_cast<std::size_t>(c)];
+  }
   // Relative Permittivität am Ort einer E-Komponente (gemittelt über die Zelle, siehe fdtd3d.md)
   double permittivity(Component3d c, std::size_t index) const;
   // Feldenergie [J] (E und H zu leicht versetzten Zeiten, für Plausibilität und Stabilität)
@@ -94,12 +120,22 @@ class Fdtd3d {
   void update_h(int k);
   void update_e(int k);
   void pml_plane(int k, bool e_phase);
+  struct GpuState;
+  struct GpuStateDeleter {
+    void operator()(GpuState* state) const;
+  };
+  void gpu_step();
+  void gpu_sync() const;  // Felder von der Grafikkarte holen, falls veraltet
+  void gpu_run_probed(std::size_t steps, const std::vector<Probe3d>& probes, std::vector<double>* values,
+                      JobControl* control);
+  std::unique_ptr<GpuState, GpuStateDeleter> gpu_;
 
   int nx_ = 0, ny_ = 0, nz_ = 0, pml_ = 0;
   double dx_ = 0.0, dt_ = 0.0;
   std::size_t steps_ = 0;
-  std::vector<double> zero_row_;             // Nachbarzeile jenseits der Wand
-  std::array<std::vector<double>, 6> f_;     // Ex, Ey, Ez, Hx, Hy, Hz
+  std::vector<double> zero_row_;  // Nachbarzeile jenseits der Wand
+  mutable std::array<std::vector<double>, 6>
+      f_;  // Ex, Ey, Ez, Hx, Hy, Hz (Kopie, solange die Grafikkarte rechnet)
   std::array<std::vector<double>, 3> coef_;  // dt/(eps0*eps_r) an Ex, Ey, Ez
   // CPML-Profile je Achse an ganzen (e) und halben (h) Gitterplätzen
   std::array<std::vector<double>, 3> be_, ce_, bh_, ch_;

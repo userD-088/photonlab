@@ -46,6 +46,7 @@ class View3d {
     field::StackIndices indices;
     std::string error;
     double seconds = 0.0;  // Rechenzeit bisher
+    bool gpu = false;      // rechnet auf der Grafikkarte
     std::uint64_t serial = 0;
   };
   struct Picture {
@@ -72,7 +73,8 @@ class View3d {
   std::future<void> future_;
   field::FieldScene computed_scene_;  // Szene der letzten Rechnung (für "Szene geändert")
   bool has_run_ = false;
-  double rate_ = 0.0;  // gemessene Zellen * Schritte je Sekunde der letzten Rechnung (Zeitschätzung)
+  double rate_ = 0.0;      // gemessene Zellen * Schritte je Sekunde der letzten Rechnung (Zeitschätzung)
+  bool rate_gpu_ = false;  // ... auf der Grafikkarte gemessen
   std::uint64_t shown_serial_ = 0;
   bool shown_intensity_ = false;
   Picture top_, side_, top3d_, side3d_;

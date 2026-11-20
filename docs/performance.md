@@ -75,6 +75,14 @@ geladen. Fehlt sie oder kann das Gerät keine doppelte Genauigkeit, rechnet alle
 * Auf dem Prozessor bleiben: Kerr-Formen (Newton je Zelle), inverses Design (setzt Permittivitäten und
   Einspeisungen) und die S-Parameter-Extraktion (liest das Feld in jedem Schritt; ein Fourier-Monitor auf der
   Karte fehlt noch).
+* **3D** (`Fdtd3d::use_gpu`, die 3D-Rechnung der Szene nutzt es automatisch): Kerne `h3`, `e3` je Zelle wie
+  `update_h`/`update_e`, je Randschicht-Term ein Aufruf `pml3` nur über dessen Schicht, in der Reihenfolge von
+  `pml_terms_` (eine Ecke bekommt Beiträge zweier Terme; die Reihenfolge der Additionen bleibt die des
+  Prozessors). Quellen je Quelle (`src3`, Signal vom Prozessor), Monitore als „Proben“ (`run_probed`,
+  `gather3`): je Schritt die Feldwerte der Flussflächen und Punkte in einen Block, der alle bis zu 256
+  Schritte zurückkommt; die Flüsse rechnet der Prozessor daraus mit derselben Formel. Abnahme auf PoCL:
+  alle sechs Komponenten, Proben und Flüsse der extrudierten Szene **bitgleich** (`tests/test_gpu.cpp`). Die
+  3D-S-Parameter lesen die Ports in jedem Schritt und rechnen deshalb auf dem Prozessor.
 * Geschwindigkeit: `photonlab_cli bench --gpu`. Das FDTD ist durch die Speicherbandbreite begrenzt: eine
   Grafikkarte mit 400 GB/s liegt etwa 5–10-mal über einem Desktop-Prozessor, auch in doppelter Genauigkeit.
   Gemessen wurde in der Entwicklungsumgebung nur PoCL auf dem Prozessor (keine Grafikkarte vorhanden).

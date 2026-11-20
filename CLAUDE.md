@@ -2,7 +2,7 @@
 
 ## Projekt
 Photonik-Simulator in C++20 mit zwei Ebenen:
-- Feld (Bauteil-Labor): 2D-FDTD (linear + nichtlinear, GPU), 3D-Rechnung der Szene, Modenlöser, PWE-Bandstruktur, inverses Design
+- Feld (Bauteil-Labor): 2D-FDTD (linear + nichtlinear, GPU), 3D-Rechnung der Szene (GPU), Modenlöser, PWE-Bandstruktur, inverses Design
 - Schaltung (Chip-Designer): S-Matrizen, aktive und nichtlineare Kompaktmodelle, Fenster „Logik“ (Bits schalten, Wahrheitstabelle, Zeugnis)
 Brücke: S-Parameter-Extraktion (Feld → Schaltung, Reiter „Bauteil für den Chip-Designer“).
 Ziel: physikalisch realistisch, ehrlich bewertet, praktisch nutzbar; Schaltungen sollen als echter Chip baubar sein.
@@ -59,7 +59,7 @@ Ohne GUI (schneller, z. B. für reine Physik-Arbeit): `-DPHOTONLAB_BUILD_GUI=OFF
 - Registry: nie `ComponentRegistry::builtin()` für geladene Projekte verwenden, sondern `io::make_registry(project)` (GUI: `active_registry()`, in Jobs `active_registry_ptr()` mitnehmen), sonst fehlen die Bauteile der Bibliothek.
 - Referenz-Szenen/-Designs: berechnete Koordinaten (cos, atan2 ...) runden (`round_pico`), sonst unterscheiden sich die Beispieldateien zwischen Compilern im letzten Bit und der Beispiel-Test schlägt in der CI fehl.
 - Tests: `doctest::Approx(x).epsilon(e)` rechnet mit `scale = 1` (Toleranz e*(1+|x|)) und ist für kleine Zahlen praktisch absolut: immer `.scale(0.0)` setzen, wenn relativ verglichen werden soll.
-- Grafikkarte: Kerne in `libs/field/src/gpu.cpp` rechnen dieselben Formeln in derselben Reihenfolge wie `fdtd.cpp` (bitgleich, `tests/test_gpu.cpp`); jede Änderung am Prozessor-Kern dort nachziehen. Nur OpenCL-Header als Abhängigkeit, die Bibliothek wird zur Laufzeit geladen. Bibliothek und Tests rechnen ohne `gpu::set_enabled(true)` auf dem Prozessor.
+- Grafikkarte: Kerne in `libs/field/src/gpu.cpp` rechnen dieselben Formeln in derselben Reihenfolge wie `fdtd.cpp` bzw. `fdtd3d.cpp` (bitgleich, `tests/test_gpu.cpp`); jede Änderung am Prozessor-Kern dort nachziehen. 3D-Monitore lesen das Feld nur über Proben (`Fdtd3d::run_probed`), nie über `component()` in jedem Schritt. Nur OpenCL-Header als Abhängigkeit, die Bibliothek wird zur Laufzeit geladen. Bibliothek und Tests rechnen ohne `gpu::set_enabled(true)` auf dem Prozessor.
 - Feld-Szene: deaktivierte Objekte (`enabled = false`) wirken nirgends; Löser nur über `field::active_scene` bzw. `Fdtd(scene)` füttern, nie die Listen direkt filtern.
 - Nichtlinearität im FDTD (Ez und Hz): Quellen nicht in nichtlinearen Formen platzieren (siehe `docs/physics/nonlinear.md`).
 - Nichtlineare Bauteile: `state_size() > 0`, `s_matrix_at`, `settle_state`; der Löser iteriert. Für Hysterese Rampen (`wavelength_ramp`, `power_ramp`) mit weitergereichtem Zustand verwenden, nie parallel unabhängig.
