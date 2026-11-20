@@ -122,6 +122,15 @@ Wellenlänge (1 pm bis 20 nm). Zum Vergleich: ein Silizium-Ring driftet thermisc
   Grenze zur zweiten Defektmode); bei 1560 nm interferierte der Übertrag gar nicht mehr. Der Streifen-Chip
   ist deutlich besser (22 dB).
 
+* **Volladdierer in einer Szene (`field_fulladder`, Gatter `scene_fulladder`):** zwei Halbaddierer-Chips und ein
+  Y-Kombinierer (ODER) in einer FDTD-Rechnung, verbunden über Regeneratoren in der Szene (fdtd.md): S1 = Summe
+  von Chip 1 schaltet den Eingang von Chip 2 (Schwelle 5·10⁻⁸, gemessen 0: 3·10⁻⁹, 1: 5·10⁻⁷), die Überträge
+  beider Chips schalten die Sender C1 und C2 am Kombinierer (Schwelle 1,1·10⁻⁶, gemessen 0: 5,6·10⁻⁷,
+  1: 2,2·10⁻⁶). Alle Sender strahlen einseitig ins Bauteil (sonst läuft Licht über die Lücken in den
+  Nachbar-Chip). Laufzeit 3,6 ps. Gemessen: alle 8 Zeilen richtig, Summe 19,4 dB, Übertrag 18,6 dB (das ODER
+  hinter den Regeneratoren ist sauber, weil C1 und C2 nie zugleich leuchten). Rechenzeit auf 4 Kernen etwa
+  1 h für alle Zeilen; mit Grafikkarte entsprechend kürzer.
+
 ## Was das Zeugnis nicht sagt
 
 - Alles ist stationär: keine Schaltzeiten, keine Bitrate, keine Schaltenergie. Die Latenz ist nur die

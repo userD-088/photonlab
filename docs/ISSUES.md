@@ -213,5 +213,6 @@ Obere Leiste, Bedienung:
 ## Phase 15 – Regenerator, Bausteine, Grafikkarte (Nov. 2026)
 - [x] #152 Regenerator als Quelle mit Auslöser (Detektor, Schwelle, Verzögerung, invertiert): O/E/O in der Feld-Szene; Verbindungslinie im Editor
 - [x] #153 Bausteine im Editor: Y-Verzweigung, Y-Kombinierer, S-Bogen, 90-Grad-Bogen, Richtkoppler, Phasenschieber, Ring am Bus, Halbaddierer-Chip, Regenerator (je als Gruppe)
-- [x] #154 Volladdierer als eine Feld-Szene (`field_fulladder`, Gatter `scene_fulladder`): zwei Halbaddierer-Chips + Y-Kombinierer, drei Regeneratoren, einseitige Quellen
+- [x] #154 Volladdierer als eine Feld-Szene (`field_fulladder`, Gatter `scene_fulladder`): zwei Halbaddierer-Chips + Y-Kombinierer, drei Regeneratoren, einseitige Quellen; gemessen alle 8 Zeilen richtig, Summe 19,4 dB, Übertrag 18,6 dB
 - [x] #155 Fehler: Leertaste/Pfeiltasten blieben im Besitz des Feld-Labors, wenn ein anderer Reiter vorn lag; eingefügte Objekte aus anderen Projekten zeigten auf fehlende Gruppen; Feld-Gatter mit Modenmonitor meldeten die Schwelle in W/m
+- [ ] #156 Feld-Gatter: Threads je Belegung fest am Anfang verteilt; die letzten Belegungen laufen dann auf einem Kern (Volladdierer-Szene: Schluss dauert lange). Freiwerdende Threads nachreichen oder Belegungen nacheinander mit allen Threads rechnen

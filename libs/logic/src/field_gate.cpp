@@ -228,6 +228,19 @@ std::vector<std::string> field_gate_names() {
           "scene_fulladder"};
 }
 
+std::string field_gate_label(std::string_view name) {
+  if (name == "phc_or_and") return "ODER / UND (Kristall)";
+  if (name == "phc_xor") return "XOR (Kristall)";
+  if (name == "phc_not") return "NICHT (Kristall)";
+  if (name == "phc_halfadder") return "Halbaddierer (zwei Kristall-Gatter)";
+  if (name == "chip_halfadder") return "Halbaddierer (ein Chip)";
+  if (name == "chip_fulladder") return "Volladdierer (drei Chips, regeneriert)";
+  if (name == "phc_chip_halfadder") return "Halbaddierer (ein Kristall-Chip)";
+  if (name == "phc_chip_fulladder") return "Volladdierer (drei Kristall-Chips, regeneriert)";
+  if (name == "scene_fulladder") return "Volladdierer (eine Szene mit Regeneratoren)";
+  return std::string(name);
+}
+
 FieldGate field_gate(std::string_view name) {
   const std::string monitor = "Fluss Ausgang";
   FieldGate g;

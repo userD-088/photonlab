@@ -83,5 +83,6 @@ FieldGateReport characterize_field_gate(const FieldGate& gate, ThreadPool* pool 
 // "chip_fulladder".
 std::vector<std::string> field_gate_names();
 FieldGate field_gate(std::string_view name);  // wirft field::FieldError bei unbekanntem Namen
+std::string field_gate_label(std::string_view name);  // Anzeigename (Latin-1)
 
 }  // namespace photonlab::logic

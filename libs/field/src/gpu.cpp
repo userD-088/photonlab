@@ -450,15 +450,24 @@ struct Fdtd::GpuState {
     return make(v.size() * sizeof(T), v.empty() ? nullptr : v.data());
   }
   void read(cl_mem b, std::vector<double>& v) const {
-    if (!v.empty())
-      api().clEnqueueReadBuffer(queue, b, CL_TRUE, 0, v.size() * sizeof(double), v.data(), 0, nullptr,
-                                nullptr);
+    if (v.empty()) return;
+    const cl_int error = api().clEnqueueReadBuffer(queue, b, CL_TRUE, 0, v.size() * sizeof(double), v.data(),
+                                                   0, nullptr, nullptr);
+    if (error != CL_SUCCESS)
+      throw FieldError("Grafikkarte: Feld lässt sich nicht lesen (OpenCL-Fehler " + std::to_string(error) +
+                       ")");
   }
 };
 
 void Fdtd::GpuStateDeleter::operator()(GpuState* state) const { delete state; }
 
 namespace {
+// Fehler der Grafikkarte (z. B. Speicher erst beim Rechnen knapp) als Klartext statt stiller Fehlwerte
+void check(cl_int error) {
+  if (error != CL_SUCCESS)
+    throw FieldError("Grafikkarte: Rechnung fehlgeschlagen (OpenCL-Fehler " + std::to_string(error) +
+                     "); Ansicht > Grafikkarte abschalten oder kleineres Gebiet");
+}
 template <class T>
 void arg(cl_kernel k, cl_uint index, const T& value) {
   api().clSetKernelArg(k, index, sizeof(T), &value);
@@ -599,26 +608,26 @@ void Fdtd::gpu_step() {
     arg(k, 0, g.cur), arg(k, 1, g.gx), arg(k, 2, g.gy), arg(k, 3, g.psi_gx), arg(k, 4, g.psi_gy);
     arg(k, 5, g.bxh), arg(k, 6, g.cxh), arg(k, 7, g.byh), arg(k, 8, g.cyh);
     arg(k, 9, nx), arg(k, 10, ny), arg(k, 11, px), arg(k, 12, py), arg(k, 13, inv), arg(k, 14, cm);
-    cl.clEnqueueNDRangeKernel(g.queue, k, 2, nullptr, global, local, 0, nullptr, nullptr);
+    check(cl.clEnqueueNDRangeKernel(g.queue, k, 2, nullptr, global, local, 0, nullptr, nullptr));
     k = g.k_field2;  // ez_e: neues Feld in den anderen Puffer
     arg(k, 0, g.cur), arg(k, 1, g.other), arg(k, 2, g.gx), arg(k, 3, g.gy), arg(k, 4, g.psi_fx),
         arg(k, 5, g.psi_fy);
     arg(k, 6, g.bxe), arg(k, 7, g.cxe), arg(k, 8, g.bye), arg(k, 9, g.cye), arg(k, 10, g.coef);
     arg(k, 11, nx), arg(k, 12, ny), arg(k, 13, px), arg(k, 14, py), arg(k, 15, inv);
-    cl.clEnqueueNDRangeKernel(g.queue, k, 2, nullptr, global, local, 0, nullptr, nullptr);
+    check(cl.clEnqueueNDRangeKernel(g.queue, k, 2, nullptr, global, local, 0, nullptr, nullptr));
   } else {
     cl_kernel k = g.k_field1;  // hz_e
     arg(k, 0, g.cur), arg(k, 1, g.gx), arg(k, 2, g.gy), arg(k, 3, g.psi_gx), arg(k, 4, g.psi_gy);
     arg(k, 5, g.bxe), arg(k, 6, g.cxe), arg(k, 7, g.bye), arg(k, 8, g.cye), arg(k, 9, g.coef),
         arg(k, 10, g.coef2);
     arg(k, 11, nx), arg(k, 12, ny), arg(k, 13, px), arg(k, 14, py), arg(k, 15, inv);
-    cl.clEnqueueNDRangeKernel(g.queue, k, 2, nullptr, global, local, 0, nullptr, nullptr);
+    check(cl.clEnqueueNDRangeKernel(g.queue, k, 2, nullptr, global, local, 0, nullptr, nullptr));
     k = g.k_field2;  // hz_h
     arg(k, 0, g.cur), arg(k, 1, g.other), arg(k, 2, g.gx), arg(k, 3, g.gy), arg(k, 4, g.psi_fx),
         arg(k, 5, g.psi_fy);
     arg(k, 6, g.bxh), arg(k, 7, g.cxh), arg(k, 8, g.byh), arg(k, 9, g.cyh);
     arg(k, 10, nx), arg(k, 11, ny), arg(k, 12, px), arg(k, 13, py), arg(k, 14, inv), arg(k, 15, cm);
-    cl.clEnqueueNDRangeKernel(g.queue, k, 2, nullptr, global, local, 0, nullptr, nullptr);
+    check(cl.clEnqueueNDRangeKernel(g.queue, k, 2, nullptr, global, local, 0, nullptr, nullptr));
   }
   std::swap(g.cur, g.other);  // cur = neues Feld, other = altes
 
@@ -629,7 +638,7 @@ void Fdtd::gpu_step() {
         arg(k, 4, g.s_slots);
     arg(k, 5, g.s_weights), arg(k, 6, g.signals), arg(k, 7, row);
     const std::size_t n = (static_cast<std::size_t>(g.source_count) + 63) / 64 * 64, l = 64;
-    cl.clEnqueueNDRangeKernel(g.queue, k, 1, nullptr, &n, &l, 0, nullptr, nullptr);
+    check(cl.clEnqueueNDRangeKernel(g.queue, k, 1, nullptr, &n, &l, 0, nullptr, nullptr));
   }
   ++steps_;
   if (g.monitor_count > 0) {
@@ -641,7 +650,7 @@ void Fdtd::gpu_step() {
     arg(k, 10, g.m_weights), arg(k, 11, g.history), arg(k, 12, row), arg(k, 13, nx), arg(k, 14, ez_flag);
     arg(k, 15, dx_);
     const std::size_t n = (static_cast<std::size_t>(g.monitor_count) + 63) / 64 * 64, l = 64;
-    cl.clEnqueueNDRangeKernel(g.queue, k, 1, nullptr, &n, &l, 0, nullptr, nullptr);
+    check(cl.clEnqueueNDRangeKernel(g.queue, k, 1, nullptr, &n, &l, 0, nullptr, nullptr));
   }
   ++g.position;
   g.fields_stale = true;
@@ -661,9 +670,9 @@ void Fdtd::gpu_sync() const {
   // neue Messwerte des laufenden Blocks anhängen
   if (g.position > g.fetched && g.monitor_count > 0) {
     const std::size_t m = static_cast<std::size_t>(g.monitor_count);
-    cl.clEnqueueReadBuffer(g.queue, g.history, CL_TRUE, g.fetched * m * sizeof(double),
-                           (g.position - g.fetched) * m * sizeof(double), g.chunk_history.data(), 0, nullptr,
-                           nullptr);
+    check(cl.clEnqueueReadBuffer(g.queue, g.history, CL_TRUE, g.fetched * m * sizeof(double),
+                                 (g.position - g.fetched) * m * sizeof(double), g.chunk_history.data(), 0,
+                                 nullptr, nullptr));
     for (std::size_t s = 0; s < g.position - g.fetched; ++s)
       for (std::size_t k = 0; k < m; ++k) monitors_[k].values.push_back(g.chunk_history[s * m + k]);
   }

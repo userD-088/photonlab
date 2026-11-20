@@ -167,9 +167,11 @@ void FieldGateView::draw() {
   const bool running = future_.valid();
   ImGui::BeginDisabled(running);
   ImGui::SetNextItemWidth(ImGui::GetFontSize() * 14.0f);
-  if (ImGui::BeginCombo("Gatter", names_[static_cast<std::size_t>(selected_)].c_str())) {
+  if (ImGui::BeginCombo("Gatter",
+                        logic::field_gate_label(names_[static_cast<std::size_t>(selected_)]).c_str())) {
     for (int i = 0; i < static_cast<int>(names_.size()); ++i)
-      if (ImGui::Selectable(names_[static_cast<std::size_t>(i)].c_str(), i == selected_)) {
+      if (ImGui::Selectable(logic::field_gate_label(names_[static_cast<std::size_t>(i)]).c_str(),
+                            i == selected_)) {
         selected_ = i;
         has_result_ = false;
       }
