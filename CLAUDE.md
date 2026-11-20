@@ -21,7 +21,7 @@ Ohne GUI (schneller, z. B. für reine Physik-Arbeit): `-DPHOTONLAB_BUILD_GUI=OFF
 
 ## Struktur
 - `libs/core` – Einheiten, Konstanten, komplexe Zahlen, Threadpool, JobControl, `parallel_for`, `StepTeam` (feste Thread-Gruppe für Zeitschritte)
-- `libs/circuit` – Component-Interface und -Registry, Plugin-Lader (`plugin.*`, C-Schnittstelle `plugin_api.h`), S-Parameter-Bauteil (`sparam:<name>`), Netzliste, linearer Löser, Sweep, Resonanz-Auswertung, Monte-Carlo, Referenz-Designs
+- `libs/circuit` – Component-Interface und -Registry, Plugin-Lader (`plugin.*`, C-Schnittstelle `plugin_api.h`), S-Parameter-Bauteil (`sparam:<name>`), Unterschaltungen (`subcircuit.*`, Bauteil `sub:<name>`, S-Matrix aus der inneren Schaltung), Netzliste, linearer Löser, Sweep, Resonanz-Auswertung, Monte-Carlo, Referenz-Designs
 - `libs/materials` – Sellmeier-Gleichungen (Si, SiO2, Si3N4), Gruppenindex, dn/dT; jede Zahl mit Quelle
 - `libs/modes` – Schichtwellenleiter analytisch, 1D-Profil-Löser, semi-vektorieller Modenlöser für Querschnitte
 - `libs/field` – Feld-Szene (Formen, Gruppen, Quellen mit Regenerator und einseitiger Abstrahlung, Monitore, Ports, `auto_ports`), Bausteine (`add_building_block`), Grafikkarte (`gpu.*`, OpenCL zur Laufzeit geladen), 2D-FDTD nach Yee mit CPML (Threads je Zeitschritt), 3D-FDTD (`fdtd3d.*`, Quader oder Brechzahl-Funktion) mit Abnahme-Experiment `waveguide3d.*`, Feld-Szene als Schicht in 3D (`extrude3d.*`: Schichtaufbau `scene.stack`, Querschnittsmode als Quelle, Flussflächen; S-Parameter in 3D `sparameters3d.cpp`), inverses Design (`inverse_design.*`: Adjoint, Filter, Projektion), Moden- und Linienquellen, Spektrum, S-Parameter-Extraktion, Kristall-Generatoren (`photonic_crystal.*`: Gitter, Liniendefekte, Punktdefekte)
@@ -55,6 +55,7 @@ Ohne GUI (schneller, z. B. für reine Physik-Arbeit): `-DPHOTONLAB_BUILD_GUI=OFF
 - GUI-Jobs, die laufend Bilder liefern (FDTD): Löser, Steuerung und Schnappschuss per `shared_ptr` an den Job geben; der Job greift nie auf Objekte der Oberfläche zu.
 - Eigenwertprobleme: Ergebnisse immer über das Residuum prüfen und nur geprüfte Moden melden (eigener Löser in `libs/modes/src/fde.cpp`; Spectra lieferte ungenaue Werte und ist nicht eingebunden).
 - Brechzahlen nie fest eintippen: aus `libs/materials` bzw. aus dem Schichtlöser berechnen.
+- Unterschaltungen sind normale Registry-Typen (`register_subcircuit`); innen nur lineare Bauteile, jede darf nur frühere enthalten. Logik-Ausgänge in Zellen heißen "<instanz>: <messgröße>".
 - Registry: nie `ComponentRegistry::builtin()` für geladene Projekte verwenden, sondern `io::make_registry(project)` (GUI: `active_registry()`, in Jobs `active_registry_ptr()` mitnehmen), sonst fehlen die Bauteile der Bibliothek.
 - Referenz-Szenen/-Designs: berechnete Koordinaten (cos, atan2 ...) runden (`round_pico`), sonst unterscheiden sich die Beispieldateien zwischen Compilern im letzten Bit und der Beispiel-Test schlägt in der CI fehl.
 - Tests: `doctest::Approx(x).epsilon(e)` rechnet mit `scale = 1` (Toleranz e*(1+|x|)) und ist für kleine Zahlen praktisch absolut: immer `.scale(0.0)` setzen, wenn relativ verglichen werden soll.

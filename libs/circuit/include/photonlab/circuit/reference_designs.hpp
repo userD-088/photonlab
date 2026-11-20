@@ -7,6 +7,7 @@
 
 #include "photonlab/circuit/monte_carlo.hpp"
 #include "photonlab/circuit/netlist.hpp"
+#include "photonlab/circuit/subcircuit.hpp"
 #include "photonlab/circuit/sweep.hpp"
 
 namespace photonlab::circuit {
@@ -42,6 +43,12 @@ Circuit reference_half_adder();
 // auf zwei Schienen (c hell bei 1, n hell bei 0) von Bit zu Bit; je Bit: Schalter g (A), c und n (A, B), s
 // (A, B), Abgriffe 10 % für die Summe. Detektoren "det_s<i>" und "det_cout"; Beschreibung in docs/physics/logic.md.
 Circuit reference_ripple_adder(int bits);
+
+// Volladdierer-Zelle als Unterschaltung "volladdierer" (ein Bit von reference_ripple_adder): Ports feed,
+// c_in, n_in (links), c_out, n_out (rechts); Parameter A und B (Heizleistungen); Summen-Detektor det_s innen.
+Subcircuit reference_adder_cell();
+// Ripple-Carry-Addierer aus Zellen "sub:volladdierer" (Instanzen fa0 ...); braucht die Zelle in der Registry.
+Circuit reference_ripple_adder_cells(int bits);
 
 // Referenz-Design samt passender Simulationseinstellungen (Sweep-Bereich, Beispiel-Streuungen).
 struct ReferenceSetup {

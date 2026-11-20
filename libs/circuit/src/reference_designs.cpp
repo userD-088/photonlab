@@ -266,13 +266,76 @@ Circuit reference_ripple_adder(int bits) {
   return c;
 }
 
+Subcircuit reference_adder_cell() {
+  Circuit c;
+  c.name = "Volladdierer-Zelle";
+  c.add("g", "mzi_switch", {}, 0, 0);
+  c.add("tap_c", "coupler", {{"power_coupling", 0.1}}, 0, 5);
+  c.add("tap_n", "coupler", {{"power_coupling", 0.1}}, 0, 10);
+  c.add("c", "mzi_switch", {}, 7, 3);
+  c.add("n", "mzi_switch", {}, 7, 9);
+  c.add("s", "mzi_switch", {}, 7, 15);
+  c.add("det_s", "photodiode", {}, 14, 17);
+  c.connect("tap_c.out1", "c.in1");
+  c.connect("g.out1", "c.in2");
+  c.connect("tap_n.out1", "n.in1");
+  c.connect("g.out2", "n.in2");
+  c.connect("tap_c.out2", "s.in1");
+  c.connect("tap_n.out2", "s.in2");
+  c.connect("s.out2", "det_s.in");
+  Subcircuit sub;
+  sub.name = "volladdierer";
+  sub.label = "Volladdierer-Zelle";
+  sub.description = "Ein Bit des Ripple-Carry-Addierers aus MZI-Schaltern; Summe am inneren Detektor det_s";
+  sub.circuit = std::move(c);
+  sub.ports = {{"feed", {"g", "in1"}},
+               {"c_in", {"tap_c", "in1"}},
+               {"n_in", {"tap_n", "in1"}},
+               {"c_out", {"c", "out1"}},
+               {"n_out", {"n", "out1"}}};
+  sub.params = {{"A", "power_a", {"g", "c", "n", "s"}, 0.0}, {"B", "power_b", {"c", "n", "s"}, 0.0}};
+  return sub;
+}
+
+Circuit reference_ripple_adder_cells(int bits) {
+  if (bits < 1 || bits > 16) throw CircuitError("Addierer: 1 bis 16 Bit");
+  Circuit c;
+  c.name = std::to_string(bits) + "-Bit-Addierer aus Volladdierer-Zellen";
+  c.add("laser", "laser", {{"power", 10e-3}}, 0, 0);
+  c.add("koppler_ein", "grating_coupler", {}, 6, 0);
+  c.connect("laser.out", "koppler_ein.fiber");
+  auto bit_x = [](int i) { return 30 + 14 * i; };
+  std::string bus = "koppler_ein.wg";
+  for (int k = 0; k < bits; ++k) {
+    const std::string name = "verteiler" + std::to_string(k);
+    c.add(name, "coupler", {{"power_coupling", 1.0 / (bits + 1 - k)}}, k == 0 ? 13 : bit_x(k - 1) - 7, 0);
+    c.connect(bus, name + ".in1");
+    bus = name + ".out1";
+  }
+  c.add("cin", "mzi_switch", {}, 20, 4);
+  c.connect("verteiler0.out2", "cin.in1");
+  std::string carry = "cin.out1", not_carry = "cin.out2";
+  for (int i = 0; i < bits; ++i) {
+    const std::string n = "fa" + std::to_string(i);
+    c.add(n, subcircuit_type_name("volladdierer"), {}, bit_x(i), 4);
+    c.connect(i + 1 < bits ? "verteiler" + std::to_string(i + 1) + ".out2" : bus, n + ".feed");
+    c.connect(carry, n + ".c_in");
+    c.connect(not_carry, n + ".n_in");
+    carry = n + ".c_out";
+    not_carry = n + ".n_out";
+  }
+  c.add("det_cout", "photodiode", {}, bit_x(bits), 4);
+  c.connect(carry, "det_cout.in");
+  return c;
+}
+
 std::vector<std::string> reference_design_names() {
   return {"mzi",          "mzi_unbalanced",   "ring_allpass",
           "ring_adddrop", "xor_interference", "and_interference",
           "xor_directed", "ring_kerr",        "ring_modulator",
           "mzi_heater",   "pcm_memory",       "half_adder",
           "full_adder",   "adder2",           "adder4",
-          "adder8"};
+          "adder8",       "adder8_cells"};
 }
 
 Circuit reference_design(std::string_view name) {
@@ -292,6 +355,7 @@ Circuit reference_design(std::string_view name) {
   if (name == "adder2") return reference_ripple_adder(2);
   if (name == "adder4") return reference_ripple_adder(4);
   if (name == "adder8") return reference_ripple_adder(8);
+  if (name == "adder8_cells") return reference_ripple_adder_cells(8);
   throw CircuitError("Unbekanntes Referenz-Design '" + std::string(name) + "'");
 }
 

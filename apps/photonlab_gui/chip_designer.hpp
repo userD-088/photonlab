@@ -55,6 +55,10 @@ class ChipDesigner {
   void select_instance(const std::string& name) { selected_ = name, rename_buffer_ = name; }
   // Bauteil an eine freie Stelle der Schaltung setzen, auswählen und den Chip-Designer zeigen
   void place_instance(const std::string& type);
+  // Unterschaltung bearbeiten: die Zeichenfläche zeigt ihr Inneres; zurück schreibt sie in die Bibliothek
+  void enter_subcircuit(int index);
+  void leave_subcircuit();
+  int editing_subcircuit() const { return editing_sub_; }
   std::uint64_t project_generation() const {
     return generation_;
   }  // zählt bei jedem neu geladenen Projekt hoch
@@ -118,6 +122,7 @@ class ChipDesigner {
   // Zeichnen
   void draw_canvas();
   void draw_library();
+  void draw_subcircuit_popup();
   void draw_properties();
   void draw_spectrum();
   void draw_curve();
@@ -158,6 +163,14 @@ class ChipDesigner {
   circuit::PowerBalance balance_;
   double max_wave_power_ = 0.0;
   std::string solve_error_;
+
+  // Hierarchie: bearbeitete Unterschaltung (-1 = die Schaltung selbst) und die solange geparkte Schaltung
+  int editing_sub_ = -1;
+  circuit::Circuit parent_circuit_;
+  logic::GateDefinition parent_gate_;
+  char sub_name_[64] = {};
+  std::vector<std::pair<circuit::SubcircuitPort, bool>> sub_ports_;  // offene Ports, nach außen ja/nein
+  bool sub_clear_ = true;
 
   // Editor
   std::string selected_;

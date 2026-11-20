@@ -15,6 +15,7 @@ struct Instance {
   ParamMap params;   // SI
   int grid_x = 0;    // Position im Raster-Editor (Zellen)
   int grid_y = 0;
+  bool operator==(const Instance&) const = default;
 };
 
 struct PortRef {
@@ -26,12 +27,14 @@ struct PortRef {
 struct Connection {
   PortRef a;
   PortRef b;
+  bool operator==(const Connection&) const = default;
 };
 
 struct Circuit {
   std::string name;
   std::vector<Instance> instances;
   std::vector<Connection> connections;
+  bool operator==(const Circuit&) const = default;
 
   Instance* find_instance(std::string_view instance_name);
   const Instance* find_instance(std::string_view instance_name) const;

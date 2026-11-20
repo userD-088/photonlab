@@ -50,6 +50,12 @@ class Component {
 
   // Messwerte aus einlaufenden (a) und auslaufenden (b) Wellen an den eigenen Ports. Standard: keine.
   virtual std::vector<Measurement> measure(const CVector& a, const CVector& b) const;
+  // Dasselbe mit der Wellenlänge der Lösung (Unterschaltungen rechnen damit ihr Inneres nach).
+  // Standard: measure(a, b).
+  virtual std::vector<Measurement> measure_at_wavelength(double /*wavelength*/, const CVector& a,
+                                                         const CVector& b) const {
+    return measure(a, b);
+  }
 
   // --- Nichtlineare Bauteile (Phase 8, docs/physics/nonlinear.md) ---
   // Ein innerer Zustand (z. B. umlaufende Leistung im Ring, Verstärkung eines SOA) bestimmt die S-Matrix.

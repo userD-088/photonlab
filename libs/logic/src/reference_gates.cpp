@@ -10,7 +10,7 @@ namespace photonlab::logic {
 bool has_reference_gate(std::string_view name) {
   return name == "xor_interference" || name == "and_interference" || name == "xor_directed" ||
          name == "half_adder" || name == "full_adder" || name == "adder2" || name == "adder4" ||
-         name == "adder8";
+         name == "adder8" || name == "adder8_cells";
 }
 
 namespace {
@@ -108,6 +108,22 @@ GateDefinition reference_gate(std::string_view name) {
     gate = ripple_adder_gate(4);
   } else if (name == "adder8") {
     gate = ripple_adder_gate(8);
+  } else if (name == "adder8_cells") {
+    // gleiche Logik, aber jedes Bit ist eine Zelle fa<i> mit den Parametern A und B; die Summe misst der
+    // Detektor det_s in der Zelle
+    gate = ripple_adder_gate(8);
+    gate.name = "8-Bit-Addierer (Zellen)";
+    for (auto& in : gate.inputs)
+      if (in.name != "Cin") {
+        in.instance = "fa" + in.name.substr(1);
+        in.param = in.name.substr(0, 1);
+        in.more_instances.clear();
+      }
+    for (auto& out : gate.outputs)
+      if (out.name != "Cout") {
+        out.instance = "fa" + out.name.substr(1);
+        out.measurement = "det_s: Leistung";
+      }
   } else {
     throw circuit::CircuitError("Kein Referenz-Gatter '" + std::string(name) + "'");
   }

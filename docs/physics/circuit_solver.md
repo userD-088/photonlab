@@ -64,6 +64,26 @@ Standardwerte (Silizium-Streifenwellenleiter 500 nm × 220 nm, TE0, 1550 nm: `n_
 - Der Detektor rauscht nicht und hat keine Bandbreite.
 - Mehrere Laser sind zueinander vollständig kohärent (gleiche Wellenlänge, feste Phase).
 
+## Unterschaltungen (Hierarchie, `subcircuit.*`)
+
+Eine Unterschaltung ist ein Bauteil `sub:<name>` wie jedes andere; der Löser kennt keinen Sonderfall. Ihre
+S-Matrix entsteht aus der inneren Schaltung: für jeden äußeren Port j wird die innere Schaltung mit
+`a_ext = e_j` an diesem (offenen) Port gelöst, innere Quellen aus (`source_scale = 0`):
+
+    S_ij = b(Port i) bei Einspeisung a(Port j) = 1
+
+Innere Quellen (z. B. ein Laser in der Zelle) liefern `source(λ)` = auslaufende Wellen an den äußeren Ports
+bei a_ext = 0. Messwerte: mit den einlaufenden Wellen der äußeren Lösung wird das Innere noch einmal
+gelöst; jeder innere Messwert heißt "<instanz>: <messgröße>", dazu die summierte Heizleistung.
+Parameter der Unterschaltung setzen einen Parameter an mehreren inneren Instanzen (wie die Logik-Eingänge,
+aus denen sie in der Oberfläche entstehen). Nicht offene innere Ports bleiben ideal abgeschlossen.
+
+Grenzen: nur lineare Bauteile im Inneren (keine Fixpunkt-Iteration über Ebenen hinweg); Monte-Carlo streut
+nur Parameter der obersten Ebene; jede Unterschaltung darf nur die vor ihr angelegten enthalten (keine
+Rekursion). Prüfung (`test_logic.cpp`): der 8-Bit-Addierer aus acht Volladdierer-Zellen liefert für 20
+Eingangsmuster an allen neun Ausgängen dieselbe Leistung wie der flache Aufbau (relativ 1e-9); die Zelle
+ist reziprok (1e-12); falsche Ports und Selbstbezug werden abgelehnt.
+
 ## Validierung
 
 | Fall | Erwartung | Ergebnis |

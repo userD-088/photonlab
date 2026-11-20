@@ -11,6 +11,7 @@
 #include "photonlab/circuit/monte_carlo.hpp"
 #include "photonlab/circuit/netlist.hpp"
 #include "photonlab/circuit/sparameter_table.hpp"
+#include "photonlab/circuit/subcircuit.hpp"
 #include "photonlab/circuit/sweep.hpp"
 #include "photonlab/field/scene.hpp"
 #include "photonlab/field/sparameters.hpp"
@@ -33,6 +34,8 @@ struct Project {
   modes::CrossSection cross_section;  // Wellenleiter-Querschnitt für den Modenlöser (immer vorhanden)
   // Bauteilbibliothek: gemessene S-Matrizen, im Chip-Designer als Bauteile "sparam:<name>" verfügbar
   std::vector<circuit::SParameterTable> sparameters;
+  // Unterschaltungen, im Chip-Designer als Bauteile "sub:<name>" (Reihenfolge: jede darf die vorigen enthalten)
+  std::vector<circuit::Subcircuit> subcircuits;
   logic::GateDefinition gate;  // Logik der Schaltung (Eingänge, Ausgänge); leer, wenn sie kein Gatter ist
 };
 
@@ -48,7 +51,7 @@ inline constexpr int project_format_version = 1;
 std::string project_to_json(const Project& project);
 Project project_from_json(std::string_view text);  // wirft IoError mit Klartext-Meldung
 
-// Registry eines Projekts: alle eingebauten Bauteile plus die S-Parameter-Tabellen der Bibliothek.
+// Registry eines Projekts: alle eingebauten Bauteile plus die S-Parameter-Tabellen und Unterschaltungen.
 // Unveränderlich und damit aus mehreren Threads nutzbar; wirft IoError bei ungültiger Tabelle.
 std::shared_ptr<const circuit::ComponentRegistry> make_registry(const Project& project);
 

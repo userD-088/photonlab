@@ -188,7 +188,8 @@ std::vector<InstanceMeasurement> CompiledCircuit::measurements(const Solution& s
     const Slot& slot = slots_[k];
     const CVector a = solution.a.segment(slot.first_port, slot.port_count);
     const CVector b = solution.b.segment(slot.first_port, slot.port_count);
-    for (auto& m : components_[k]->measure(a, b)) result.push_back({slot.name, std::move(m)});
+    for (auto& m : components_[k]->measure_at_wavelength(solution.wavelength, a, b))
+      result.push_back({slot.name, std::move(m)});
   }
   return result;
 }

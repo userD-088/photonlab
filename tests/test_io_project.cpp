@@ -145,7 +145,8 @@ TEST_CASE("Projekt: Beispieldateien entsprechen den Referenz-Designs") {
         std::pair{"28_volladdierer_chip.plab.json", "full_adder"},
         std::pair{"29_addierer_2bit_chip.plab.json", "adder2"},
         std::pair{"30_addierer_4bit_chip.plab.json", "adder4"},
-        std::pair{"31_addierer_8bit_chip.plab.json", "adder8"}}) {
+        std::pair{"31_addierer_8bit_chip.plab.json", "adder8"},
+        std::pair{"32_addierer_8bit_zellen_chip.plab.json", "adder8_cells"}}) {
     CHECK(io::project_to_json(io::load_project(dir / file)) ==
           io::project_to_json(io::reference_project(name)));
   }

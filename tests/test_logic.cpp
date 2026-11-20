@@ -286,3 +286,65 @@ TEST_CASE("8-Bit-Addierer: 200 Zufallsaufgaben mit den festen Schwellen richtig"
     CHECK_MESSAGE(result == a + b + cin, a, " + ", b, " + ", cin);
   }
 }
+
+TEST_CASE("Unterschaltungen: 8-Bit-Addierer aus Volladdierer-Zellen rechnet wie der flache") {
+  const io::Project flat = io::reference_project("adder8");
+  const io::Project cells = io::reference_project("adder8_cells");
+  REQUIRE(cells.subcircuits.size() == 1);
+  const auto registry = io::make_registry(cells);
+  const circuit::ComponentType* cell = registry->find("sub:volladdierer");
+  REQUIRE(cell != nullptr);
+  CHECK(cell->port_names == std::vector<std::string>{"feed", "c_in", "n_in", "c_out", "n_out"});
+  CHECK(cell->left_port_count == 3);
+  // Die Zelle ist reziprok (alle Bauteile im Inneren sind es)
+  const auto component = cell->create({{"A", 24.77e-3}, {"B", 0.0}});
+  const circuit::CMatrix s = component->s_matrix(lambda0);
+  CHECK((s - s.transpose()).norm() < 1e-12);
+
+  for (int task = 0; task < 20; ++task) {
+    std::vector<int> bits(17);
+    for (std::size_t k = 0; k < bits.size(); ++k)
+      bits[k] = circuit::standard_normal(11, static_cast<std::uint64_t>(task), k, 0) > 0.0 ? 1 : 0;
+    const circuit::CompiledCircuit a(apply_bits(flat.circuit, flat.gate, bits), reg());
+    const circuit::CompiledCircuit b(apply_bits(cells.circuit, cells.gate, bits), *registry);
+    const auto ma = a.measurements(a.solve(flat.wavelength));
+    const auto mb = b.measurements(b.solve(cells.wavelength));
+    for (std::size_t k = 0; k < flat.gate.outputs.size(); ++k) {
+      double pa = -1.0, pb = -2.0;
+      for (const auto& m : ma)
+        if (m.instance == flat.gate.outputs[k].instance && m.measurement.name == flat.gate.outputs[k].measurement)
+          pa = m.measurement.value;
+      for (const auto& m : mb)
+        if (m.instance == cells.gate.outputs[k].instance && m.measurement.name == cells.gate.outputs[k].measurement)
+          pb = m.measurement.value;
+      CHECK(pb == doctest::Approx(pa).epsilon(1e-9).scale(1e-12));
+    }
+  }
+  // Projektdatei mit Unterschaltung: Speichern und Laden verlustfrei
+  const io::Project loaded = io::project_from_json(io::project_to_json(cells));
+  CHECK(loaded.subcircuits == cells.subcircuits);
+}
+
+TEST_CASE("Unterschaltungen: offene Ports nach außen, Fehler im Klartext") {
+  const io::Project half = io::reference_project("half_adder");
+  const circuit::Subcircuit sub = circuit::make_subcircuit(half.circuit, "halb", {}, reg());
+  // offene Ports: verteiler.in2, s.in2, g.in2, c.in1 (links), s.out2, g.out2, c.out2 (rechts); die
+  // Detektoren sind verbunden
+  REQUIRE(sub.ports.size() == 7);
+  for (int k = 0; k < 4; ++k) CHECK(sub.ports[static_cast<std::size_t>(k)].inner.port.rfind("in", 0) == 0);
+  for (int k = 4; k < 7; ++k) CHECK(sub.ports[static_cast<std::size_t>(k)].inner.port.rfind("out", 0) == 0);
+  circuit::ComponentRegistry registry = reg();
+  circuit::register_subcircuit(registry, std::make_shared<const circuit::Subcircuit>(sub));
+  CHECK(registry.find("sub:halb") != nullptr);
+
+  circuit::Subcircuit wrong = sub;
+  wrong.name = "falsch";
+  wrong.ports.push_back({"belegt", {"s", "in1"}});  // im Inneren mit dem Verteiler verbunden
+  CHECK_THROWS_AS(circuit::register_subcircuit(registry, std::make_shared<const circuit::Subcircuit>(wrong)),
+                  circuit::CircuitError);
+  circuit::Subcircuit itself = sub;
+  itself.name = "selbst";
+  itself.circuit.add("ich", "sub:selbst", {}, 0, 30);  // enthält sich selbst: Typ noch unbekannt
+  CHECK_THROWS_AS(circuit::register_subcircuit(registry, std::make_shared<const circuit::Subcircuit>(itself)),
+                  circuit::CircuitError);
+}

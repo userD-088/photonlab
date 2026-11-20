@@ -12,6 +12,7 @@
 #include "imgui_internal.h"  // FindWindowByName, DockId
 #include "implot.h"
 #include "photonlab/circuit/reference_designs.hpp"
+#include "photonlab/circuit/subcircuit.hpp"
 #include "photonlab/circuit/sweep.hpp"
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/reference_scenes.hpp"
@@ -131,6 +132,7 @@ void ChipDesigner::library_changed() {
 }
 
 void ChipDesigner::set_project(io::Project project, std::string path) {
+  editing_sub_ = -1;
   project_ = std::move(project);
   try {
     g_registry = io::make_registry(project_);
@@ -164,6 +166,7 @@ void ChipDesigner::request(Pending action, std::string argument) {
 }
 
 void ChipDesigner::perform(Pending action, const std::string& argument) {
+  if (editing_sub_ >= 0 && action != Pending::none) leave_subcircuit();  // Inneres zurück in die Bibliothek
   switch (action) {
     case Pending::new_project: {
       io::Project project;
@@ -203,6 +206,7 @@ bool ChipDesigner::open_file(const std::string& path) {
 }
 
 bool ChipDesigner::save_file(const std::string& path) {
+  if (editing_sub_ >= 0) leave_subcircuit();  // gespeichert wird immer die ganze Schaltung mit Bibliothek
   try {
     io::save_project(project_, path_from_utf8(path));
     file_path_ = path;
@@ -289,6 +293,53 @@ void ChipDesigner::place_instance(const std::string& type) {
   add_instance(type, 2, project_.circuit.instances.empty() ? 2 : y);
   fit_view_ = 3;
   ImGui::SetWindowFocus(window_canvas);
+}
+
+void ChipDesigner::enter_subcircuit(int index) {
+  if (editing_sub_ >= 0) leave_subcircuit();
+  if (index < 0 || index >= static_cast<int>(project_.subcircuits.size())) return;
+  parent_circuit_ = project_.circuit;
+  parent_gate_ = project_.gate;
+  project_.circuit = project_.subcircuits[static_cast<std::size_t>(index)].circuit;
+  project_.gate = {};
+  editing_sub_ = index;
+  selected_.clear();
+  rename_buffer_.clear();
+  wire_from_.reset();
+  fit_view_ = 3;
+  touch();
+  set_status("Unterschaltung '" + project_.subcircuits[static_cast<std::size_t>(index)].name +
+             "': Änderungen gelten für alle ihre Instanzen. 'Zurück zur Schaltung' oben.");
+}
+
+void ChipDesigner::leave_subcircuit() {
+  if (editing_sub_ < 0) return;
+  circuit::Subcircuit& sub = project_.subcircuits[static_cast<std::size_t>(editing_sub_)];
+  sub.circuit = project_.circuit;
+  // Ports, die es nicht mehr gibt oder die inzwischen verbunden sind, fallen weg
+  const std::size_t before = sub.ports.size();
+  std::erase_if(sub.ports, [&](const circuit::SubcircuitPort& port) {
+    const circuit::Instance* instance = sub.circuit.find_instance(port.inner.instance);
+    return !instance || sub.circuit.is_connected(port.inner);
+  });
+  std::erase_if(sub.params, [&](const circuit::SubcircuitParam& param) {
+    return std::any_of(param.instances.begin(), param.instances.end(),
+                       [&](const std::string& name) { return !sub.circuit.find_instance(name); });
+  });
+  const std::string name = sub.name;
+  project_.circuit = parent_circuit_;
+  project_.gate = parent_gate_;
+  editing_sub_ = -1;
+  selected_.clear();
+  rename_buffer_.clear();
+  wire_from_.reset();
+  fit_view_ = 3;
+  library_changed();
+  dirty_ = true;
+  if (sub.ports.size() != before)
+    set_status("Unterschaltung '" + name + "': Ports, die nicht mehr offen sind, wurden entfernt.", true);
+  else if (!status_is_error_)
+    set_status("Zurück in der Schaltung; 'sub:" + name + "' ist aktualisiert.");
 }
 
 void ChipDesigner::rename_selected(const std::string& new_name) {
@@ -713,6 +764,11 @@ void ChipDesigner::draw_library() {
   ImGui::TextDisabled("Klick fügt das Bauteil ein");
   ImGui::Separator();
   for (const auto& type : registry().types()) {
+    // beim Bearbeiten einer Unterschaltung: sie selbst und spätere nicht anbieten (keine Rekursion)
+    bool hidden = false;
+    for (int k = std::max(editing_sub_, 0); editing_sub_ >= 0 && k < static_cast<int>(project_.subcircuits.size()); ++k)
+      hidden = hidden || type.name == circuit::subcircuit_type_name(project_.subcircuits[static_cast<std::size_t>(k)].name);
+    if (hidden) continue;
     if (ImGui::Selectable(type.label.c_str()))
       add_instance(type.name, static_cast<int>(std::lround(view_center_grid_.x - component_width / 2)),
                    static_cast<int>(std::lround(view_center_grid_.y)));
@@ -726,7 +782,113 @@ void ChipDesigner::draw_library() {
       ImGui::EndTooltip();
     }
   }
+
+  // Hierarchie: Unterschaltungen bearbeiten, entfernen, aus der Schaltung anlegen
+  ImGui::SeparatorText("Unterschaltungen");
+  int remove = -1;
+  for (int k = 0; k < static_cast<int>(project_.subcircuits.size()); ++k) {
+    const auto& sub = project_.subcircuits[static_cast<std::size_t>(k)];
+    const std::string type = circuit::subcircuit_type_name(sub.name);
+    const bool used = std::any_of(project_.circuit.instances.begin(), project_.circuit.instances.end(),
+                                  [&](const Instance& i) { return i.type == type; });
+    ImGui::PushID(k);
+    ImGui::TextUnformatted(sub.label.c_str());
+    ImGui::SameLine();
+    if (editing_sub_ == k)
+      ImGui::TextColored(ui_color_limited, "(offen)");
+    else if (ImGui::SmallButton("Bearbeiten"))
+      enter_subcircuit(k);
+    ImGui::SameLine();
+    ImGui::BeginDisabled(used || editing_sub_ >= 0);
+    if (ImGui::SmallButton("x")) remove = k;
+    ImGui::EndDisabled();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+      ImGui::SetTooltip(used ? "Wird in der Schaltung benutzt." : "Aus der Bibliothek entfernen");
+    ImGui::PopID();
+  }
+  if (remove >= 0) {
+    project_.subcircuits.erase(project_.subcircuits.begin() + remove);
+    library_changed();
+  }
+  ImGui::BeginDisabled(editing_sub_ >= 0 || project_.circuit.instances.empty());
+  if (ImGui::SmallButton("Schaltung als Unterschaltung ...")) {
+    std::snprintf(sub_name_, sizeof sub_name_, "zelle%zu", project_.subcircuits.size() + 1);
+    sub_ports_.clear();
+    try {
+      for (auto& port : circuit::make_subcircuit(project_.circuit, "x", {}, registry()).ports)
+        sub_ports_.emplace_back(std::move(port), true);
+    } catch (const std::exception& e) {
+      set_status(e.what(), true);
+    }
+    ImGui::OpenPopup("unterschaltung");
+  }
+  ImGui::EndDisabled();
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled))
+    ImGui::SetTooltip(
+        "Die ganze Schaltung wird ein Bauteil 'sub:<name>': offene Ports führen nach außen, die Eingänge der\n"
+        "Logik werden seine Parameter. Danach z. B. leere Schaltung und die Zelle mehrfach einsetzen.");
+  draw_subcircuit_popup();
   ImGui::End();
+}
+
+void ChipDesigner::draw_subcircuit_popup() {
+  if (!ImGui::BeginPopup("unterschaltung")) return;
+  ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
+  ImGui::InputText("Name", sub_name_, sizeof sub_name_);
+  ImGui::TextDisabled("Ports nach außen (offene Ports der Schaltung):");
+  for (auto& [port, on] : sub_ports_) {
+    ImGui::PushID(&port);
+    ImGui::Checkbox("##an", &on);
+    ImGui::SameLine();
+    char buffer[48];
+    std::snprintf(buffer, sizeof buffer, "%s", port.name.c_str());
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7.0f);
+    if (ImGui::InputText("##portname", buffer, sizeof buffer)) port.name = buffer;
+    ImGui::SameLine();
+    ImGui::TextDisabled("%s.%s", port.inner.instance.c_str(), port.inner.port.c_str());
+    ImGui::PopID();
+  }
+  if (!project_.gate.inputs.empty()) {
+    std::string inputs;
+    for (const auto& in : project_.gate.inputs) inputs += (inputs.empty() ? "" : ", ") + in.name;
+    ImGui::TextDisabled("Parameter aus den Logik-Eingängen: %s", inputs.c_str());
+  } else {
+    ImGui::TextDisabled("Ohne Logik-Eingänge hat die Unterschaltung keine Parameter.");
+  }
+  ImGui::Checkbox("danach mit leerer Schaltung weiterarbeiten", &sub_clear_);
+  if (ImGui::Button("Anlegen")) {
+    try {
+      std::vector<circuit::SubcircuitParam> params;
+      for (const auto& in : project_.gate.inputs) {
+        circuit::SubcircuitParam param{in.name, in.param, logic::targets(in), in.value0};
+        params.push_back(param);
+      }
+      circuit::Subcircuit sub = circuit::make_subcircuit(project_.circuit, sub_name_, std::move(params), registry());
+      sub.ports.clear();
+      for (const auto& [port, on] : sub_ports_)
+        if (on) sub.ports.push_back(port);
+      sub.label = sub_name_;
+      sub.description = project_.circuit.name;
+      // vorab prüfen, dann übernehmen
+      circuit::ComponentRegistry check = registry();
+      circuit::register_subcircuit(check, std::make_shared<const circuit::Subcircuit>(sub));
+      project_.subcircuits.push_back(std::move(sub));
+      if (sub_clear_) {
+        project_.circuit = {};
+        project_.circuit.name = "Neue Schaltung";
+        project_.gate = {};
+        selected_.clear();
+      }
+      library_changed();
+      set_status(std::string("Unterschaltung angelegt: sub:") + sub_name_ + " (Bauteilbibliothek)");
+      ImGui::CloseCurrentPopup();
+    } catch (const std::exception& e) {
+      set_status(e.what(), true);
+    }
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Abbrechen")) ImGui::CloseCurrentPopup();
+  ImGui::EndPopup();
 }
 
 void ChipDesigner::draw_properties() {
@@ -1354,7 +1516,16 @@ void ChipDesigner::draw_canvas() {
       (dirty_ ? " *" : "");
   ImGui::TextUnformatted(file_label.c_str());
   ImGui::SameLine();
-  ImGui::TextDisabled("|  %s  |", project_.circuit.name.c_str());
+  if (editing_sub_ >= 0) {
+    ImGui::TextColored(ui_color_limited, "|  Unterschaltung '%s'",
+                       project_.subcircuits[static_cast<std::size_t>(editing_sub_)].name.c_str());
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Zurück zur Schaltung")) leave_subcircuit();
+    ImGui::SameLine();
+    ImGui::TextDisabled("|");
+  } else {
+    ImGui::TextDisabled("|  %s  |", project_.circuit.name.c_str());
+  }
   ImGui::SameLine();
   double wavelength_nm = project_.wavelength / units::nm;
   const double low_nm = 100.0, high_nm = 20000.0;

@@ -170,6 +170,14 @@ void chip_designer() {
        "Eingänge (Heizer, Laser ...) und Ausgänge (Detektoren) eines Gatters; Bits und Zahlen von Hand "
        "schalten, Wahrheitstabelle und Zeugnis bis 6 Eingänge."}};
   table("fenster", windows, 7);
+  heading("Unterschaltungen (Hierarchie)");
+  paragraph(
+      "Eine fertige Schaltung - etwa eine Volladdierer-Zelle - wird mit 'Schaltung als Unterschaltung ...' "
+      "(Bauteilbibliothek, unten) zu einem Bauteil: offene Ports führen nach außen, die Eingänge der Logik "
+      "werden seine Parameter. Danach lässt sie sich beliebig oft einsetzen; 'Bearbeiten' öffnet ihr "
+      "Inneres, "
+      "'Zurück zur Schaltung' übernimmt die Änderungen für alle Instanzen. Beispiel: 8-Bit-Addierer aus "
+      "Zellen.");
   heading("Bedienen");
   bullet("Verbinden: von Port zu Port ziehen; Trennen: Rechtsklick auf einen Port.");
   bullet("Verschieben: Bauteil ziehen; Löschen: Entf oder Rechtsklick.");

@@ -373,9 +373,11 @@ ordered_json finite_or_null(double value) {
 }
 }  // namespace
 
-std::string project_to_json(const Project& project) {
+namespace {
+
+ordered_json circuit_to_json(const circuit::Circuit& circuit) {
   ordered_json instances = ordered_json::array();
-  for (const auto& inst : project.circuit.instances) {
+  for (const auto& inst : circuit.instances) {
     ordered_json params = ordered_json::object();
     for (const auto& [key, value] : inst.params) params[key] = value;
     instances.push_back({{"name", inst.name},
@@ -384,8 +386,67 @@ std::string project_to_json(const Project& project) {
                          {"grid", {inst.grid_x, inst.grid_y}}});
   }
   ordered_json connections = ordered_json::array();
-  for (const auto& c : project.circuit.connections)
+  for (const auto& c : circuit.connections)
     connections.push_back({{"from", circuit::to_string(c.a)}, {"to", circuit::to_string(c.b)}});
+  return {{"name", circuit.name}, {"instances", std::move(instances)}, {"connections", std::move(connections)}};
+}
+
+circuit::Circuit circuit_from_json(const ordered_json& circuit_json) {
+  circuit::Circuit circuit;
+  circuit.name = circuit_json.value("name", "");
+  for (const auto& inst : circuit_json.at("instances")) {
+    circuit::ParamMap params;
+    if (inst.contains("params"))
+      for (const auto& [key, value] : inst.at("params").items()) params[key] = value.get<double>();
+    int grid_x = 0, grid_y = 0;
+    if (inst.contains("grid")) {
+      grid_x = inst.at("grid").at(0).get<int>();
+      grid_y = inst.at("grid").at(1).get<int>();
+    }
+    circuit.add(inst.at("name").get<std::string>(), inst.at("type").get<std::string>(), std::move(params), grid_x,
+                grid_y);
+  }
+  if (circuit_json.contains("connections"))
+    for (const auto& c : circuit_json.at("connections"))
+      circuit.connect(c.at("from").get<std::string>(), c.at("to").get<std::string>());
+  return circuit;
+}
+
+ordered_json subcircuit_to_json(const circuit::Subcircuit& sub) {
+  ordered_json ports = ordered_json::array(), params = ordered_json::array();
+  for (const auto& p : sub.ports) ports.push_back({{"name", p.name}, {"inner", circuit::to_string(p.inner)}});
+  for (const auto& p : sub.params)
+    params.push_back(
+        {{"name", p.name}, {"param", p.param}, {"instances", p.instances}, {"default", p.default_value}});
+  return {{"name", sub.name},          {"label", sub.label},  {"description", sub.description},
+          {"circuit", circuit_to_json(sub.circuit)}, {"ports", std::move(ports)}, {"params", std::move(params)}};
+}
+
+circuit::Subcircuit subcircuit_from_json(const ordered_json& j) {
+  circuit::Subcircuit sub;
+  sub.name = j.at("name").get<std::string>();
+  sub.label = j.value("label", sub.name);
+  sub.description = j.value("description", "");
+  sub.circuit = circuit_from_json(j.at("circuit"));
+  for (const auto& p : j.at("ports")) {
+    const std::string inner = p.at("inner").get<std::string>();
+    const auto dot = inner.find('.');
+    if (dot == std::string::npos) throw IoError("Unterschaltung '" + sub.name + "': Port '" + inner + "' ohne Punkt");
+    sub.ports.push_back({p.at("name").get<std::string>(), {inner.substr(0, dot), inner.substr(dot + 1)}});
+  }
+  if (j.contains("params"))
+    for (const auto& p : j.at("params"))
+      sub.params.push_back({p.at("name").get<std::string>(), p.at("param").get<std::string>(),
+                            p.at("instances").get<std::vector<std::string>>(), p.value("default", 0.0)});
+  return sub;
+}
+
+}  // namespace
+
+std::string project_to_json(const Project& project) {
+  const ordered_json circuit_json = circuit_to_json(project.circuit);
+  const ordered_json& instances = circuit_json.at("instances");
+  const ordered_json& connections = circuit_json.at("connections");
 
   ordered_json variations = ordered_json::array();
   for (const auto& v : project.monte_carlo.variations)
@@ -403,9 +464,7 @@ std::string project_to_json(const Project& project) {
                              {"version", project_format_version},
                              {"units", "SI"},
                              {"circuit",
-                              {{"name", project.circuit.name},
-                               {"instances", std::move(instances)},
-                               {"connections", std::move(connections)}}},
+                              {{"name", project.circuit.name}, {"instances", instances}, {"connections", connections}}},
                              {"simulation",
                               {{"wavelength", project.wavelength},
                                {"sweep",
@@ -420,6 +479,13 @@ std::string project_to_json(const Project& project) {
                              {"field", scene_to_json(project.field)},
                              {"cross_section", cross_section_to_json(project.cross_section)},
                              {"sparameters", std::move(library)}};
+  if (!project.subcircuits.empty()) {
+    ordered_json with_subs = root;
+    ordered_json subs = ordered_json::array();
+    for (const auto& sub : project.subcircuits) subs.push_back(subcircuit_to_json(sub));
+    with_subs["subcircuits"] = std::move(subs);
+    return with_subs.dump(2) + "\n";
+  }
   return root.dump(2) + "\n";
 }
 
@@ -433,23 +499,7 @@ Project project_from_json(std::string_view text) {
       throw IoError("Nicht unterstützte Projektversion " + std::to_string(version));
 
     Project project;
-    const auto& circuit_json = root.at("circuit");
-    project.circuit.name = circuit_json.value("name", "");
-    for (const auto& inst : circuit_json.at("instances")) {
-      circuit::ParamMap params;
-      if (inst.contains("params"))
-        for (const auto& [key, value] : inst.at("params").items()) params[key] = value.get<double>();
-      int grid_x = 0, grid_y = 0;
-      if (inst.contains("grid")) {
-        grid_x = inst.at("grid").at(0).get<int>();
-        grid_y = inst.at("grid").at(1).get<int>();
-      }
-      project.circuit.add(inst.at("name").get<std::string>(), inst.at("type").get<std::string>(),
-                          std::move(params), grid_x, grid_y);
-    }
-    if (circuit_json.contains("connections"))
-      for (const auto& c : circuit_json.at("connections"))
-        project.circuit.connect(c.at("from").get<std::string>(), c.at("to").get<std::string>());
+    project.circuit = circuit_from_json(root.at("circuit"));
 
     if (root.contains("simulation")) {
       const auto& sim = root.at("simulation");
@@ -477,6 +527,8 @@ Project project_from_json(std::string_view text) {
       project.cross_section = cross_section_from_json(root.at("cross_section"));
     if (root.contains("sparameters"))
       for (const auto& table : root.at("sparameters")) project.sparameters.push_back(table_from_json(table));
+    if (root.contains("subcircuits"))
+      for (const auto& sub : root.at("subcircuits")) project.subcircuits.push_back(subcircuit_from_json(sub));
     return project;
   } catch (const nlohmann::json::exception& e) {
     throw IoError(std::string("Projektdatei fehlerhaft: ") + e.what());
@@ -507,6 +559,7 @@ Project reference_project(std::string_view name) {
   project.sweep = setup.sweep;
   project.monte_carlo = std::move(setup.monte_carlo);
   if (logic::has_reference_gate(name)) project.gate = logic::reference_gate(name);
+  if (name == "adder8_cells") project.subcircuits = {circuit::reference_adder_cell()};
   return project;
 }
 
@@ -515,6 +568,9 @@ std::shared_ptr<const circuit::ComponentRegistry> make_registry(const Project& p
   try {
     for (const auto& table : project.sparameters)
       circuit::register_sparameter_table(*registry, std::make_shared<const circuit::SParameterTable>(table));
+    // Unterschaltungen der Reihe nach: jede kann die vorigen enthalten, sich selbst aber nicht
+    for (const auto& sub : project.subcircuits)
+      circuit::register_subcircuit(*registry, std::make_shared<const circuit::Subcircuit>(sub));
   } catch (const circuit::CircuitError& e) {
     throw IoError(std::string("Bauteilbibliothek fehlerhaft: ") + e.what());
   }
