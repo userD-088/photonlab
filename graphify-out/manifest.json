@@ -18,16 +18,16 @@
     "semantic_hash": "2dd928e1727142b1cca3dd02eb9b6321"
   },
   "apps/photonlab_cli/main.cpp": {
-    "mtime": 1795107390.8721771,
-    "seen": 1795108451.4688919,
-    "ast_hash": "5aa288330a5af436227673a86bd4e951",
-    "semantic_hash": "5aa288330a5af436227673a86bd4e951"
+    "mtime": 1795202402.347588,
+    "seen": 1795203508.645834,
+    "ast_hash": "c17500bfc9804561c93a11b8d0ec174d",
+    "semantic_hash": "c17500bfc9804561c93a11b8d0ec174d"
   },
   "apps/photonlab_gui/band_view.cpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4688933,
-    "ast_hash": "9faf2bf1edc3703b0f27216eae1c0996",
-    "semantic_hash": "9faf2bf1edc3703b0f27216eae1c0996"
+    "mtime": 1795127706.9893577,
+    "seen": 1795203508.6458366,
+    "ast_hash": "a0e71533d04f9a5e83adc40afd953e8a",
+    "semantic_hash": "a0e71533d04f9a5e83adc40afd953e8a"
   },
   "apps/photonlab_gui/band_view.hpp": {
     "mtime": 1795107390.8727725,
@@ -36,52 +36,40 @@
     "semantic_hash": "1d5b406b4ec754573cc34fea84aa6ea3"
   },
   "apps/photonlab_gui/chip_designer.cpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4688954,
-    "ast_hash": "d1b8d9c5c983413815b0ef76b9b1bac4",
-    "semantic_hash": "d1b8d9c5c983413815b0ef76b9b1bac4"
+    "mtime": 1795201371.1465273,
+    "seen": 1795203508.6458678,
+    "ast_hash": "daaf8f5069a332f008c65cf2f711b7ec",
+    "semantic_hash": "daaf8f5069a332f008c65cf2f711b7ec"
   },
   "apps/photonlab_gui/chip_designer.hpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4688962,
-    "ast_hash": "d9f56249cdb0ed997636dc28da7cd3f7",
-    "semantic_hash": "d9f56249cdb0ed997636dc28da7cd3f7"
-  },
-  "apps/photonlab_gui/eye_view.cpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4688973,
-    "ast_hash": "9d208a02aa791ec9af74f3842f9ab03d",
-    "semantic_hash": "9d208a02aa791ec9af74f3842f9ab03d"
-  },
-  "apps/photonlab_gui/eye_view.hpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4688983,
-    "ast_hash": "1a35c55b32fb0160598a6a7af994eef5",
-    "semantic_hash": "1a35c55b32fb0160598a6a7af994eef5"
+    "mtime": 1795200708.2824879,
+    "seen": 1795203508.6458695,
+    "ast_hash": "b40c6f66c5236f160d76c0469b5dd968",
+    "semantic_hash": "b40c6f66c5236f160d76c0469b5dd968"
   },
   "apps/photonlab_gui/field_gate_view.cpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4688993,
-    "ast_hash": "ff3f5f536ad719cff1db88a8fbd7b108",
-    "semantic_hash": "ff3f5f536ad719cff1db88a8fbd7b108"
+    "mtime": 1795185256.3204026,
+    "seen": 1795203508.6458712,
+    "ast_hash": "9d84e2324cc89cf63e84b3f5bbc574b3",
+    "semantic_hash": "9d84e2324cc89cf63e84b3f5bbc574b3"
   },
   "apps/photonlab_gui/field_gate_view.hpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.468901,
-    "ast_hash": "e9754391286dd89e0b05022117851d51",
-    "semantic_hash": "e9754391286dd89e0b05022117851d51"
+    "mtime": 1795185256.3254623,
+    "seen": 1795203508.645873,
+    "ast_hash": "2b122a48b32ab5b8029c44b624288ff5",
+    "semantic_hash": "2b122a48b32ab5b8029c44b624288ff5"
   },
   "apps/photonlab_gui/field_lab.cpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.468902,
-    "ast_hash": "61b6f51dd90e541997a0ee117c9cfc05",
-    "semantic_hash": "61b6f51dd90e541997a0ee117c9cfc05"
+    "mtime": 1795190990.2563322,
+    "seen": 1795203508.645875,
+    "ast_hash": "ba2ea954b5d18e5a889f28350627ca7a",
+    "semantic_hash": "ba2ea954b5d18e5a889f28350627ca7a"
   },
   "apps/photonlab_gui/field_lab.hpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4689028,
-    "ast_hash": "c0e7e855a6dd3ccb1bdca27a8b3db38d",
-    "semantic_hash": "c0e7e855a6dd3ccb1bdca27a8b3db38d"
+    "mtime": 1795191192.9412515,
+    "seen": 1795203508.6458766,
+    "ast_hash": "0f1888b132e74b12b404131687664461",
+    "semantic_hash": "0f1888b132e74b12b404131687664461"
   },
   "apps/photonlab_gui/file_dialog.cpp": {
     "mtime": 1795107390.8727725,
@@ -107,35 +95,11 @@
     "ast_hash": "1704b64ffaf5f4f38095846075a50726",
     "semantic_hash": "1704b64ffaf5f4f38095846075a50726"
   },
-  "apps/photonlab_gui/logic_lab.cpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4689085,
-    "ast_hash": "31031dc696f94c81590d12c76fe8995c",
-    "semantic_hash": "31031dc696f94c81590d12c76fe8995c"
-  },
-  "apps/photonlab_gui/logic_lab.hpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4689095,
-    "ast_hash": "749ef6dfa1a1b2aa64d16c286c5b5110",
-    "semantic_hash": "749ef6dfa1a1b2aa64d16c286c5b5110"
-  },
-  "apps/photonlab_gui/logic_sim_view.cpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.468911,
-    "ast_hash": "0aec46b2f1be045604944fc779e1a65b",
-    "semantic_hash": "0aec46b2f1be045604944fc779e1a65b"
-  },
-  "apps/photonlab_gui/logic_sim_view.hpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4689116,
-    "ast_hash": "286904df669cd4311899c20931c914e9",
-    "semantic_hash": "286904df669cd4311899c20931c914e9"
-  },
   "apps/photonlab_gui/main.cpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4689128,
-    "ast_hash": "b7d9eed094a9b9d029453813281fe600",
-    "semantic_hash": "b7d9eed094a9b9d029453813281fe600"
+    "mtime": 1795186472.4913535,
+    "seen": 1795203508.6459703,
+    "ast_hash": "73b777d0ff2570c3e50aa3d2ac32197c",
+    "semantic_hash": "73b777d0ff2570c3e50aa3d2ac32197c"
   },
   "apps/photonlab_gui/mode_view.cpp": {
     "mtime": 1795107390.8727725,
@@ -149,47 +113,23 @@
     "ast_hash": "fb606cbc9d328a0cc050c1afdeb8480f",
     "semantic_hash": "fb606cbc9d328a0cc050c1afdeb8480f"
   },
-  "apps/photonlab_gui/quantum_view.cpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4689155,
-    "ast_hash": "0edccbdabb48d0f34228335d14b344c6",
-    "semantic_hash": "0edccbdabb48d0f34228335d14b344c6"
-  },
-  "apps/photonlab_gui/quantum_view.hpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4689164,
-    "ast_hash": "a85e2930e6045fa680b303732c34dd7b",
-    "semantic_hash": "a85e2930e6045fa680b303732c34dd7b"
-  },
   "apps/photonlab_gui/sparam_view.cpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4689171,
-    "ast_hash": "127d0c84c554ec1674dc7b79b08ef78e",
-    "semantic_hash": "127d0c84c554ec1674dc7b79b08ef78e"
+    "mtime": 1795199968.2906697,
+    "seen": 1795203508.6460211,
+    "ast_hash": "f4bfc20c17174fc856bd4987da865ec6",
+    "semantic_hash": "f4bfc20c17174fc856bd4987da865ec6"
   },
   "apps/photonlab_gui/sparam_view.hpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.4689183,
-    "ast_hash": "c655aac56ce80e9b552cc401fbda61e3",
-    "semantic_hash": "c655aac56ce80e9b552cc401fbda61e3"
+    "mtime": 1795192513.4719512,
+    "seen": 1795203508.6460226,
+    "ast_hash": "9b94212a64f9bf68b4c36f157062d030",
+    "semantic_hash": "9b94212a64f9bf68b4c36f157062d030"
   },
   "apps/photonlab_gui/ui_util.hpp": {
     "mtime": 1795107390.8727725,
     "seen": 1795108451.4689193,
     "ast_hash": "621ea315de740a52d0818ace16ca045c",
     "semantic_hash": "621ea315de740a52d0818ace16ca045c"
-  },
-  "apps/photonlab_gui/wave3d_view.cpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.46892,
-    "ast_hash": "66ea85c39809a0865c88dd080bbcab41",
-    "semantic_hash": "66ea85c39809a0865c88dd080bbcab41"
-  },
-  "apps/photonlab_gui/wave3d_view.hpp": {
-    "mtime": 1795107390.8727725,
-    "seen": 1795108451.468921,
-    "ast_hash": "82e7b3e2910daca7670a372f231d1071",
-    "semantic_hash": "82e7b3e2910daca7670a372f231d1071"
   },
   "examples/01_wellenleiter_fdtd.plab.json": {
     "mtime": 1795107390.8768888,
@@ -270,28 +210,28 @@
     "semantic_hash": "4c965e7d0cb4e5b3d991d98b0d490144"
   },
   "examples/07_phc_w1_fdtd.plab.json": {
-    "mtime": 1795107390.8772695,
-    "seen": 1795108451.468937,
-    "ast_hash": "1d6ef4365aac442920f8c6b4a48f129b",
-    "semantic_hash": "1d6ef4365aac442920f8c6b4a48f129b"
+    "mtime": 1795127698.691775,
+    "seen": 1795203508.646287,
+    "ast_hash": "4b3b85bb1ef27bdf1fd65846f8472e67",
+    "semantic_hash": "4b3b85bb1ef27bdf1fd65846f8472e67"
   },
   "examples/07b_phc_knick_fdtd.plab.json": {
-    "mtime": 1795107390.8772695,
-    "seen": 1795108451.4689376,
-    "ast_hash": "1c9af83292c63bc4ee0dacdd9ca22f03",
-    "semantic_hash": "1c9af83292c63bc4ee0dacdd9ca22f03"
+    "mtime": 1795127698.695775,
+    "seen": 1795203508.6462886,
+    "ast_hash": "4d4ace37a2428f0ef96cd655e9ac58c0",
+    "semantic_hash": "4d4ace37a2428f0ef96cd655e9ac58c0"
   },
   "examples/07c_phc_y_oder_und_fdtd.plab.json": {
-    "mtime": 1795107390.8772695,
-    "seen": 1795108451.4689388,
-    "ast_hash": "80e4e116a62c4738d93bcdcfc92756ba",
-    "semantic_hash": "80e4e116a62c4738d93bcdcfc92756ba"
+    "mtime": 1795127698.699775,
+    "seen": 1795203508.6462898,
+    "ast_hash": "132cd373d6be47e8d1f7fe6beea8fe8e",
+    "semantic_hash": "132cd373d6be47e8d1f7fe6beea8fe8e"
   },
   "examples/07d_phc_y_xor_fdtd.plab.json": {
-    "mtime": 1795107390.8772695,
-    "seen": 1795108451.4689398,
-    "ast_hash": "d10c58b3e084d28a3f18bbdc44f42d17",
-    "semantic_hash": "d10c58b3e084d28a3f18bbdc44f42d17"
+    "mtime": 1795127698.703775,
+    "seen": 1795203508.6462913,
+    "ast_hash": "13310d62d5313a6fecac0211597cf2df",
+    "semantic_hash": "13310d62d5313a6fecac0211597cf2df"
   },
   "examples/08_ring_nichtlinear.plab.json": {
     "mtime": 1795107390.8772695,
@@ -300,10 +240,10 @@
     "semantic_hash": "b7f7686cc7dd0dc9e1f078ba91f87c99"
   },
   "examples/09_ring_modulator.plab.json": {
-    "mtime": 1795107390.8772695,
-    "seen": 1795108451.468942,
-    "ast_hash": "34979bc8ae404ca9d124484f1ada298e",
-    "semantic_hash": "34979bc8ae404ca9d124484f1ada298e"
+    "mtime": 1795184701.925405,
+    "seen": 1795203508.6463096,
+    "ast_hash": "c26d69c6ffca68d7fc69cf3541624daf",
+    "semantic_hash": "c26d69c6ffca68d7fc69cf3541624daf"
   },
   "examples/09b_mzi_heizer.plab.json": {
     "mtime": 1795107390.8772695,
@@ -324,10 +264,10 @@
     "semantic_hash": "0950df3a9a3b2c416c0bd0999794b9da"
   },
   "libs/circuit/include/photonlab/circuit/active_devices.hpp": {
-    "mtime": 1795107390.8792372,
-    "seen": 1795108451.4689457,
-    "ast_hash": "a31746224179ad9e34f211e30efed4cf",
-    "semantic_hash": "a31746224179ad9e34f211e30efed4cf"
+    "mtime": 1795191362.2402334,
+    "seen": 1795203508.6463976,
+    "ast_hash": "4e6079c03770b0aba63e81dd0c715274",
+    "semantic_hash": "4e6079c03770b0aba63e81dd0c715274"
   },
   "libs/circuit/include/photonlab/circuit/analysis.hpp": {
     "mtime": 1795107390.8792713,
@@ -336,10 +276,10 @@
     "semantic_hash": "7aeaa4db2ab91fa4da96e46ec037a0f9"
   },
   "libs/circuit/include/photonlab/circuit/component.hpp": {
-    "mtime": 1795107390.8792713,
-    "seen": 1795108451.4689476,
-    "ast_hash": "5cc77783f1c97a0763f148cf6ebee2cf",
-    "semantic_hash": "5cc77783f1c97a0763f148cf6ebee2cf"
+    "mtime": 1795200354.9794784,
+    "seen": 1795203508.6464312,
+    "ast_hash": "94f2350c4aef6b59c47c8ee92212e286",
+    "semantic_hash": "94f2350c4aef6b59c47c8ee92212e286"
   },
   "libs/circuit/include/photonlab/circuit/kerr_cavity.hpp": {
     "mtime": 1795107390.8792713,
@@ -354,10 +294,10 @@
     "semantic_hash": "8bb6b6addeae138ad684505a015b8f02"
   },
   "libs/circuit/include/photonlab/circuit/netlist.hpp": {
-    "mtime": 1795107390.8792713,
-    "seen": 1795108451.468951,
-    "ast_hash": "117f322fc2666999e0e76e922a1da8c8",
-    "semantic_hash": "117f322fc2666999e0e76e922a1da8c8"
+    "mtime": 1795200591.0490396,
+    "seen": 1795203508.6464832,
+    "ast_hash": "d3d45bdbdedc273b1f37438615caa5c8",
+    "semantic_hash": "d3d45bdbdedc273b1f37438615caa5c8"
   },
   "libs/circuit/include/photonlab/circuit/pcm.hpp": {
     "mtime": 1795107390.8792713,
@@ -378,10 +318,10 @@
     "semantic_hash": "b2e721804a580e07ddad265f174ce46f"
   },
   "libs/circuit/include/photonlab/circuit/reference_designs.hpp": {
-    "mtime": 1795107390.8792713,
-    "seen": 1795108451.4689543,
-    "ast_hash": "9f80f0d1182e6588e2f97bc69127e187",
-    "semantic_hash": "9f80f0d1182e6588e2f97bc69127e187"
+    "mtime": 1795200475.412111,
+    "seen": 1795203508.6465585,
+    "ast_hash": "5a3187fc7faff252ed1df804e2c61468",
+    "semantic_hash": "5a3187fc7faff252ed1df804e2c61468"
   },
   "libs/circuit/include/photonlab/circuit/registry.hpp": {
     "mtime": 1795107390.8792713,
@@ -408,10 +348,10 @@
     "semantic_hash": "beddddeeceeaa0e0b741273855940f54"
   },
   "libs/circuit/src/active_devices.cpp": {
-    "mtime": 1795107390.8792713,
-    "seen": 1795108451.468959,
-    "ast_hash": "1d25dc1cd9c87fada1a8f8c7271092fa",
-    "semantic_hash": "1d25dc1cd9c87fada1a8f8c7271092fa"
+    "mtime": 1795191362.2406116,
+    "seen": 1795203508.6466565,
+    "ast_hash": "c44908a2bb15ae4d53091adb4335581c",
+    "semantic_hash": "c44908a2bb15ae4d53091adb4335581c"
   },
   "libs/circuit/src/analysis.cpp": {
     "mtime": 1795107390.8797197,
@@ -420,10 +360,10 @@
     "semantic_hash": "e0228e37476fcf8bb633170c87fef5d6"
   },
   "libs/circuit/src/builtin_components.cpp": {
-    "mtime": 1795107390.8797197,
-    "seen": 1795108451.4689605,
-    "ast_hash": "33b692c4c1b8a1cad6f068a5158fbd8b",
-    "semantic_hash": "33b692c4c1b8a1cad6f068a5158fbd8b"
+    "mtime": 1795191557.7993753,
+    "seen": 1795203508.646681,
+    "ast_hash": "f2d673abce040d95246113f958c35c93",
+    "semantic_hash": "f2d673abce040d95246113f958c35c93"
   },
   "libs/circuit/src/kerr_cavity.cpp": {
     "mtime": 1795107390.8797197,
@@ -450,16 +390,16 @@
     "semantic_hash": "c36d17136085863919ee7756f76891c3"
   },
   "libs/circuit/src/plugin.cpp": {
-    "mtime": 1795107390.8797197,
-    "seen": 1795108451.4689655,
-    "ast_hash": "e287e69e2df4704a787f17234097fdf6",
-    "semantic_hash": "e287e69e2df4704a787f17234097fdf6"
+    "mtime": 1795114624.3165805,
+    "seen": 1795203508.6467657,
+    "ast_hash": "4126ba45386d2e7b00160054acc93535",
+    "semantic_hash": "4126ba45386d2e7b00160054acc93535"
   },
   "libs/circuit/src/reference_designs.cpp": {
-    "mtime": 1795107390.8797197,
-    "seen": 1795108451.4689665,
-    "ast_hash": "3d44551d9043828015e8796a3c37ea09",
-    "semantic_hash": "3d44551d9043828015e8796a3c37ea09"
+    "mtime": 1795200517.3072863,
+    "seen": 1795203508.6467671,
+    "ast_hash": "453b461291b8836c302b077050bc34f0",
+    "semantic_hash": "453b461291b8836c302b077050bc34f0"
   },
   "libs/circuit/src/registry.cpp": {
     "mtime": 1795107390.8797197,
@@ -468,10 +408,10 @@
     "semantic_hash": "c6467afc460728c6c34429477839fcf8"
   },
   "libs/circuit/src/solver.cpp": {
-    "mtime": 1795107390.8797197,
-    "seen": 1795108451.4689686,
-    "ast_hash": "d3b897192ebe6a619aa5e5d8f7910ab1",
-    "semantic_hash": "d3b897192ebe6a619aa5e5d8f7910ab1"
+    "mtime": 1795200354.9799104,
+    "seen": 1795203508.6467886,
+    "ast_hash": "990b7ebfc5a6b54dd8529caf0818b4eb",
+    "semantic_hash": "990b7ebfc5a6b54dd8529caf0818b4eb"
   },
   "libs/circuit/src/sparameter_table.cpp": {
     "mtime": 1795107390.8797197,
@@ -546,16 +486,16 @@
     "semantic_hash": "8e7e6cd01ca8add0a8ea22075be322ef"
   },
   "libs/field/include/photonlab/field/fdtd.hpp": {
-    "mtime": 1795107390.8810096,
-    "seen": 1795108451.4689815,
-    "ast_hash": "f8666ad09bce67b983e4fa04a33da440",
-    "semantic_hash": "f8666ad09bce67b983e4fa04a33da440"
+    "mtime": 1795133955.6649637,
+    "seen": 1795203508.647108,
+    "ast_hash": "40b029d334ba678aef9bb22376a1d78b",
+    "semantic_hash": "40b029d334ba678aef9bb22376a1d78b"
   },
   "libs/field/include/photonlab/field/fdtd3d.hpp": {
-    "mtime": 1795107390.8811038,
-    "seen": 1795108451.4689827,
-    "ast_hash": "2ead6191975f5354592df5728a97a079",
-    "semantic_hash": "2ead6191975f5354592df5728a97a079"
+    "mtime": 1795202402.2244267,
+    "seen": 1795203508.6471093,
+    "ast_hash": "a088eb0fb4523c630910be02cff84357",
+    "semantic_hash": "a088eb0fb4523c630910be02cff84357"
   },
   "libs/field/include/photonlab/field/inverse_design.hpp": {
     "mtime": 1795107390.8811038,
@@ -564,28 +504,28 @@
     "semantic_hash": "8855fae9a5d36e441cc63122a082d53c"
   },
   "libs/field/include/photonlab/field/photonic_crystal.hpp": {
-    "mtime": 1795107390.8811038,
-    "seen": 1795108451.4689853,
-    "ast_hash": "2e15ee9e1581c8b11f73e9efefe36de6",
-    "semantic_hash": "2e15ee9e1581c8b11f73e9efefe36de6"
+    "mtime": 1795184822.8619459,
+    "seen": 1795203508.647175,
+    "ast_hash": "8a5f772062483e1b43837a9366948dac",
+    "semantic_hash": "8a5f772062483e1b43837a9366948dac"
   },
   "libs/field/include/photonlab/field/reference_scenes.hpp": {
-    "mtime": 1795107390.8811038,
-    "seen": 1795108451.468986,
-    "ast_hash": "9d8685327a717b6271ab40c4c7de10b5",
-    "semantic_hash": "9d8685327a717b6271ab40c4c7de10b5"
+    "mtime": 1795184822.8622036,
+    "seen": 1795203508.6471767,
+    "ast_hash": "02e345527b13ee37749e53e425cb6484",
+    "semantic_hash": "02e345527b13ee37749e53e425cb6484"
   },
   "libs/field/include/photonlab/field/scene.hpp": {
-    "mtime": 1795107390.8811038,
-    "seen": 1795108451.4689872,
-    "ast_hash": "48951ed6857c67ac0dae2836620b8f1d",
-    "semantic_hash": "48951ed6857c67ac0dae2836620b8f1d"
+    "mtime": 1795191989.337289,
+    "seen": 1795203508.647178,
+    "ast_hash": "a67e0a3e7ab401c1fdbae557b9c5025c",
+    "semantic_hash": "a67e0a3e7ab401c1fdbae557b9c5025c"
   },
   "libs/field/include/photonlab/field/sparameters.hpp": {
-    "mtime": 1795107390.8811038,
-    "seen": 1795108451.468988,
-    "ast_hash": "128151f9c5f0bbc52b2cfd32bb138669",
-    "semantic_hash": "128151f9c5f0bbc52b2cfd32bb138669"
+    "mtime": 1795185119.6119747,
+    "seen": 1795203508.6471794,
+    "ast_hash": "ebe4152d076bf594cb5b48ff91620807",
+    "semantic_hash": "ebe4152d076bf594cb5b48ff91620807"
   },
   "libs/field/include/photonlab/field/spectrum.hpp": {
     "mtime": 1795107390.8811038,
@@ -606,16 +546,16 @@
     "semantic_hash": "697e29ddf5958e27483f34357233e567"
   },
   "libs/field/src/fdtd.cpp": {
-    "mtime": 1795107390.8813949,
-    "seen": 1795108451.4689922,
-    "ast_hash": "ebcee3961430bf9c60a1b9f8940ecb02",
-    "semantic_hash": "ebcee3961430bf9c60a1b9f8940ecb02"
+    "mtime": 1795133955.6606026,
+    "seen": 1795203508.6472642,
+    "ast_hash": "e4cbd6ee83d3ae153379bf03c1260bb9",
+    "semantic_hash": "e4cbd6ee83d3ae153379bf03c1260bb9"
   },
   "libs/field/src/fdtd3d.cpp": {
-    "mtime": 1795107390.8813949,
-    "seen": 1795108451.468993,
-    "ast_hash": "738d617ce999a36c8a1ab0d568ffd203",
-    "semantic_hash": "738d617ce999a36c8a1ab0d568ffd203"
+    "mtime": 1795202211.5223525,
+    "seen": 1795203508.6472654,
+    "ast_hash": "64ae2101610d76260d81b96a797552a6",
+    "semantic_hash": "64ae2101610d76260d81b96a797552a6"
   },
   "libs/field/src/inverse_design.cpp": {
     "mtime": 1795107390.8813949,
@@ -624,28 +564,28 @@
     "semantic_hash": "75806e145fb8e1e71f58c26281f4c20c"
   },
   "libs/field/src/photonic_crystal.cpp": {
-    "mtime": 1795107390.8813949,
-    "seen": 1795108451.4689949,
-    "ast_hash": "595acd0a8e7099c870605c52e3e169b2",
-    "semantic_hash": "595acd0a8e7099c870605c52e3e169b2"
+    "mtime": 1795127706.9597754,
+    "seen": 1795203508.6472914,
+    "ast_hash": "c02b37c0d807e8f118aba9fe3c2844c4",
+    "semantic_hash": "c02b37c0d807e8f118aba9fe3c2844c4"
   },
   "libs/field/src/reference_scenes.cpp": {
-    "mtime": 1795107390.8813949,
-    "seen": 1795108451.4689956,
-    "ast_hash": "330098f528f524189043f6d2c9b99439",
-    "semantic_hash": "330098f528f524189043f6d2c9b99439"
+    "mtime": 1795140763.2207017,
+    "seen": 1795203508.6472924,
+    "ast_hash": "27d218310ddcab468535c52e4b0ea136",
+    "semantic_hash": "27d218310ddcab468535c52e4b0ea136"
   },
   "libs/field/src/scene.cpp": {
-    "mtime": 1795107390.8813949,
-    "seen": 1795108451.4689963,
-    "ast_hash": "96c3da048a5981e5c3a39c20701b178e",
-    "semantic_hash": "96c3da048a5981e5c3a39c20701b178e"
+    "mtime": 1795133955.7720494,
+    "seen": 1795203508.6472933,
+    "ast_hash": "b10d0b2222aa516c846f91480a6887a2",
+    "semantic_hash": "b10d0b2222aa516c846f91480a6887a2"
   },
   "libs/field/src/sparameters.cpp": {
-    "mtime": 1795107390.8813949,
-    "seen": 1795108451.468997,
-    "ast_hash": "ef77618b700ac7a111bc9e7a14cd4fdf",
-    "semantic_hash": "ef77618b700ac7a111bc9e7a14cd4fdf"
+    "mtime": 1795185157.9846969,
+    "seen": 1795203508.6472948,
+    "ast_hash": "8322bcb1f83d828d924f489d732ff682",
+    "semantic_hash": "8322bcb1f83d828d924f489d732ff682"
   },
   "libs/field/src/spectrum.cpp": {
     "mtime": 1795107390.8813949,
@@ -660,16 +600,16 @@
     "semantic_hash": "292c1100828059696f892d9a229724c8"
   },
   "libs/io/include/photonlab/io/project.hpp": {
-    "mtime": 1795107390.8828053,
-    "seen": 1795108451.4689996,
-    "ast_hash": "276f546e3e4c5b6e6852c016f8ea6dc4",
-    "semantic_hash": "276f546e3e4c5b6e6852c016f8ea6dc4"
+    "mtime": 1795200517.3066864,
+    "seen": 1795203508.64734,
+    "ast_hash": "1ecaf2e2735bad68008f98591ebb99c4",
+    "semantic_hash": "1ecaf2e2735bad68008f98591ebb99c4"
   },
   "libs/io/src/project.cpp": {
-    "mtime": 1795107390.8828053,
-    "seen": 1795108451.4690003,
-    "ast_hash": "e3b5ec9a049a662c3ccce82598f0488f",
-    "semantic_hash": "e3b5ec9a049a662c3ccce82598f0488f"
+    "mtime": 1795200517.3062181,
+    "seen": 1795203508.647341,
+    "ast_hash": "6ad2ef2408020f4352b1e66c881beead",
+    "semantic_hash": "6ad2ef2408020f4352b1e66c881beead"
   },
   "libs/layout/include/photonlab/layout/gds.hpp": {
     "mtime": 1795107390.8832426,
@@ -690,34 +630,22 @@
     "semantic_hash": "961ea86f88d3f1bebf6e13c265df91d7"
   },
   "libs/layout/src/layout.cpp": {
-    "mtime": 1795107390.8833492,
-    "seen": 1795108451.4690037,
-    "ast_hash": "7e3016bea9cd8dd81d114a0546d0266d",
-    "semantic_hash": "7e3016bea9cd8dd81d114a0546d0266d"
+    "mtime": 1795119816.2468736,
+    "seen": 1795203508.6474197,
+    "ast_hash": "43bb0a38f8dae9feb473ae8ae35a948e",
+    "semantic_hash": "43bb0a38f8dae9feb473ae8ae35a948e"
   },
   "libs/logic/include/photonlab/logic/field_gate.hpp": {
-    "mtime": 1795107390.883433,
-    "seen": 1795108451.4690049,
-    "ast_hash": "286dcfe590cae3a0e62b4da12604803d",
-    "semantic_hash": "286dcfe590cae3a0e62b4da12604803d"
+    "mtime": 1795184822.8639498,
+    "seen": 1795203508.6474206,
+    "ast_hash": "3af5480dee71a06c5c17596d8e2c5d8f",
+    "semantic_hash": "3af5480dee71a06c5c17596d8e2c5d8f"
   },
   "libs/logic/include/photonlab/logic/gate.hpp": {
-    "mtime": 1795107390.8834693,
-    "seen": 1795108451.4690056,
-    "ast_hash": "c9fa0d6b2a5b0314d8f1cf999818fc42",
-    "semantic_hash": "c9fa0d6b2a5b0314d8f1cf999818fc42"
-  },
-  "libs/logic/include/photonlab/logic/logic_sim.hpp": {
-    "mtime": 1795107390.8834693,
-    "seen": 1795108451.4690065,
-    "ast_hash": "12afb630087e94680ef6fb74ed58a765",
-    "semantic_hash": "12afb630087e94680ef6fb74ed58a765"
-  },
-  "libs/logic/include/photonlab/logic/optimize.hpp": {
-    "mtime": 1795107390.8834693,
-    "seen": 1795108451.4690073,
-    "ast_hash": "a80918559a99795535e6274348103123",
-    "semantic_hash": "a80918559a99795535e6274348103123"
+    "mtime": 1795184822.8642843,
+    "seen": 1795203508.6474218,
+    "ast_hash": "7335f8c710c19cf9a8afa8c3864f8fb3",
+    "semantic_hash": "7335f8c710c19cf9a8afa8c3864f8fb3"
   },
   "libs/logic/include/photonlab/logic/reference_gates.hpp": {
     "mtime": 1795107390.8834693,
@@ -726,52 +654,40 @@
     "semantic_hash": "7747962985c5c5dcf835cb19426d8c7f"
   },
   "libs/logic/include/photonlab/logic/report.hpp": {
-    "mtime": 1795107390.8834693,
-    "seen": 1795108451.4690092,
-    "ast_hash": "947c7146c2ae367452a072aec77af5ab",
-    "semantic_hash": "947c7146c2ae367452a072aec77af5ab"
+    "mtime": 1795184822.8645427,
+    "seen": 1795203508.6474485,
+    "ast_hash": "053cc1d7a3b60e211916f8839f032ea1",
+    "semantic_hash": "053cc1d7a3b60e211916f8839f032ea1"
   },
   "libs/logic/include/photonlab/logic/truth_table.hpp": {
-    "mtime": 1795107390.8834693,
-    "seen": 1795108451.4690099,
-    "ast_hash": "95692ee6f2d2630245bf66fa2687e672",
-    "semantic_hash": "95692ee6f2d2630245bf66fa2687e672"
+    "mtime": 1795184822.8647356,
+    "seen": 1795203508.64745,
+    "ast_hash": "cd1f1b281847f480bc6fcb1897c011bc",
+    "semantic_hash": "cd1f1b281847f480bc6fcb1897c011bc"
   },
   "libs/logic/src/field_gate.cpp": {
-    "mtime": 1795107390.8834693,
-    "seen": 1795108451.4690106,
-    "ast_hash": "c436d4e47f4ea92014c3dbd7e4808155",
-    "semantic_hash": "c436d4e47f4ea92014c3dbd7e4808155"
+    "mtime": 1795140763.2381768,
+    "seen": 1795203508.647451,
+    "ast_hash": "703c28739f17b220e2fea88e2fa0691c",
+    "semantic_hash": "703c28739f17b220e2fea88e2fa0691c"
   },
   "libs/logic/src/gate.cpp": {
-    "mtime": 1795107390.8837383,
-    "seen": 1795108451.4690115,
-    "ast_hash": "82d3d56513096e6f892ae393b05f8dee",
-    "semantic_hash": "82d3d56513096e6f892ae393b05f8dee"
-  },
-  "libs/logic/src/logic_sim.cpp": {
-    "mtime": 1795107390.8837383,
-    "seen": 1795108451.4690123,
-    "ast_hash": "c6138c10edd1e765f8311e6cf1d89b3f",
-    "semantic_hash": "c6138c10edd1e765f8311e6cf1d89b3f"
-  },
-  "libs/logic/src/optimize.cpp": {
-    "mtime": 1795107390.8837383,
-    "seen": 1795108451.469013,
-    "ast_hash": "a0379a2b07b60c2b3f54ba35e0708e46",
-    "semantic_hash": "a0379a2b07b60c2b3f54ba35e0708e46"
+    "mtime": 1795184040.5980368,
+    "seen": 1795203508.647452,
+    "ast_hash": "a087548622520f7a5d8429fff18a5063",
+    "semantic_hash": "a087548622520f7a5d8429fff18a5063"
   },
   "libs/logic/src/reference_gates.cpp": {
-    "mtime": 1795107390.8837383,
-    "seen": 1795108451.4690137,
-    "ast_hash": "ede513d9c2ad4f083854ce30efc16a4e",
-    "semantic_hash": "ede513d9c2ad4f083854ce30efc16a4e"
+    "mtime": 1795200517.307681,
+    "seen": 1795203508.647453,
+    "ast_hash": "416e4cf5ceb9475b4458064a204e7898",
+    "semantic_hash": "416e4cf5ceb9475b4458064a204e7898"
   },
   "libs/logic/src/report.cpp": {
-    "mtime": 1795107390.8837383,
-    "seen": 1795108451.469015,
-    "ast_hash": "2cb1ed66ccece743bee67508a8b3a853",
-    "semantic_hash": "2cb1ed66ccece743bee67508a8b3a853"
+    "mtime": 1795184044.367587,
+    "seen": 1795203508.6474547,
+    "ast_hash": "aaa5d3f48b5a298565621c9fcfe4de12",
+    "semantic_hash": "aaa5d3f48b5a298565621c9fcfe4de12"
   },
   "libs/logic/src/truth_table.cpp": {
     "mtime": 1795107390.8837383,
@@ -798,10 +714,10 @@
     "semantic_hash": "f65f7a5f830ba51e9754fa7e8b979777"
   },
   "libs/materials/src/material.cpp": {
-    "mtime": 1795107390.8841977,
-    "seen": 1795108451.4690187,
-    "ast_hash": "75b8c2f903377505aaecb0c45e181289",
-    "semantic_hash": "75b8c2f903377505aaecb0c45e181289"
+    "mtime": 1795184822.8650427,
+    "seen": 1795203508.6475546,
+    "ast_hash": "c9acdc2aac9638ec0db680a5a52f592c",
+    "semantic_hash": "c9acdc2aac9638ec0db680a5a52f592c"
   },
   "libs/materials/src/phase_change.cpp": {
     "mtime": 1795107390.8842807,
@@ -875,54 +791,6 @@
     "ast_hash": "67541e8c2cf6daefb05af3abaaeae1fc",
     "semantic_hash": "67541e8c2cf6daefb05af3abaaeae1fc"
   },
-  "libs/quantum/include/photonlab/quantum/experiments.hpp": {
-    "mtime": 1795107390.884835,
-    "seen": 1795108451.4690294,
-    "ast_hash": "2cafe1dfd8897e0874801fa1b1c92b92",
-    "semantic_hash": "2cafe1dfd8897e0874801fa1b1c92b92"
-  },
-  "libs/quantum/include/photonlab/quantum/fock.hpp": {
-    "mtime": 1795107390.8848715,
-    "seen": 1795108451.4690301,
-    "ast_hash": "c2a850e1d982b249743323ad2d38df13",
-    "semantic_hash": "c2a850e1d982b249743323ad2d38df13"
-  },
-  "libs/quantum/include/photonlab/quantum/mesh.hpp": {
-    "mtime": 1795107390.8848715,
-    "seen": 1795108451.4690309,
-    "ast_hash": "3541fdfcb55b174d420afdcb70f37519",
-    "semantic_hash": "3541fdfcb55b174d420afdcb70f37519"
-  },
-  "libs/quantum/src/experiments.cpp": {
-    "mtime": 1795107390.8848715,
-    "seen": 1795108451.4690316,
-    "ast_hash": "2ad383dbad5cad1c2dcb59a2a942fb5c",
-    "semantic_hash": "2ad383dbad5cad1c2dcb59a2a942fb5c"
-  },
-  "libs/quantum/src/fock.cpp": {
-    "mtime": 1795107390.884977,
-    "seen": 1795108451.4690325,
-    "ast_hash": "541a1a53aa83f3a210f7f00e5a555cb0",
-    "semantic_hash": "541a1a53aa83f3a210f7f00e5a555cb0"
-  },
-  "libs/quantum/src/mesh.cpp": {
-    "mtime": 1795107390.884977,
-    "seen": 1795108451.4690332,
-    "ast_hash": "e4aa40699b7c89e38378e4c26a425ca6",
-    "semantic_hash": "e4aa40699b7c89e38378e4c26a425ca6"
-  },
-  "libs/signal/include/photonlab/signal/link.hpp": {
-    "mtime": 1795107390.8851163,
-    "seen": 1795108451.469034,
-    "ast_hash": "b20950fbba50de4edc43924a96859276",
-    "semantic_hash": "b20950fbba50de4edc43924a96859276"
-  },
-  "libs/signal/src/link.cpp": {
-    "mtime": 1795107390.8851163,
-    "seen": 1795108451.4690347,
-    "ast_hash": "bbc94d26456009c68c60b3a332d35bd1",
-    "semantic_hash": "bbc94d26456009c68c60b3a332d35bd1"
-  },
   "plugins/example/example_plugin.cpp": {
     "mtime": 1795107390.8852606,
     "seen": 1795108451.4690359,
@@ -942,10 +810,10 @@
     "semantic_hash": "c51e7fe91d3c894d7119f439ec7d97b2"
   },
   "tests/test_circuit_components.cpp": {
-    "mtime": 1795107390.8853247,
-    "seen": 1795108451.469038,
-    "ast_hash": "9ab341dbfbadb69046d99a6546bdc81e",
-    "semantic_hash": "9ab341dbfbadb69046d99a6546bdc81e"
+    "mtime": 1795191377.7869334,
+    "seen": 1795203508.6480105,
+    "ast_hash": "2eb95ebe55f12d40cb71cd291d634cd0",
+    "semantic_hash": "2eb95ebe55f12d40cb71cd291d634cd0"
   },
   "tests/test_circuit_monte_carlo.cpp": {
     "mtime": 1795107390.8853247,
@@ -972,10 +840,10 @@
     "semantic_hash": "f11e62e2a3c11c443d70ba47f92aea81"
   },
   "tests/test_circuit_solver.cpp": {
-    "mtime": 1795107390.8853247,
-    "seen": 1795108451.4690418,
-    "ast_hash": "9ddd1d44654af4be14454da46fe3002a",
-    "semantic_hash": "9ddd1d44654af4be14454da46fe3002a"
+    "mtime": 1795184822.8657084,
+    "seen": 1795203508.6480834,
+    "ast_hash": "11ea5defe27b50ad39a3b14c304290b2",
+    "semantic_hash": "11ea5defe27b50ad39a3b14c304290b2"
   },
   "tests/test_circuit_sweep.cpp": {
     "mtime": 1795107390.8853247,
@@ -990,10 +858,10 @@
     "semantic_hash": "113e5e72c0e31deeea61ac1fa52c97d2"
   },
   "tests/test_field_fdtd.cpp": {
-    "mtime": 1795107390.8853247,
-    "seen": 1795108451.4690442,
-    "ast_hash": "6d797758fb19353d2eaf7a2b4d83ef97",
-    "semantic_hash": "6d797758fb19353d2eaf7a2b4d83ef97"
+    "mtime": 1795184822.8672001,
+    "seen": 1795203508.6481214,
+    "ast_hash": "15af351e34cc331063013ab18ce5c5b4",
+    "semantic_hash": "15af351e34cc331063013ab18ce5c5b4"
   },
   "tests/test_interference.cpp": {
     "mtime": 1795107390.8853247,
@@ -1008,10 +876,10 @@
     "semantic_hash": "f0a9eafa2cada194b52d35aca91aa0d9"
   },
   "tests/test_io_project.cpp": {
-    "mtime": 1795107390.8853247,
-    "seen": 1795108451.4690468,
-    "ast_hash": "8ccf494196740fc9e660d16dc2a8a2a9",
-    "semantic_hash": "8ccf494196740fc9e660d16dc2a8a2a9"
+    "mtime": 1795200660.2198858,
+    "seen": 1795203508.6481595,
+    "ast_hash": "c54e8e8febaefefa45461fbcdf666aea",
+    "semantic_hash": "c54e8e8febaefefa45461fbcdf666aea"
   },
   "tests/test_kerr_cavity.cpp": {
     "mtime": 1795107390.8853247,
@@ -1020,28 +888,16 @@
     "semantic_hash": "b01b5875415a75321b941e0fe32f6b5c"
   },
   "tests/test_layout.cpp": {
-    "mtime": 1795107390.8853247,
-    "seen": 1795108451.4690485,
-    "ast_hash": "018a28d39f8d5c8cfe94e315d7f4e46b",
-    "semantic_hash": "018a28d39f8d5c8cfe94e315d7f4e46b"
-  },
-  "tests/test_link.cpp": {
-    "mtime": 1795107390.8853247,
-    "seen": 1795108451.4690506,
-    "ast_hash": "4b312523fff0edbe92c1d14be5c965ff",
-    "semantic_hash": "4b312523fff0edbe92c1d14be5c965ff"
+    "mtime": 1795201329.5208294,
+    "seen": 1795203508.6481774,
+    "ast_hash": "65073afe2757055b5b764aa6c031b7f0",
+    "semantic_hash": "65073afe2757055b5b764aa6c031b7f0"
   },
   "tests/test_logic.cpp": {
-    "mtime": 1795107390.8853247,
-    "seen": 1795108451.4690514,
-    "ast_hash": "87b8d26b946308c89565aeb3aa5ef226",
-    "semantic_hash": "87b8d26b946308c89565aeb3aa5ef226"
-  },
-  "tests/test_logic_sim.cpp": {
-    "mtime": 1795107390.8853247,
-    "seen": 1795108451.4690523,
-    "ast_hash": "3f29b91904aa3e6e80682db853647e00",
-    "semantic_hash": "3f29b91904aa3e6e80682db853647e00"
+    "mtime": 1795200646.665792,
+    "seen": 1795203508.6481783,
+    "ast_hash": "8d3035bdcd84a38d737177e9219b9419",
+    "semantic_hash": "8d3035bdcd84a38d737177e9219b9419"
   },
   "tests/test_modes.cpp": {
     "mtime": 1795107390.8853247,
@@ -1062,10 +918,10 @@
     "semantic_hash": "e5f1ecc3406d77402339ac29138a0867"
   },
   "tests/test_phc_field.cpp": {
-    "mtime": 1795107390.8853247,
-    "seen": 1795108451.4690554,
-    "ast_hash": "6f80defb383c8f3f5ea75de93a2e4512",
-    "semantic_hash": "6f80defb383c8f3f5ea75de93a2e4512"
+    "mtime": 1795127706.8197756,
+    "seen": 1795203508.648231,
+    "ast_hash": "6891d6d1b8a89930295f73665acd87f6",
+    "semantic_hash": "6891d6d1b8a89930295f73665acd87f6"
   },
   "tests/test_photonic_crystal.cpp": {
     "mtime": 1795107390.8853247,
@@ -1085,17 +941,11 @@
     "ast_hash": "8c80b7487e20b57b0b7dd8c26f323353",
     "semantic_hash": "8c80b7487e20b57b0b7dd8c26f323353"
   },
-  "tests/test_quantum.cpp": {
-    "mtime": 1795107390.8853247,
-    "seen": 1795108451.4690585,
-    "ast_hash": "ffb90e8dabd5faa68cebf1a5ec1e3a84",
-    "semantic_hash": "ffb90e8dabd5faa68cebf1a5ec1e3a84"
-  },
   "tests/test_sparameters.cpp": {
-    "mtime": 1795107390.8853247,
-    "seen": 1795108451.4690592,
-    "ast_hash": "2fd1ac26aa9bb585bdaa1fefcb65e161",
-    "semantic_hash": "2fd1ac26aa9bb585bdaa1fefcb65e161"
+    "mtime": 1795185174.0581198,
+    "seen": 1795203508.6482828,
+    "ast_hash": "22b76461e7ce12f865a203b8d04e0e15",
+    "semantic_hash": "22b76461e7ce12f865a203b8d04e0e15"
   },
   "tests/test_thread_pool.cpp": {
     "mtime": 1795107390.8853247,
@@ -1108,5 +958,485 @@
     "seen": 1795108451.4690611,
     "ast_hash": "a0231a5080695d098f4144376d6023b5",
     "semantic_hash": "a0231a5080695d098f4144376d6023b5"
+  },
+  "apps/photonlab_gui/help.cpp": {
+    "mtime": 1795202402.3544047,
+    "seen": 1795203508.6459227,
+    "ast_hash": "50860fe8a8504abee8c689d852c1e032",
+    "semantic_hash": "50860fe8a8504abee8c689d852c1e032"
+  },
+  "apps/photonlab_gui/help.hpp": {
+    "mtime": 1795186394.8335056,
+    "seen": 1795203508.6459246,
+    "ast_hash": "e8a96e321dd2be50ba36ef2e7e3412c5",
+    "semantic_hash": "e8a96e321dd2be50ba36ef2e7e3412c5"
+  },
+  "apps/photonlab_gui/logic_view.cpp": {
+    "mtime": 1795191586.0789862,
+    "seen": 1795203508.6459672,
+    "ast_hash": "2a9730fe752161fe1b8c564aa33f8154",
+    "semantic_hash": "2a9730fe752161fe1b8c564aa33f8154"
+  },
+  "apps/photonlab_gui/logic_view.hpp": {
+    "mtime": 1795184298.8733811,
+    "seen": 1795203508.6459692,
+    "ast_hash": "4766cd8291f987987b23b500f27ada7b",
+    "semantic_hash": "4766cd8291f987987b23b500f27ada7b"
+  },
+  "apps/photonlab_gui/view3d.cpp": {
+    "mtime": 1795202331.35337,
+    "seen": 1795203508.6460435,
+    "ast_hash": "e6f3e18b72aca8c9f823f6baccac1e31",
+    "semantic_hash": "e6f3e18b72aca8c9f823f6baccac1e31"
+  },
+  "apps/photonlab_gui/view3d.hpp": {
+    "mtime": 1795202402.2567477,
+    "seen": 1795203508.646045,
+    "ast_hash": "1eba5cefa61f23ac4b7dd9480d9cdc7b",
+    "semantic_hash": "1eba5cefa61f23ac4b7dd9480d9cdc7b"
+  },
+  "apps/photonlab_gui/viewport3d.cpp": {
+    "mtime": 1795191193.257375,
+    "seen": 1795203508.6460462,
+    "ast_hash": "ebb39b9776e3be9729bcd33145e4a5df",
+    "semantic_hash": "ebb39b9776e3be9729bcd33145e4a5df"
+  },
+  "apps/photonlab_gui/viewport3d.hpp": {
+    "mtime": 1795191193.260563,
+    "seen": 1795203508.646047,
+    "ast_hash": "542e6822d929e10374bd563a7293bfa8",
+    "semantic_hash": "542e6822d929e10374bd563a7293bfa8"
+  },
+  "examples/11_taper_fdtd.plab.json": {
+    "mtime": 1795121780.371347,
+    "seen": 1795203508.646365,
+    "ast_hash": "e4108f823f51211d58aa0f669b31230c",
+    "semantic_hash": "e4108f823f51211d58aa0f669b31230c"
+  },
+  "examples/11b_bogen_fdtd.plab.json": {
+    "mtime": 1795121780.3761528,
+    "seen": 1795203508.6463661,
+    "ast_hash": "0f222f44b4caa1e7277cee5e8ee47317",
+    "semantic_hash": "0f222f44b4caa1e7277cee5e8ee47317"
+  },
+  "examples/11c_bragg_spiegel_fdtd.plab.json": {
+    "mtime": 1795121780.378112,
+    "seen": 1795203508.6463675,
+    "ast_hash": "dc23e438489a9457b5c7a29fcee338f4",
+    "semantic_hash": "dc23e438489a9457b5c7a29fcee338f4"
+  },
+  "examples/11d_linse_fdtd.plab.json": {
+    "mtime": 1795121780.3797853,
+    "seen": 1795203508.6463723,
+    "ast_hash": "bbfc2662752114ae74797f0d26f9004a",
+    "semantic_hash": "bbfc2662752114ae74797f0d26f9004a"
+  },
+  "examples/12_halbaddierer_fdtd.plab.json": {
+    "mtime": 1795127698.707775,
+    "seen": 1795203508.646374,
+    "ast_hash": "9c3b8414fb61ed4edc53fe97d925a9e1",
+    "semantic_hash": "9c3b8414fb61ed4edc53fe97d925a9e1"
+  },
+  "examples/12b_phc_halbaddierer_fdtd.plab.json": {
+    "mtime": 1795127698.683775,
+    "seen": 1795203508.6463754,
+    "ast_hash": "2927ecd80c49183e13c7693c964fbf50",
+    "semantic_hash": "2927ecd80c49183e13c7693c964fbf50"
+  },
+  "examples/13_volladdierer_fdtd.plab.json": {
+    "mtime": 1795134374.0112762,
+    "seen": 1795203508.6463764,
+    "ast_hash": "7c8ff3af45898af685873ccaaea529d0",
+    "semantic_hash": "7c8ff3af45898af685873ccaaea529d0"
+  },
+  "examples/14_gaussian_beam_fdtd.plab.json": {
+    "mtime": 1795137046.3237166,
+    "seen": 1795203508.6463776,
+    "ast_hash": "8161de5a7da682056ca6f4b111bfa96c",
+    "semantic_hash": "8161de5a7da682056ca6f4b111bfa96c"
+  },
+  "examples/15_total_reflection_fdtd.plab.json": {
+    "mtime": 1795137046.325675,
+    "seen": 1795203508.6463785,
+    "ast_hash": "c4d034552ad6d82091f8883300d35de1",
+    "semantic_hash": "c4d034552ad6d82091f8883300d35de1"
+  },
+  "examples/16_crossing_fdtd.plab.json": {
+    "mtime": 1795137046.3275185,
+    "seen": 1795203508.6463795,
+    "ast_hash": "48cc0880b2fe930f0aca868bd295a245",
+    "semantic_hash": "48cc0880b2fe930f0aca868bd295a245"
+  },
+  "examples/17_mmi_fdtd.plab.json": {
+    "mtime": 1795137046.3293433,
+    "seen": 1795203508.6463807,
+    "ast_hash": "ec0562a7feae38a8461e6c4bbc451661",
+    "semantic_hash": "ec0562a7feae38a8461e6c4bbc451661"
+  },
+  "examples/18_mzi_fdtd.plab.json": {
+    "mtime": 1795137046.331167,
+    "seen": 1795203508.6463816,
+    "ast_hash": "ba854050f10d044f51a0e33caf9c3914",
+    "semantic_hash": "ba854050f10d044f51a0e33caf9c3914"
+  },
+  "examples/19_add_drop_fdtd.plab.json": {
+    "mtime": 1795137046.3314352,
+    "seen": 1795203508.6463826,
+    "ast_hash": "925d2807faa6a3cf93497b2f8e3da1ed",
+    "semantic_hash": "925d2807faa6a3cf93497b2f8e3da1ed"
+  },
+  "examples/20_xor_fdtd.plab.json": {
+    "mtime": 1795137046.3351545,
+    "seen": 1795203508.6463833,
+    "ast_hash": "88ce7285a0b4c368c91c8e649aef4e2c",
+    "semantic_hash": "88ce7285a0b4c368c91c8e649aef4e2c"
+  },
+  "examples/21_or_and_fdtd.plab.json": {
+    "mtime": 1795137046.3354352,
+    "seen": 1795203508.6463845,
+    "ast_hash": "e8d32eaa78d36ff85ff98e43ebfb2b93",
+    "semantic_hash": "e8d32eaa78d36ff85ff98e43ebfb2b93"
+  },
+  "examples/22_not_fdtd.plab.json": {
+    "mtime": 1795137046.338996,
+    "seen": 1795203508.6463857,
+    "ast_hash": "9303ba59e711e54869c905c75a5ee245",
+    "semantic_hash": "9303ba59e711e54869c905c75a5ee245"
+  },
+  "examples/23_phc_mirror_fdtd.plab.json": {
+    "mtime": 1795137046.339435,
+    "seen": 1795203508.6463869,
+    "ast_hash": "b242bb64357e5620e90ff86fe78cb876",
+    "semantic_hash": "b242bb64357e5620e90ff86fe78cb876"
+  },
+  "examples/24_phc_cavity_fdtd.plab.json": {
+    "mtime": 1795137046.3447633,
+    "seen": 1795203508.646388,
+    "ast_hash": "99c9582bd243d7b549a5a5d7a7a5a667",
+    "semantic_hash": "99c9582bd243d7b549a5a5d7a7a5a667"
+  },
+  "examples/25_phc_rods_fdtd.plab.json": {
+    "mtime": 1795137046.347943,
+    "seen": 1795203508.646389,
+    "ast_hash": "da583ac0c8c274a6a8ca36dda292f399",
+    "semantic_hash": "da583ac0c8c274a6a8ca36dda292f399"
+  },
+  "examples/26_volladdierer_optisch_fdtd.plab.json": {
+    "mtime": 1795140722.6080403,
+    "seen": 1795203508.64639,
+    "ast_hash": "eaf66b4da4ab6e55171fb5416109bec5",
+    "semantic_hash": "eaf66b4da4ab6e55171fb5416109bec5"
+  },
+  "examples/27_halbaddierer_chip.plab.json": {
+    "mtime": 1795184701.905405,
+    "seen": 1795203508.6463912,
+    "ast_hash": "c2b6ee51760b6ac9a2f6c837399a2485",
+    "semantic_hash": "c2b6ee51760b6ac9a2f6c837399a2485"
+  },
+  "examples/28_volladdierer_chip.plab.json": {
+    "mtime": 1795184701.9118123,
+    "seen": 1795203508.6463919,
+    "ast_hash": "ded4e6353633fced9324187cc7735664",
+    "semantic_hash": "ded4e6353633fced9324187cc7735664"
+  },
+  "examples/29_addierer_2bit_chip.plab.json": {
+    "mtime": 1795184701.9149628,
+    "seen": 1795203508.6463928,
+    "ast_hash": "defbfdf13bc90edcd3ace75e579546b0",
+    "semantic_hash": "defbfdf13bc90edcd3ace75e579546b0"
+  },
+  "examples/30_addierer_4bit_chip.plab.json": {
+    "mtime": 1795184701.9175892,
+    "seen": 1795203508.646394,
+    "ast_hash": "c6a8bd8e121e354c2bc09c977a78607b",
+    "semantic_hash": "c6a8bd8e121e354c2bc09c977a78607b"
+  },
+  "examples/31_addierer_8bit_chip.plab.json": {
+    "mtime": 1795184701.9203713,
+    "seen": 1795203508.6463952,
+    "ast_hash": "c9321c95d94279279bfeb0be3d192911",
+    "semantic_hash": "c9321c95d94279279bfeb0be3d192911"
+  },
+  "examples/32_addierer_8bit_zellen_chip.plab.json": {
+    "mtime": 1795200660.206454,
+    "seen": 1795203508.6463962,
+    "ast_hash": "84727c9f0f109aa85035044d81e5267c",
+    "semantic_hash": "84727c9f0f109aa85035044d81e5267c"
+  },
+  "libs/circuit/include/photonlab/circuit/subcircuit.hpp": {
+    "mtime": 1795200757.0027528,
+    "seen": 1795203508.6466315,
+    "ast_hash": "15ded05bf822548c94e58fda9f9c0e27",
+    "semantic_hash": "15ded05bf822548c94e58fda9f9c0e27"
+  },
+  "libs/circuit/src/subcircuit.cpp": {
+    "mtime": 1795200757.0000648,
+    "seen": 1795203508.646837,
+    "ast_hash": "c72e5a56360c82d906f00b362e627871",
+    "semantic_hash": "c72e5a56360c82d906f00b362e627871"
+  },
+  "libs/field/include/photonlab/field/extrude3d.hpp": {
+    "mtime": 1795202231.521532,
+    "seen": 1795203508.647107,
+    "ast_hash": "e2ed963f9ced812e48ace96481473597",
+    "semantic_hash": "e2ed963f9ced812e48ace96481473597"
+  },
+  "libs/field/include/photonlab/field/gpu.hpp": {
+    "mtime": 1795202396.270201,
+    "seen": 1795203508.647111,
+    "ast_hash": "75e0d98027b1a938ef2c868d62dc9a25",
+    "semantic_hash": "75e0d98027b1a938ef2c868d62dc9a25"
+  },
+  "libs/field/src/extrude3d.cpp": {
+    "mtime": 1795202402.2197726,
+    "seen": 1795203508.6472628,
+    "ast_hash": "641186e58229a858f3be29484461cb76",
+    "semantic_hash": "641186e58229a858f3be29484461cb76"
+  },
+  "libs/field/src/gpu.cpp": {
+    "mtime": 1795202402.1868515,
+    "seen": 1795203508.647267,
+    "ast_hash": "3d0cae3d729323d9f093d7b7f7038b0a",
+    "semantic_hash": "3d0cae3d729323d9f093d7b7f7038b0a"
+  },
+  "libs/field/src/sparameters3d.cpp": {
+    "mtime": 1795199968.2368264,
+    "seen": 1795203508.647296,
+    "ast_hash": "bf14c6c403bf6f916bf3c2966b7252e4",
+    "semantic_hash": "bf14c6c403bf6f916bf3c2966b7252e4"
+  },
+  "libs/layout/include/photonlab/layout/circuit_layout.hpp": {
+    "mtime": 1795201478.2967267,
+    "seen": 1795203508.6473424,
+    "ast_hash": "47b37930eebb52f163a6e933b4d7653d",
+    "semantic_hash": "47b37930eebb52f163a6e933b4d7653d"
+  },
+  "libs/layout/src/circuit_layout.cpp": {
+    "mtime": 1795201478.2932065,
+    "seen": 1795203508.6473963,
+    "ast_hash": "5836e4a52a9fabf5884c385952109a04",
+    "semantic_hash": "5836e4a52a9fabf5884c385952109a04"
+  },
+  "tests/test_extrude3d.cpp": {
+    "mtime": 1795199968.2982292,
+    "seen": 1795203508.648102,
+    "ast_hash": "be0452fe91318bc25c33785c90d7098e",
+    "semantic_hash": "be0452fe91318bc25c33785c90d7098e"
+  },
+  "tests/test_gpu.cpp": {
+    "mtime": 1795202402.237654,
+    "seen": 1795203508.6481225,
+    "ast_hash": "1f43130580e199902718a6eacead36c5",
+    "semantic_hash": "1f43130580e199902718a6eacead36c5"
+  },
+  "CLAUDE.md": {
+    "mtime": 1795202396.2722623,
+    "seen": 1795203508.648319,
+    "ast_hash": "3ab76874ac2f5a71037432259073b5a5",
+    "semantic_hash": "3ab76874ac2f5a71037432259073b5a5"
+  },
+  "CMakeLists.txt": {
+    "mtime": 1795183672.5016747,
+    "seen": 1795203508.6483204,
+    "ast_hash": "8c59f76c8056162edded546280f80e32",
+    "semantic_hash": "8c59f76c8056162edded546280f80e32"
+  },
+  "README.md": {
+    "mtime": 1795191192.9948335,
+    "seen": 1795203508.6483216,
+    "ast_hash": "ef1a5961c8e946ab28d49766ab7dd90b",
+    "semantic_hash": "ef1a5961c8e946ab28d49766ab7dd90b"
+  },
+  "apps/photonlab_cli/CMakeLists.txt": {
+    "mtime": 1795183672.502051,
+    "seen": 1795203508.6483228,
+    "ast_hash": "fa083484ae1b487c21a513e7d34b6c7a",
+    "semantic_hash": "fa083484ae1b487c21a513e7d34b6c7a"
+  },
+  "apps/photonlab_gui/CMakeLists.txt": {
+    "mtime": 1795190990.257366,
+    "seen": 1795203508.648324,
+    "ast_hash": "32ab26acf4f6e4eea569469fc093fb5e",
+    "semantic_hash": "32ab26acf4f6e4eea569469fc093fb5e"
+  },
+  "docs/ISSUES.md": {
+    "mtime": 1795202396.2716548,
+    "seen": 1795203508.6483254,
+    "ast_hash": "3255ff67ec4e4496fa4505a5a5e6dfbd",
+    "semantic_hash": "3255ff67ec4e4496fa4505a5a5e6dfbd"
+  },
+  "docs/performance.md": {
+    "mtime": 1795202396.2705548,
+    "seen": 1795203508.6483264,
+    "ast_hash": "f30eb3f1d0643a287001daea7ccab3fb",
+    "semantic_hash": "f30eb3f1d0643a287001daea7ccab3fb"
+  },
+  "docs/physics/README.md": {
+    "mtime": 1795107390.8747854,
+    "seen": 1795203508.6483276,
+    "ast_hash": "3d397193f79b3521231d4ab510851cc5",
+    "semantic_hash": "3d397193f79b3521231d4ab510851cc5"
+  },
+  "docs/physics/active.md": {
+    "mtime": 1795191607.8588223,
+    "seen": 1795203508.6483288,
+    "ast_hash": "676dc96eac2cb075cca5e2bbf5bd8d14",
+    "semantic_hash": "676dc96eac2cb075cca5e2bbf5bd8d14"
+  },
+  "docs/physics/circuit_solver.md": {
+    "mtime": 1795200756.9620326,
+    "seen": 1795203508.6483297,
+    "ast_hash": "641dbe039c05f20eba29370f0f6efe58",
+    "semantic_hash": "641dbe039c05f20eba29370f0f6efe58"
+  },
+  "docs/physics/fdtd.md": {
+    "mtime": 1795133911.597145,
+    "seen": 1795203508.6483307,
+    "ast_hash": "7d731e93ccff0d37ed88374ffa584d0e",
+    "semantic_hash": "7d731e93ccff0d37ed88374ffa584d0e"
+  },
+  "docs/physics/fdtd3d.md": {
+    "mtime": 1795202396.2709105,
+    "seen": 1795203508.6483314,
+    "ast_hash": "369f5cb420645de12b1c08c3f47ff145",
+    "semantic_hash": "369f5cb420645de12b1c08c3f47ff145"
+  },
+  "docs/physics/inverse_design.md": {
+    "mtime": 1795107390.875885,
+    "seen": 1795203508.6483326,
+    "ast_hash": "bdbb287dbcb232f6597caa65a3f2b996",
+    "semantic_hash": "bdbb287dbcb232f6597caa65a3f2b996"
+  },
+  "docs/physics/layout.md": {
+    "mtime": 1795201478.2084358,
+    "seen": 1795203508.6483335,
+    "ast_hash": "3cc89102acc3f1629e8c3fe70c16bf69",
+    "semantic_hash": "3cc89102acc3f1629e8c3fe70c16bf69"
+  },
+  "docs/physics/logic.md": {
+    "mtime": 1795184822.8603373,
+    "seen": 1795203508.6483343,
+    "ast_hash": "2f89d7c94e51143b62845df07dface4a",
+    "semantic_hash": "2f89d7c94e51143b62845df07dface4a"
+  },
+  "docs/physics/materials.md": {
+    "mtime": 1795184822.8606071,
+    "seen": 1795203508.6483355,
+    "ast_hash": "f149edcc64f8ea54a3a2e1961f73b3ae",
+    "semantic_hash": "f149edcc64f8ea54a3a2e1961f73b3ae"
+  },
+  "docs/physics/modes.md": {
+    "mtime": 1795184822.8610485,
+    "seen": 1795203508.6483362,
+    "ast_hash": "91033c26acfd71ee6bff59cb88bc6273",
+    "semantic_hash": "91033c26acfd71ee6bff59cb88bc6273"
+  },
+  "docs/physics/monte_carlo.md": {
+    "mtime": 1795107390.875885,
+    "seen": 1795203508.6483374,
+    "ast_hash": "d5de224e8edb08bae414ff213fe32708",
+    "semantic_hash": "d5de224e8edb08bae414ff213fe32708"
+  },
+  "docs/physics/nonlinear.md": {
+    "mtime": 1795107390.875885,
+    "seen": 1795203508.6483383,
+    "ast_hash": "429038e01464515f761f9baafa6b48ac",
+    "semantic_hash": "429038e01464515f761f9baafa6b48ac"
+  },
+  "docs/physics/photonic_crystals.md": {
+    "mtime": 1795184822.8613932,
+    "seen": 1795203508.6483395,
+    "ast_hash": "84dab28c1515e5000b9f19c90487a530",
+    "semantic_hash": "84dab28c1515e5000b9f19c90487a530"
+  },
+  "docs/physics/pwe.md": {
+    "mtime": 1795107390.875885,
+    "seen": 1795203508.6483402,
+    "ast_hash": "d5eab0b760b55c56ad73439ba6fc683f",
+    "semantic_hash": "d5eab0b760b55c56ad73439ba6fc683f"
+  },
+  "docs/physics/resonators.md": {
+    "mtime": 1795107390.875885,
+    "seen": 1795203508.6483414,
+    "ast_hash": "a136628a71d08947feb1dcdfd1919575",
+    "semantic_hash": "a136628a71d08947feb1dcdfd1919575"
+  },
+  "docs/physics/sparameters.md": {
+    "mtime": 1795199959.9530795,
+    "seen": 1795203508.6483426,
+    "ast_hash": "1a5f44f7245e2d9a7ce89aee1272a17b",
+    "semantic_hash": "1a5f44f7245e2d9a7ce89aee1272a17b"
+  },
+  "docs/plugins.md": {
+    "mtime": 1795107390.875885,
+    "seen": 1795203508.6483436,
+    "ast_hash": "457f47e7532490933d1c31edca163544",
+    "semantic_hash": "457f47e7532490933d1c31edca163544"
+  },
+  "docs/prototypes/photonische_gatter.html": {
+    "mtime": 1795107390.875885,
+    "seen": 1795203508.6483443,
+    "ast_hash": "12ebf8cca1d8acb627514ed5f86783e6",
+    "semantic_hash": "12ebf8cca1d8acb627514ed5f86783e6"
+  },
+  "libs/circuit/CMakeLists.txt": {
+    "mtime": 1795200434.5841045,
+    "seen": 1795203508.6483457,
+    "ast_hash": "dad5ec0a3c4bcd8aea84f3c24c7eb596",
+    "semantic_hash": "dad5ec0a3c4bcd8aea84f3c24c7eb596"
+  },
+  "libs/core/CMakeLists.txt": {
+    "mtime": 1795107390.8797197,
+    "seen": 1795203508.6483467,
+    "ast_hash": "335cae2c757d29c72f7d806b5dd50328",
+    "semantic_hash": "335cae2c757d29c72f7d806b5dd50328"
+  },
+  "libs/field/CMakeLists.txt": {
+    "mtime": 1795192165.6663454,
+    "seen": 1795203508.6483476,
+    "ast_hash": "7be09b0e4959c13137fe95c4318630ed",
+    "semantic_hash": "7be09b0e4959c13137fe95c4318630ed"
+  },
+  "libs/io/CMakeLists.txt": {
+    "mtime": 1795183672.5033052,
+    "seen": 1795203508.6483486,
+    "ast_hash": "59ee190b961ec3bf24975676984dc180",
+    "semantic_hash": "59ee190b961ec3bf24975676984dc180"
+  },
+  "libs/layout/CMakeLists.txt": {
+    "mtime": 1795201302.357235,
+    "seen": 1795203508.6483498,
+    "ast_hash": "8ec667cdcf040ed8fc7d7fef23742e0c",
+    "semantic_hash": "8ec667cdcf040ed8fc7d7fef23742e0c"
+  },
+  "libs/logic/CMakeLists.txt": {
+    "mtime": 1795183672.503439,
+    "seen": 1795203508.6483507,
+    "ast_hash": "ee720a7a2432e0c8ba519e1cb452dc7a",
+    "semantic_hash": "ee720a7a2432e0c8ba519e1cb452dc7a"
+  },
+  "libs/materials/CMakeLists.txt": {
+    "mtime": 1795107390.8837383,
+    "seen": 1795203508.6483517,
+    "ast_hash": "81467e080d49850a1a5c057c6eda51f7",
+    "semantic_hash": "81467e080d49850a1a5c057c6eda51f7"
+  },
+  "libs/modes/CMakeLists.txt": {
+    "mtime": 1795107390.8842807,
+    "seen": 1795203508.6483529,
+    "ast_hash": "f7e9136c3e49cf72371dd7f639c1f91b",
+    "semantic_hash": "f7e9136c3e49cf72371dd7f639c1f91b"
+  },
+  "libs/pwe/CMakeLists.txt": {
+    "mtime": 1795107390.8844824,
+    "seen": 1795203508.6483538,
+    "ast_hash": "7b5b32de596aa0afcaa19a2201035012",
+    "semantic_hash": "7b5b32de596aa0afcaa19a2201035012"
+  },
+  "plugins/example/CMakeLists.txt": {
+    "mtime": 1795107390.88524,
+    "seen": 1795203508.6483548,
+    "ast_hash": "0c1be5a53ed4ef7b311d24b14000ec1a",
+    "semantic_hash": "0c1be5a53ed4ef7b311d24b14000ec1a"
   }
 }

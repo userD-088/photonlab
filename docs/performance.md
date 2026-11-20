@@ -51,9 +51,6 @@ Speicherbandbreite fällt der Gewinn kleiner aus; `bench` zeigt den eigenen Wert
 
 ## Nicht umgesetzt
 
-- **GPU-Backend.** Möglich waren SDL3-GPU-Compute, CUDA oder OpenCL. CUDA/OpenCL wären neue
-  Abhängigkeiten (Rückfrage nötig); SDL3-GPU-Compute braucht Shader in drei Formaten (SPIR-V, DXIL, MSL) und
-  darf nach den Projektregeln nicht in `libs/` stehen. Offen als #111.
 - Zeitliches Blocken (mehrere Schritte je Speicherdurchgang) und einfache Genauigkeit (`float`): würden den
   Speicherverkehr weiter senken, ändern aber die Ergebnisse; offen als #112.
 
