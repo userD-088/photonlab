@@ -116,7 +116,19 @@ TEST_CASE("Projekt: Beispieldateien entsprechen den Referenz-Designs") {
         std::pair{"11d_linse_fdtd.plab.json", "field_lens"},
         std::pair{"12_halbaddierer_fdtd.plab.json", "field_halfadder"},
         std::pair{"12b_phc_halbaddierer_fdtd.plab.json", "field_phc_halfadder"},
-        std::pair{"13_volladdierer_fdtd.plab.json", "field_fulladder"}}) {
+        std::pair{"13_volladdierer_fdtd.plab.json", "field_fulladder"},
+        std::pair{"14_gaussian_beam_fdtd.plab.json", "field_gaussian_beam"},
+        std::pair{"15_total_reflection_fdtd.plab.json", "field_total_reflection"},
+        std::pair{"16_crossing_fdtd.plab.json", "field_crossing"},
+        std::pair{"17_mmi_fdtd.plab.json", "field_mmi"},
+        std::pair{"18_mzi_fdtd.plab.json", "field_mzi"},
+        std::pair{"19_add_drop_fdtd.plab.json", "field_add_drop"},
+        std::pair{"20_xor_fdtd.plab.json", "field_xor"},
+        std::pair{"21_or_and_fdtd.plab.json", "field_or_and"},
+        std::pair{"22_not_fdtd.plab.json", "field_not"},
+        std::pair{"23_phc_mirror_fdtd.plab.json", "field_phc_mirror"},
+        std::pair{"24_phc_cavity_fdtd.plab.json", "field_phc_cavity"},
+        std::pair{"25_phc_rods_fdtd.plab.json", "field_phc_rods"}}) {
     CHECK(io::project_to_json(io::load_project(dir / file)) ==
           io::project_to_json(io::reference_project(name)));
   }

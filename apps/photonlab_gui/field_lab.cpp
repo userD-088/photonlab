@@ -442,9 +442,18 @@ void FieldLab::draw_empty_state() {
       "abstrahlt, fehlt, und die Brechzahlen haben keine Dispersion.");
   ImGui::PopTextWrapPos();
   ImGui::Spacing();
-  ImGui::SeparatorText("Beispiele laden");
-  for (const auto& name : field::reference_scene_names()) {
-    if (ImGui::Button(field::reference_scene(name).name.c_str())) designer_.load_example(name);
+  // Beispiele nach Gruppen; Namen einmal ermitteln (Szenen bauen kostet Zeit)
+  static const std::vector<std::pair<std::string, std::string>> examples = [] {
+    std::vector<std::pair<std::string, std::string>> list;
+    for (const auto& name : field::reference_scene_names())
+      list.emplace_back(name, field::reference_scene(name).name);
+    return list;
+  }();
+  for (const char* group : {"Grundlagen", "Logische Bauteile", "Photonische Kristalle"}) {
+    ImGui::SeparatorText(group);
+    for (const auto& [key, label] : examples)
+      if (field::reference_scene_category(key) == group && ImGui::Button(label.c_str()))
+        designer_.load_example(key);
   }
   ImGui::Spacing();
   if (ImGui::Button("Leere Szene in dieses Projekt einfügen")) {

@@ -903,11 +903,314 @@ FieldScene fulladder_scene() {
   return s;
 }
 
+// --- weitere Beispiele (Grundlagen, Logik, Kristalle)
+// -------------------------------------------------------
+namespace {
+
+FieldScene base(const char* name, double width, double height, double cell, Polarization polarization,
+                double duration, double background = index_cladding) {
+  FieldScene s;
+  s.name = name;
+  s.width = width, s.height = height, s.cell_size = cell;
+  s.background_index = background;
+  s.polarization = polarization;
+  s.duration = duration;
+  return s;
+}
+
+Source mode_source(const char* name, double x, double y, int direction, double half = 1.2 * um) {
+  Source q;
+  q.name = name, q.kind = SourceKind::mode, q.direction = direction;
+  q.x1 = q.x2 = round_pico(x), q.y1 = round_pico(y - half), q.y2 = round_pico(y + half);
+  return q;
+}
+
+Monitor vertical(const char* name, MonitorKind kind, double x, double y, double half = 1.2 * um) {
+  return {name, kind, round_pico(x), round_pico(y - half), round_pico(x), round_pico(y + half)};
+}
+
+Shape strip(const char* name, double x0, double y0, double x1, double y1, double width = 0.30 * um) {
+  Shape sh;
+  sh.name = name, sh.index = index_core;
+  sh.x = round_pico(0.5 * (x0 + x1)), sh.y = round_pico(0.5 * (y0 + y1));
+  sh.width = round_pico(std::max(std::abs(x1 - x0), width)),
+  sh.height = round_pico(std::max(std::abs(y1 - y0), width));
+  return sh;
+}
+
+// Mach-Zehnder: Y-Verzweigung, zwei Arme, Y-Kombinierer. Das verbreiterte Stück im oberen Arm (zunächst
+// deaktiviert, Taste H) verschiebt dort die Phase um etwa pi: der Ausgang wird dunkel.
+FieldScene mzi() {
+  FieldScene s = base("Mach-Zehnder-Interferometer", 30 * um, 8 * um, 25e-9, Polarization::hz, 600e-15);
+  const double yc = 4 * um, arm = 2 * 6 * um * std::sin(25.0 * constants::pi / 180.0) + 1 * um;
+  const double dy = 2 * 6 * um * (1 - std::cos(25.0 * constants::pi / 180.0));
+  const double x_split = 4 * um, x_join = 26 * um;
+  add_building_block(s, "y_splitter", x_split, yc);
+  add_building_block(s, "y_combiner", x_join, yc);
+  s.shapes.push_back(strip("Zuleitung", 0.0, yc, x_split - 2 * um, yc));
+  s.shapes.push_back(strip("Ausleitung", x_join + 2 * um, yc, s.width, yc));
+  for (int side : {-1, 1})
+    s.shapes.push_back(strip(side < 0 ? "Arm oben" : "Arm unten", x_split + arm, yc + side * dy, x_join - arm,
+                             yc + side * dy));
+  Shape shifter = strip("Phasenschieber (H: an/aus)", 15 * um - 0.875 * um, yc - dy, 15 * um + 0.875 * um,
+                        yc - dy, 0.45 * um);
+  shifter.height = 0.45 * um, shifter.enabled = false;
+  s.shapes.push_back(shifter);
+  s.sources = {mode_source("Laser", 1 * um, yc, 1)};
+  s.monitors = {vertical("Mode Ausgang", MonitorKind::mode, 28.5 * um, yc),
+                vertical("Fluss Ausgang", MonitorKind::flux, 29 * um, yc)};
+  return s;
+}
+
+// Add-Drop-Ringfilter: Ring zwischen zwei Bussen; ein kurzer Puls deckt viele Wellenlängen ab, im Spektrum
+// des Drop-Monitors erscheinen die Resonanzen (Abstand FSR = lambda^2 / (n_g L)).
+FieldScene add_drop() {
+  FieldScene s = base("Add-Drop-Ringfilter", 14 * um, 11 * um, 25e-9, Polarization::hz, 2.0e-12);
+  const double w = 0.30 * um, gap = 0.15 * um, r = 3 * um, xc = 7 * um, yc = 5.5 * um;
+  const double y_top = yc - r - 0.5 * w - gap - 0.5 * w, y_bottom = yc + r + 0.5 * w + gap + 0.5 * w;
+  s.shapes.push_back(strip("Bus oben", 0.0, y_top, s.width, y_top));
+  s.shapes.push_back(strip("Bus unten", 0.0, y_bottom, s.width, y_bottom));
+  Shape ring;
+  ring.name = "Ring", ring.kind = ShapeKind::ring, ring.x = xc, ring.y = yc, ring.index = index_core;
+  ring.radius = r + 0.5 * w, ring.inner_radius = r - 0.5 * w;
+  s.shapes.push_back(ring);
+  Source pulse = mode_source("Puls", 1 * um, y_top, 1, 0.8 * um);
+  pulse.signal = SignalKind::pulse, pulse.pulse_duration = 10e-15, pulse.direction = 0;
+  s.sources = {pulse};
+  s.monitors = {vertical("Durchgang", MonitorKind::point, 13 * um, y_top, 0.0),
+                vertical("Drop", MonitorKind::point, 1 * um, y_bottom, 0.0)};
+  for (auto& m : s.monitors) m.x2 = m.x1, m.y1 = m.y2 = round_pico(m.y1);
+  return s;
+}
+
+// Kreuzung zweier Wellenleiter: wie viel läuft geradeaus weiter, wie viel spricht in den Quer-Wellenleiter
+// über?
+FieldScene crossing() {
+  FieldScene s = base("Wellenleiterkreuzung", 12 * um, 12 * um, 25e-9, Polarization::hz, 400e-15);
+  s.shapes = {strip("waagerecht", 0.0, 6 * um, 12 * um, 6 * um),
+              strip("senkrecht", 6 * um, 0.0, 6 * um, 12 * um)};
+  s.sources = {mode_source("Laser", 1.5 * um, 6 * um, 1)};
+  s.monitors = {vertical("geradeaus", MonitorKind::flux, 10.5 * um, 6 * um),
+                {"quer", MonitorKind::flux, 4.8 * um, 1.5 * um, 7.2 * um, 1.5 * um}};
+  return s;
+}
+
+// MMI-Teiler 1x2: im 3 um breiten Stück bilden sich Abbilder des Eingangs (Selbstabbildung); in der Länge
+// 3/8 L_pi mit L_pi = 4 n W^2 / (3 lambda) entstehen zwei Abbilder bei +-W/4.
+FieldScene mmi() {
+  const double width = 3 * um,
+               length = round_pico(3.0 / 8.0 * 4.0 * index_core * width * width / (3.0 * 1550e-9));
+  FieldScene s =
+      base("MMI-Teiler 1x2", round_pico(length + 10 * um), 7 * um, 25e-9, Polarization::hz, 500e-15);
+  const double yc = 3.5 * um, x0 = 4 * um, x1 = x0 + length;
+  s.shapes = {strip("Eingang", 0.0, yc, x0, yc),
+              strip("MMI", x0, yc - 0.5 * width, x1, yc + 0.5 * width, width),
+              strip("Ausgang oben", x1, yc - 0.25 * width, s.width, yc - 0.25 * width),
+              strip("Ausgang unten", x1, yc + 0.25 * width, s.width, yc + 0.25 * width)};
+  s.shapes[1].height = width;
+  s.sources = {mode_source("Laser", 1.5 * um, yc, 1)};
+  s.monitors = {vertical("oben", MonitorKind::flux, s.width - 2 * um, yc - 0.25 * width, 0.6 * um),
+                vertical("unten", MonitorKind::flux, s.width - 2 * um, yc + 0.25 * width, 0.6 * um),
+                vertical("Eingang", MonitorKind::flux, 3 * um, yc)};
+  return s;
+}
+
+// Totalreflexion: ein breiter Gauß-Strahl (Taille 2,5 um, Aufweitung etwa 8 Grad) im Glas trifft unter 60
+// Grad auf die Grenze zu Luft; der Grenzwinkel ist arcsin(1/n) = 43,8 Grad, also wird praktisch alles
+// reflektiert (oben bleibt nur die abklingende Welle).
+FieldScene total_reflection() {
+  FieldScene s = base("Totalreflexion an Glas/Luft", 28 * um, 16 * um, 40e-9, Polarization::ez, 250e-15, 1.0);
+  s.shapes = {strip("Glas", 0.0, 5 * um, 28 * um, 16 * um, 11 * um)};
+  s.shapes[0].index = index_cladding;
+  const double a = 60.0 * constants::pi / 180.0, cx = 6 * um, cy = 10.5 * um, half = 5 * um;
+  Source beam;
+  beam.name = "Strahl", beam.kind = SourceKind::line, beam.beam_width = 2.5 * um;
+  beam.x1 = round_pico(cx - half * std::cos(a)), beam.y1 = round_pico(cy - half * std::sin(a));
+  beam.x2 = round_pico(cx + half * std::cos(a)), beam.y2 = round_pico(cy + half * std::sin(a));
+  s.sources = {beam};
+  s.monitors = {{"Luft (durchgelassen)", MonitorKind::flux, 6 * um, 3 * um, 26 * um, 3 * um},
+                {"Glas (reflektiert)", MonitorKind::flux, 17 * um, 8 * um, 27 * um, 8 * um}};
+  return s;
+}
+
+// Gauß-Strahl im freien Raum: Taille 0,8 um, Divergenz lambda / (pi w0); die Punktmonitore zeigen, wie die
+// Amplitude auf der Achse mit dem Abstand sinkt.
+FieldScene gaussian_beam() {
+  FieldScene s = base("Gauß-Strahl im freien Raum", 20 * um, 12 * um, 40e-9, Polarization::ez, 150e-15, 1.0);
+  Source beam;
+  beam.name = "Strahl", beam.kind = SourceKind::line, beam.beam_width = 0.8 * um;
+  beam.x1 = beam.x2 = 2 * um, beam.y1 = 3 * um, beam.y2 = 9 * um;
+  s.sources = {beam};
+  s.monitors = {{"nah", MonitorKind::point, 4 * um, 6 * um, 0, 0},
+                {"mittel", MonitorKind::point, 10 * um, 6 * um, 0, 0},
+                {"fern", MonitorKind::point, 17 * um, 6 * um, 0, 0}};
+  return s;
+}
+
+// XOR bzw. ODER/UND aus einem Y-Kombinierer: zwei einseitige Quellen auf den Eingangsarmen, gegenphasig
+// (XOR: A = B = 1 löscht aus) bzw. gleichphasig (eine: Pegel 1/4, beide: Pegel 1; ODER mit niedriger, UND mit
+// hoher Schwelle).
+FieldScene strip_gate(bool antiphase) {
+  FieldScene s =
+      base(antiphase ? "XOR (Y-Kombinierer, gegenphasig)" : "ODER / UND (Y-Kombinierer, gleichphasig)",
+           16 * um, 7 * um, 25e-9, Polarization::hz, 600e-15);
+  const double yc = 3.5 * um, dy = 2 * 6 * um * (1 - std::cos(25.0 * constants::pi / 180.0));
+  const double x_in = 2 * um, arm = 2 * 6 * um * std::sin(25.0 * constants::pi / 180.0) + 1 * um;
+  add_building_block(s, "y_combiner", round_pico(x_in + arm), yc);
+  for (int side : {-1, 1})
+    s.shapes.push_back(
+        strip(side < 0 ? "Zuleitung A" : "Zuleitung B", 0.0, yc + side * dy, x_in, yc + side * dy));
+  s.shapes.push_back(strip("Ausleitung", x_in + arm + 2 * um, yc, s.width, yc));
+  Source a = mode_source("A", 1 * um, yc - dy, 1, 0.9 * um),
+         b = mode_source("B", 1 * um, yc + dy, 1, 0.9 * um);
+  b.phase = antiphase ? constants::pi : 0.0;
+  s.sources = {a, b};
+  s.monitors = {vertical("Mode Ausgang", MonitorKind::mode, 14 * um, yc)};
+  return s;
+}
+
+// NICHT: Licht am Detektor schaltet den invertierten Regenerator aus; ohne Licht sendet er.
+FieldScene not_gate() {
+  FieldScene s = base("NICHT (invertierter Regenerator)", 16 * um, 5 * um, 25e-9, Polarization::hz, 500e-15);
+  // Eingang und Ausgang versetzt: sonst strahlt das Ende des Eingangs direkt in den Ausgang
+  s.shapes = {strip("Eingang", 0.0, 1.5 * um, 6 * um, 1.5 * um),
+              strip("Ausgang", 10 * um, 3.5 * um, 16 * um, 3.5 * um)};
+  Source a = mode_source("A", 1 * um, 1.5 * um, 1, 1.0 * um);
+  Source out = mode_source("NICHT A", 11 * um, 3.5 * um, 1, 1.0 * um);
+  out.trigger = "Detektor", out.trigger_threshold = 1e-8, out.trigger_invert = true;
+  s.sources = {a, out};
+  s.monitors = {vertical("Detektor", MonitorKind::mode, 5 * um, 1.5 * um, 1.0 * um),
+                vertical("Mode Ausgang", MonitorKind::mode, 14.5 * um, 3.5 * um, 1.0 * um)};
+  return s;
+}
+
+// Kristall-Resonator: ein fehlendes Loch im Dreiecksgitter (Punktdefekt) hält Licht in der Bandlücke fest.
+// Ein kurzer Puls regt ihn an; im Spektrum des Monitors bleibt nach dem Abklingen die Resonanz übrig.
+FieldScene phc_cavity() {
+  const double a = phc_a;
+  FieldScene s = base("Photonischer Kristall: Resonator (Punktdefekt)", round_pico(16 * a),
+                      round_pico(14 * a), round_pico(a / 20.0), Polarization::hz, 2.0e-12);
+  CrystalLayout layout;
+  layout.a = a, layout.radius = phc_radius;
+  layout.origin_x = round_pico(0.5 * s.width), layout.origin_y = round_pico(0.5 * s.height);
+  layout.x_min = 0.0, layout.x_max = s.width, layout.y_min = 0.0, layout.y_max = s.height;
+  remove_site(layout, {0, 0});
+  s.shapes.push_back({"Platte", ShapeKind::rectangle, round_pico(0.5 * s.width), round_pico(0.5 * s.height),
+                      s.width, s.height, 0.0, 1e-6, 0.5e-6, index_core});
+  add_crystal(s, layout, index_cladding);
+  Source pulse;
+  pulse.name = "Puls", pulse.kind = SourceKind::point, pulse.signal = SignalKind::pulse,
+  pulse.pulse_duration = 8e-15;
+  pulse.wavelength = phc_wavelength;
+  pulse.x1 = pulse.x2 = round_pico(layout.origin_x + 0.1 * a),
+  pulse.y1 = pulse.y2 = round_pico(layout.origin_y + 0.05 * a);
+  s.sources = {pulse};
+  s.monitors = {
+      {"im Resonator", MonitorKind::point, round_pico(layout.origin_x - 0.1 * a), layout.origin_y, 0, 0}};
+  return s;
+}
+
+// Stabkristall: quadratisches Gitter aus Si-Stäben (r = 0,2 a) in Luft, Ez; Bandlücke etwa a/lambda = 0,30
+// ... 0,44 (Joannopoulos u. a., Photonic Crystals, Kap. 5). Eine fehlende Reihe führt Licht bei a/lambda =
+// 0,38.
+FieldScene phc_rods() {
+  const double a = round_pico(0.38 * 1550e-9);
+  FieldScene s = base("Photonischer Kristall: Stäbe in Luft, Wellenleiter (Ez)", round_pico(24 * a),
+                      round_pico(13 * a), round_pico(a / 20.0), Polarization::ez, 1.5e-12, 1.0);
+  CrystalLayout layout;
+  layout.kind = LatticeKind::square, layout.a = a, layout.radius = round_pico(0.2 * a);
+  layout.origin_x = round_pico(0.5 * a), layout.origin_y = round_pico(0.5 * s.height);
+  layout.x_min = 0.0, layout.x_max = s.width, layout.y_min = 0.0, layout.y_max = s.height;
+  remove_line(layout, {-2, 0}, 0, 30);
+  add_crystal(s, layout, materials::get("Si").index(1550e-9), "Kristall (Stäbe)", "stab");
+  Source source;
+  source.name = "Quelle", source.kind = SourceKind::point;
+  source.x1 = source.x2 = round_pico(2 * a), source.y1 = source.y2 = layout.origin_y;
+  s.sources = {source};
+  s.monitors = {{"Fluss Ende", MonitorKind::flux, round_pico(21 * a), round_pico(layout.origin_y - 1.5 * a),
+                 round_pico(21 * a), round_pico(layout.origin_y + 1.5 * a)}};
+  return s;
+}
+
+// Kristall als Spiegel: eine ebene Welle (Puls) trifft auf ein Dreiecksgitter; in der Bandlücke (a/lambda um
+// 0,28) wird sie fast ganz reflektiert, darüber und darunter läuft sie teils hindurch (Spektrum der
+// Monitore).
+FieldScene phc_mirror() {
+  const double a = phc_a;
+  FieldScene s = base("Photonischer Kristall als Spiegel", round_pico(30 * a), round_pico(8 * a),
+                      round_pico(a / 20.0), Polarization::hz, 1.2e-12);
+  s.boundary_y = Boundary::periodic;
+  s.height = round_pico(8 * a * std::sqrt(3.0) / 2.0 * 2.0 / 2.0);  // ganzzahlig viele Gitterzeilen
+  CrystalLayout layout;
+  layout.a = a, layout.radius = phc_radius;
+  layout.origin_x = round_pico(12 * a), layout.origin_y = 0.0;
+  layout.x_min = round_pico(12 * a), layout.x_max = round_pico(22 * a), layout.y_min = -s.height,
+  layout.y_max = 2 * s.height;
+  s.shapes.push_back({"Platte", ShapeKind::rectangle, round_pico(0.5 * s.width), round_pico(0.5 * s.height),
+                      s.width, s.height, 0.0, 1e-6, 0.5e-6, index_core});
+  add_crystal(s, layout, index_cladding);
+  Source wave;
+  wave.name = "ebene Welle", wave.kind = SourceKind::line, wave.signal = SignalKind::pulse,
+  wave.pulse_duration = 8e-15;
+  wave.wavelength = phc_wavelength;
+  wave.x1 = wave.x2 = round_pico(4 * a), wave.y1 = 0.0, wave.y2 = s.height;
+  s.sources = {wave};
+  s.monitors = {
+      {"vor dem Kristall", MonitorKind::point, round_pico(8 * a), round_pico(0.5 * s.height), 0, 0},
+      {"hinter dem Kristall", MonitorKind::point, round_pico(26 * a), round_pico(0.5 * s.height), 0, 0}};
+  return s;
+}
+
+}  // namespace
+
+namespace {
+// Beispiele nach Gruppen; die Reihenfolge ist die des Menüs
+const std::vector<std::pair<std::string, std::string>>& catalog() {
+  static const std::vector<std::pair<std::string, std::string>> list = {
+      {"field_waveguide", "Grundlagen"},
+      {"field_interface", "Grundlagen"},
+      {"field_interference", "Grundlagen"},
+      {"field_gaussian_beam", "Grundlagen"},
+      {"field_total_reflection", "Grundlagen"},
+      {"field_lens", "Grundlagen"},
+      {"field_gap", "Grundlagen"},
+      {"field_gap_pair", "Grundlagen"},
+      {"field_taper", "Grundlagen"},
+      {"field_bend", "Grundlagen"},
+      {"field_crossing", "Grundlagen"},
+      {"field_coupler", "Grundlagen"},
+      {"field_mmi", "Grundlagen"},
+      {"field_mzi", "Grundlagen"},
+      {"field_ring", "Grundlagen"},
+      {"field_add_drop", "Grundlagen"},
+      {"field_bragg", "Grundlagen"},
+      {"field_xor", "Logische Bauteile"},
+      {"field_or_and", "Logische Bauteile"},
+      {"field_not", "Logische Bauteile"},
+      {"field_halfadder", "Logische Bauteile"},
+      {"field_fulladder", "Logische Bauteile"},
+      {"field_phc_w1", "Photonische Kristalle"},
+      {"field_phc_bend", "Photonische Kristalle"},
+      {"field_phc_mirror", "Photonische Kristalle"},
+      {"field_phc_cavity", "Photonische Kristalle"},
+      {"field_phc_rods", "Photonische Kristalle"},
+      {"field_phc_y", "Photonische Kristalle"},
+      {"field_phc_y_xor", "Photonische Kristalle"},
+      {"field_phc_halfadder", "Photonische Kristalle"}};
+  return list;
+}
+}  // namespace
+
 std::vector<std::string> reference_scene_names() {
-  return {"field_waveguide", "field_interface", "field_interference", "field_ring",
-          "field_gap",       "field_gap_pair",  "field_coupler",      "field_phc_w1",
-          "field_phc_bend",  "field_phc_y",     "field_phc_y_xor",    "field_taper",
-          "field_bend",      "field_bragg",     "field_lens",         "field_halfadder"};
+  std::vector<std::string> names;
+  for (const auto& [name, group] : catalog()) names.push_back(name);
+  return names;
+}
+
+std::string reference_scene_category(std::string_view name) {
+  for (const auto& [n, group] : catalog())
+    if (n == name) return group;
+  return "Grundlagen";
 }
 
 FieldScene reference_scene(std::string_view name) {
@@ -926,6 +1229,18 @@ FieldScene reference_scene(std::string_view name) {
   if (name == "field_bend") return bend();
   if (name == "field_bragg") return bragg();
   if (name == "field_lens") return lens();
+  if (name == "field_mzi") return mzi();
+  if (name == "field_add_drop") return add_drop();
+  if (name == "field_crossing") return crossing();
+  if (name == "field_mmi") return mmi();
+  if (name == "field_total_reflection") return total_reflection();
+  if (name == "field_gaussian_beam") return gaussian_beam();
+  if (name == "field_xor") return strip_gate(true);
+  if (name == "field_or_and") return strip_gate(false);
+  if (name == "field_not") return not_gate();
+  if (name == "field_phc_cavity") return phc_cavity();
+  if (name == "field_phc_rods") return phc_rods();
+  if (name == "field_phc_mirror") return phc_mirror();
   if (name == "field_halfadder") return halfadder(1.75 * um);
   if (name == "field_fulladder") return fulladder_scene();
   if (name == "field_phc_halfadder") return phc_halfadder(1, 0.25, 1.3, phc_wavelength);

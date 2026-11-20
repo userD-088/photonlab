@@ -10,6 +10,8 @@ namespace photonlab::field {
 
 std::vector<std::string> reference_scene_names();
 FieldScene reference_scene(std::string_view name);  // wirft FieldError bei unbekanntem Namen
+// Gruppe für das Menü: "Grundlagen", "Logische Bauteile" oder "Photonische Kristalle"
+std::string reference_scene_category(std::string_view name);
 
 // Bausteine für den Editor: fertige Geometrie (Kern 0,30 µm aus Si in SiO2, Draufsicht, für Hz und Ez
 // einmodig) als eine Gruppe mit Bezugspunkt (x, y). Der Regenerator legt Detektor und Sender an.

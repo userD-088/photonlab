@@ -1,7 +1,5 @@
 #include "chip_designer.hpp"
 
-#include "imgui_internal.h"  // FindWindowByName, DockId
-
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -11,10 +9,12 @@
 #include <iterator>
 
 #include "file_dialog.hpp"
+#include "imgui_internal.h"  // FindWindowByName, DockId
 #include "implot.h"
 #include "photonlab/circuit/reference_designs.hpp"
 #include "photonlab/circuit/sweep.hpp"
 #include "photonlab/core/units.hpp"
+#include "photonlab/field/reference_scenes.hpp"
 #include "photonlab/layout/gds.hpp"
 #include "photonlab/layout/layout.hpp"
 #include "ui_util.hpp"
@@ -622,15 +622,34 @@ bool ChipDesigner::show_side_window(const char* name) const {
 void ChipDesigner::draw_file_menu(const std::function<void()>& more_examples) {
   if (ImGui::MenuItem("Neu", "Strg+N")) request(Pending::new_project);
   if (ImGui::MenuItem("Öffnen...", "Strg+O")) request(Pending::open_project);
-  // Beispiele getrennt nach Ebene; der Menütext ist der Name des Projekts
-  for (const bool field : {true, false}) {
-    if (!ImGui::BeginMenu(field ? "Beispiele: Feld (Bauteil-Labor)" : "Beispiele: Schaltung (Chip-Designer)"))
-      continue;
+  // Beispiele getrennt nach Ebene, Feld-Beispiele zusätzlich nach Gruppen. Namen einmal ermitteln: jedes
+  // Beispiel neu zu bauen kostet bei Kristallen und Addierern spürbar Zeit.
+  struct Example {
+    std::string key, label, group;
+    bool field;
+  };
+  static const std::vector<Example> examples = [] {
+    std::vector<Example> list;
     for (const auto& name : io::reference_project_names()) {
       const io::Project example = io::reference_project(name);
-      if (example.field.empty() == field) continue;
-      if (ImGui::MenuItem(example.circuit.name.c_str())) request(Pending::load_example, name);
+      const bool field = !example.field.empty();
+      list.push_back({name, example.circuit.name, field ? field::reference_scene_category(name) : "", field});
     }
+    return list;
+  }();
+  if (ImGui::BeginMenu("Beispiele: Feld (Bauteil-Labor)")) {
+    for (const char* group : {"Grundlagen", "Logische Bauteile", "Photonische Kristalle"}) {
+      if (!ImGui::BeginMenu(group)) continue;
+      for (const auto& e : examples)
+        if (e.field && e.group == group && ImGui::MenuItem(e.label.c_str()))
+          request(Pending::load_example, e.key);
+      ImGui::EndMenu();
+    }
+    ImGui::EndMenu();
+  }
+  if (ImGui::BeginMenu("Beispiele: Schaltung (Chip-Designer)")) {
+    for (const auto& e : examples)
+      if (!e.field && ImGui::MenuItem(e.label.c_str())) request(Pending::load_example, e.key);
     ImGui::EndMenu();
   }
   if (more_examples) more_examples();
