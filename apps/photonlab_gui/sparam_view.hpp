@@ -59,6 +59,7 @@ class SParamView {
   bool show_db_ = true;
   bool show_phase_ = false;
   bool fit_plot_ = true;
+  bool three_d_ = false;  // Messung im 3D-FDTD mit dem Schichtaufbau der Szene
 };
 
 }  // namespace photonlab::gui

@@ -9,6 +9,7 @@ add_library(photonlab_field
   src/reference_scenes.cpp
   src/scene.cpp
   src/sparameters.cpp
+  src/sparameters3d.cpp
   src/spectrum.cpp)
 add_library(photonlab::field ALIAS photonlab_field)
 target_include_directories(photonlab_field PUBLIC include)

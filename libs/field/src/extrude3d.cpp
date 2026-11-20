@@ -64,6 +64,7 @@ Extruded3d::Extruded3d(const FieldScene& input, const Stack3d& stack)
   const Extent3d e = extent_3d(scene_, stack);
   const double dx = stack.cell_size;
   const int pml = e.pml_cells;
+  pml_ = pml;
   layer_z0_ = pml * dx + stack.below;
   layer_z1_ = layer_z0_ + stack.thickness;
 
@@ -182,35 +183,15 @@ Extruded3d::Extruded3d(const FieldScene& input, const Stack3d& stack)
     std::vector<double> section;  // Feld je (c, k) außerhalb der Randschicht in z, c schnell
     const int k_lo = pml, k_hi = f.nz() - pml;
     if (source.kind == SourceKind::mode) {
-      modes::FdeGrid grid;
-      grid.nx = count, grid.ny = k_hi - k_lo;
-      grid.dx = grid.dy = dx;
-      grid.index.resize(static_cast<std::size_t>(grid.nx) * static_cast<std::size_t>(grid.ny));
-      // Brechzahl am Ort der eingespeisten Komponente, so wie das FDTD sie sieht (gemittelt über die Zelle):
-      // dann passt das Profil zur Mode des Gitters und es streut weniger (fdtd3d.md)
-      const int i_line = cell_index(source.x1, f.nx()), j_line = cell_index(source.y1, f.ny());
-      for (int k = 0; k < grid.ny; ++k)
-        for (int c = 0; c < count; ++c)
-          grid.index[static_cast<std::size_t>(c) +
-                     static_cast<std::size_t>(count) * static_cast<std::size_t>(k)] =
-              std::sqrt(f.permittivity(
-                  s.component, f.at(vertical ? i_line : i1 + c, vertical ? j1 + c : j_line, k_lo + k)));
-      modes::FdeSettings settings;
-      settings.wavelength = source.wavelength;
-      settings.polarization = ez ? modes::FdePolarization::quasi_tm : modes::FdePolarization::quasi_te;
-      settings.modes = source.mode_order + 1;
-      try {
-        const auto found = modes::solve_modes(grid, settings);
-        if (static_cast<int>(found.size()) > source.mode_order &&
-            found[static_cast<std::size_t>(source.mode_order)].guided) {
-          section = found[static_cast<std::size_t>(source.mode_order)].field;
-          n_eff = found[static_cast<std::size_t>(source.mode_order)].n_eff;
-        }
-      } catch (const modes::ModeError&) {
-      }
-      if (section.empty())
+      const PlaneMode mode =
+          plane_mode(source.x1, source.y1, source.x2, source.y2, source.wavelength, source.mode_order);
+      if (mode.guided && mode.count == count && mode.rows == k_hi - k_lo) {
+        section = mode.profile;
+        n_eff = mode.n_eff;
+      } else {
         warnings_.push_back(
             who + ": Modenlöser findet keine geführte 3D-Mode; Profil aus 2D-Mode mal Schichtmode.");
+      }
     }
     if (source.kind == SourceKind::mode && section.empty()) {
       std::vector<double> index_2d(static_cast<std::size_t>(count));
@@ -343,12 +324,69 @@ std::size_t Extruded3d::steps_for(double duration) const {
   return duration > 0.0 ? static_cast<std::size_t>(std::ceil(duration / fdtd_->time_step())) : 0;
 }
 
-void Extruded3d::run(std::size_t steps, JobControl* control) {
+void Extruded3d::run(std::size_t steps, JobControl* control,
+                     const std::function<void(const Fdtd3d&)>& each_step) {
   for (std::size_t s = 0; s < steps; ++s) {
     if (control && (s & 7u) == 0 && control->cancel_requested) return;
     fdtd_->step();
     record();
+    if (each_step) each_step(*fdtd_);
   }
+}
+
+Extruded3d::PlaneMode Extruded3d::plane_mode(double x1, double y1, double x2, double y2, double wavelength,
+                                             int order) const {
+  const Fdtd3d& f = *fdtd_;
+  const double dx = f.cell_size();
+  const bool ez = scene_.polarization == Polarization::ez;
+  PlaneMode m;
+  m.normal_x = std::abs(x2 - x1) < 0.5 * dx;
+  // dominante E-Komponente und das H für den Fluss (S_x = Ey Hz - Ez Hy, S_y = Ez Hx - Ex Hz)
+  if (m.normal_x) {
+    m.e = ez ? Component3d::ez : Component3d::ey;
+    m.h = ez ? Component3d::hy : Component3d::hz;
+    m.sign = ez ? -1.0 : 1.0;
+    m.next = 1;
+  } else {
+    m.e = ez ? Component3d::ez : Component3d::ex;
+    m.h = ez ? Component3d::hx : Component3d::hz;
+    m.sign = ez ? 1.0 : -1.0;
+    m.next = static_cast<std::size_t>(f.nx());
+  }
+  auto cell = [&](double v, int n) { return std::clamp(static_cast<int>(std::floor(v / dx)), 0, n - 1); };
+  const int fixed =
+      m.normal_x ? std::min(cell(x1, f.nx()), f.nx() - 2) : std::min(cell(y1, f.ny()), f.ny() - 2);
+  const int n_run = m.normal_x ? f.ny() : f.nx();
+  const double lo = m.normal_x ? std::min(y1, y2) : std::min(x1, x2),
+               hi = m.normal_x ? std::max(y1, y2) : std::max(x1, x2);
+  const int from = std::clamp(cell(lo, n_run), pml_, n_run - 1 - pml_),
+            to = std::clamp(cell(hi, n_run), pml_, n_run - 1 - pml_);
+  const int k_lo = pml_, k_hi = f.nz() - pml_;
+  m.count = to - from + 1, m.rows = k_hi - k_lo;
+  if (m.count < 3 || m.rows < 3) return m;
+  modes::FdeGrid grid;
+  grid.nx = m.count, grid.ny = m.rows;
+  grid.dx = grid.dy = dx;
+  for (int k = k_lo; k < k_hi; ++k)
+    for (int c = from; c <= to; ++c) {
+      const std::size_t index = m.normal_x ? f.at(fixed, c, k) : f.at(c, fixed, k);
+      m.cells.push_back(index);
+      grid.index.push_back(std::sqrt(f.permittivity(m.e, index)));
+    }
+  modes::FdeSettings settings;
+  settings.wavelength = wavelength;
+  settings.polarization = ez ? modes::FdePolarization::quasi_tm : modes::FdePolarization::quasi_te;
+  settings.modes = order + 1;
+  try {
+    const auto found = modes::solve_modes(grid, settings);
+    if (static_cast<int>(found.size()) > order && found[static_cast<std::size_t>(order)].guided) {
+      m.profile = found[static_cast<std::size_t>(order)].field;
+      m.n_eff = found[static_cast<std::size_t>(order)].n_eff;
+      m.guided = true;
+    }
+  } catch (const modes::ModeError&) {
+  }
+  return m;
 }
 
 void Extruded3d::record() {

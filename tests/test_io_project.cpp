@@ -72,8 +72,19 @@ TEST_CASE("Projekt: Gruppen, Taper und Bogen überstehen Speichern und Laden") {
   project.field.sources[0].trigger_threshold = 1.5e-12;
   project.field.sources[0].trigger_delay = 33e-15;
   project.field.sources[0].trigger_invert = true;
+  // Schichtaufbau der 3D-Rechnung (nur geschrieben, wenn er von der Voreinstellung abweicht)
+  CHECK(io::project_to_json(project).find("\"stack\"") == std::string::npos);
+  project.field.stack.thickness = 300e-9;
+  project.field.stack.core = "Si3N4";
+  project.field.stack.cladding = "Luft";
+  project.field.stack.cell_size = 30e-9;
   const io::Project loaded = io::project_from_json(io::project_to_json(project));
   CHECK(loaded.field == project.field);
+  // 2D- und 3D-Messung derselben Szene haben verschiedene Fingerabdrücke; der Aufbau zählt nur in 3D mit
+  CHECK(io::sparameter_hash_3d(project.field) != io::sparameter_hash(project.field));
+  field::FieldScene thicker = project.field;
+  thicker.stack.thickness = 400e-9;
+  CHECK(io::sparameter_hash_3d(thicker) != io::sparameter_hash_3d(project.field));
 }
 
 TEST_CASE("Projekt: Datei schreiben und lesen") {

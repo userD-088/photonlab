@@ -75,3 +75,53 @@ TEST_CASE("3D-Szene: gerader Wellenleiter führt die Leistung verlustfrei von Mo
   CHECK(a > 0.0);
   CHECK(b / a == doctest::Approx(1.0).epsilon(0.02));
 }
+
+TEST_CASE("3D-S-Parameter: gerader Wellenleiter |S21|² = 1, keine Reflexion, reziprok") {
+  FieldScene scene = straight_guide();
+  scene.sources.clear();
+  scene.monitors.clear();
+  scene.ports = auto_ports(scene);
+  REQUIRE(scene.ports.size() == 2);
+  scene.stack.cell_size = 50e-9;
+  scene.stack.below = scene.stack.above = 0.5e-6;
+  scene.sparameters.points = 3;
+  scene.sparameters.decay = 1e-4;
+  const SParameterResult r = extract_sparameters_3d(scene);
+  REQUIRE(r.port_count() == 2);
+  for (std::size_t k = 0; k < r.wavelengths.size(); ++k) {
+    MESSAGE(r.wavelengths[k] * 1e9, " nm: |S21|² ", std::norm(r.at(k, 1, 0)), ", |S11|² ",
+            std::norm(r.at(k, 0, 0)), ", n_eff ", r.n_eff[0][k]);
+    CHECK(std::norm(r.at(k, 1, 0)) == doctest::Approx(1.0).epsilon(0.03));
+    CHECK(std::norm(r.at(k, 0, 0)) < 1e-3);  // < -30 dB
+    CHECK(std::abs(r.at(k, 1, 0) - r.at(k, 0, 1)) < 0.03);
+  }
+  // effektiver Index der Streifenmode 500 x 220 nm (quasi-TE): etwa 2,4 bei 1550 nm
+  CHECK(r.n_eff[0][1] == doctest::Approx(2.4).epsilon(0.08));
+}
+
+TEST_CASE("3D-S-Parameter: Spalt im Wellenleiter ist reziprok und passiv und reflektiert") {
+  FieldScene scene = straight_guide();
+  scene.sources.clear();
+  scene.monitors.clear();
+  Shape gap;
+  gap.name = "Spalt";
+  gap.x = 2.2e-6, gap.y = 1.2e-6, gap.width = 0.15e-6, gap.height = 0.6e-6, gap.index = 1.444;
+  scene.shapes.push_back(gap);
+  scene.ports = auto_ports(scene);
+  REQUIRE(scene.ports.size() == 2);
+  scene.stack.cell_size = 50e-9;
+  scene.stack.below = scene.stack.above = 0.5e-6;
+  scene.sparameters.points = 3;
+  scene.sparameters.decay = 1e-4;
+  const SParameterResult r = extract_sparameters_3d(scene);
+  for (std::size_t k = 0; k < r.wavelengths.size(); ++k) {
+    const double t = std::norm(r.at(k, 1, 0)), refl = std::norm(r.at(k, 0, 0));
+    MESSAGE(r.wavelengths[k] * 1e9, " nm: |S21|² ", t, ", |S11|² ", refl, ", |S22|² ",
+            std::norm(r.at(k, 1, 1)), ", |S12 - S21| ", std::abs(r.at(k, 1, 0) - r.at(k, 0, 1)));
+    CHECK(std::abs(r.at(k, 1, 0) - r.at(k, 0, 1)) < 0.03);  // reziprok
+    CHECK(t + refl < 1.02);                                 // passiv (Rest strahlt ab)
+    CHECK(refl > 1e-3);                                     // ein Spalt reflektiert
+    CHECK(t < 0.95);
+    CHECK(std::norm(r.at(k, 1, 1)) == doctest::Approx(refl).epsilon(0.02));  // symmetrisch
+  }
+}

@@ -78,7 +78,7 @@ void View3d::start() {
   control_ = std::make_shared<JobControl>();
   snapshot_ = std::make_shared<Snapshot>();
   // Der Job besitzt Szene, Löser, Steuerung und Schnappschuss; er greift nie auf die Oberfläche zu.
-  future_ = pool_.submit([scene, stack = stack_, control = control_, snap = snapshot_, y_cut = y_cut_] {
+  future_ = pool_.submit([scene, stack = scene.stack, control = control_, snap = snapshot_, y_cut = y_cut_] {
     const auto start = std::chrono::steady_clock::now();
     auto seconds = [&] {
       return std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
@@ -192,38 +192,41 @@ void View3d::fill(Picture& picture, const std::vector<float>& values, const std:
 }
 
 void View3d::draw_settings() {
-  const field::FieldScene& scene = designer_.project().field;
+  field::FieldScene& scene = designer_.project().field;
+  field::Stack3d& stack = scene.stack;
+  const field::Stack3d before = stack;
   const bool busy = future_.valid();
   ImGui::BeginDisabled(busy);
   ImGui::AlignTextToFramePadding();
   ImGui::TextUnformatted("Schicht");
   ImGui::SameLine();
-  drag_nm("##dicke", &stack_.thickness, 20e-9, 3e-6, 2.0f);
+  drag_nm("##dicke", &stack.thickness, 20e-9, 3e-6, 2.0f);
   if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
     ImGui::SetTooltip("Dicke der Bauteilschicht (220 nm: Standard-SOI)");
   ImGui::SameLine();
-  material_combo("Kern", &stack_.core, false);
+  material_combo("Kern", &stack.core, false);
   ImGui::SameLine();
-  material_combo("unten", &stack_.substrate, true);
+  material_combo("unten", &stack.substrate, true);
   ImGui::SameLine();
-  material_combo("oben", &stack_.cladding, true);
+  material_combo("oben", &stack.cladding, true);
   ImGui::SameLine();
-  drag_nm("Zelle", &stack_.cell_size, 15e-9, 100e-9, 0.5f);
+  drag_nm("Zelle", &stack.cell_size, 15e-9, 100e-9, 0.5f);
   if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
     ImGui::SetTooltip(
         "Würfelzelle des 3D-Gitters. 40 nm: grob, aber schnell; 20 nm: achtmal so viele Zellen.");
   ImGui::SameLine();
-  double margin_um = stack_.below / units::um;
+  double margin_um = stack.below / units::um;
   const double lo = 0.2, hi = 3.0;
   ImGui::SetNextItemWidth(ImGui::GetFontSize() * 4.5f);
   if (ImGui::DragScalar("Mantel", ImGuiDataType_Double, &margin_um, 0.01f, &lo, &hi, "%.2f µm",
                         ImGuiSliderFlags_AlwaysClamp))
-    stack_.below = stack_.above = margin_um * units::um;
+    stack.below = stack.above = margin_um * units::um;
   if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
     ImGui::SetTooltip("Oxid bzw. Luft unter und über der Schicht bis zur Randschicht");
   ImGui::EndDisabled();
 
-  const field::Extent3d e = field::extent_3d(scene, stack_);
+  if (!(stack == before)) designer_.mark_dirty();
+  const field::Extent3d e = field::extent_3d(scene, stack);
   const double cells = static_cast<double>(e.nx) * e.ny * e.nz;
   const bool too_big = e.memory_bytes > 6e9;
   if (busy) {
@@ -426,7 +429,7 @@ void View3d::draw(const ViewportHooks& hooks, float ui_scale) {
   // 3D-Umgebung oben, darunter Monitore und flache Schnitte
   const float available = ImGui::GetContentRegionAvail().y;
   const float view_height = has_run_ ? available * 0.62f : available - ImGui::GetStyle().ItemSpacing.y;
-  viewport_.draw(scene, stack_, have_slices ? &slices : nullptr, hooks,
+  viewport_.draw(scene, scene.stack, have_slices ? &slices : nullptr, hooks,
                  ImVec2(ImGui::GetContentRegionAvail().x, view_height), ui_scale);
   if (!has_run_) return;
   if (ImGui::BeginTabBar("unten3d")) {

@@ -5,6 +5,7 @@
 // quellen bekommen das Profil der Mode quer (wie in 2D) mal das Profil der Schichtmode senkrecht.
 // Herleitung und Grenzen: docs/physics/fdtd3d.md
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -12,21 +13,11 @@
 #include "photonlab/core/job.hpp"
 #include "photonlab/field/fdtd3d.hpp"
 #include "photonlab/field/scene.hpp"
+#include "photonlab/field/sparameters.hpp"
 
 namespace photonlab::field {
 
-struct Stack3d {
-  double thickness = 220e-9;       // Dicke der Bauteilschicht [m]
-  std::string core = "Si";         // Material der Kerne (Materialbibliothek)
-  std::string substrate = "SiO2";  // unter der Schicht (vergrabenes Oxid)
-  std::string cladding = "SiO2";   // über der Schicht; "Luft" für einen offenen Chip
-  double below = 0.7e-6;           // Substrat unter der Schicht bis zur Randschicht [m]
-  double above = 0.7e-6;           // Mantel über der Schicht bis zur Randschicht [m]
-  double cell_size = 40e-9;        // Würfelzelle [m]
-  // Formen (und der Hintergrund) mit einer 2D-Brechzahl ab diesem Wert werden in der Schicht zum Kern.
-  // In 2D stehen dort meist effektive Indizes (2,85 für 220 nm Si); in 3D zählt das echte Material.
-  double core_threshold = 2.0;
-};
+// Schichtaufbau Stack3d: siehe scene.hpp (gehört zur Szene und wird mit ihr gespeichert)
 
 // Brechzahlen des Aufbaus bei der Wellenlänge (Materialbibliothek; "Luft" = 1).
 struct StackIndices {
@@ -57,8 +48,28 @@ class Extruded3d {
   Extruded3d(const FieldScene& scene, const Stack3d& stack);
 
   // steps Zeitschritte rechnen, Monitore mitschreiben; Abbruch über control (Fortschritt bleibt beim
-  // Aufrufer, der die Schritte stückelt).
-  void run(std::size_t steps, JobControl* control = nullptr);
+  // Aufrufer, der die Schritte stückelt). each_step: nach jedem Schritt (z. B. Fourier-Summen der Ports).
+  void run(std::size_t steps, JobControl* control = nullptr,
+           const std::function<void(const Fdtd3d&)>& each_step = {});
+
+  // Querschnittsmode unter einer achsenparallelen Linie, gerechnet mit dem eigenen Modenlöser auf dem
+  // 3D-Gitter und der Brechzahl, die das FDTD am Ort der dominanten E-Komponente sieht. Quer zur Linie
+  // bleibt die Randschicht außen vor, in z der ganze Aufbau ohne Randschicht.
+  struct PlaneMode {
+    bool normal_x = true;             // senkrechte Linie: Fläche quer zu x
+    Component3d e = Component3d::ey;  // dominante E-Komponente
+    Component3d h = Component3d::hz;  // H-Komponente für den Fluss durch die Fläche
+    double sign = 1.0;                // Fluss in +Achsenrichtung = sign * E * H
+    int count = 0, rows = 0;          // Punkte quer zur Linie (schnell) und in z
+    std::vector<std::size_t> cells;   // Zellen der E-Komponente an der Linie, H liegt eine halbe Zelle weiter
+    std::size_t next = 1;             // Indexabstand zur Nachbarzelle in Normalenrichtung
+    std::vector<double> profile;      // dominante E-Komponente der Mode, Maximum 1
+    double n_eff = 0.0;
+    bool guided = false;
+  };
+  PlaneMode plane_mode(double x1, double y1, double x2, double y2, double wavelength, int order) const;
+  void set_threads(int threads) { fdtd_->set_threads(threads); }
+  double energy() const { return fdtd_->energy(); }
 
   const Fdtd3d& solver() const { return *fdtd_; }
   std::size_t steps_for(double duration) const;
@@ -98,12 +109,18 @@ class Extruded3d {
   std::unique_ptr<Fdtd3d> fdtd_;
   Component3d main_ = Component3d::ey;
   double layer_z0_ = 0.0, layer_z1_ = 0.0;
-  int layer_k_ = 0;
+  int layer_k_ = 0, pml_ = 0;
   std::size_t period_steps_ = 1;
   std::vector<FluxPlane> planes_;
   std::vector<Probe> probes_;
   std::vector<Monitor3dData> monitors_;
   std::vector<std::string> warnings_;
 };
+
+// S-Parameter der Szene im Schichtaufbau scene.stack (wie extract_sparameters in 2D, siehe sparameters.md):
+// je Port ein breitbandiger Puls mit der Querschnittsmode, an allen Portflächen laufende Fourier-
+// Transformation von E und H, Zerlegung in hin- und rücklaufende Mode. Die Anregungen laufen nacheinander,
+// jede mit allen Threads. Wirft FieldError, wenn an einem Port keine Mode geführt wird.
+SParameterResult extract_sparameters_3d(const FieldScene& scene, JobControl* control = nullptr);
 
 }  // namespace photonlab::field

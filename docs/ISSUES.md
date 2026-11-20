@@ -231,7 +231,7 @@ echter Chip baubar), Bauteil-Labor aufräumen, eigene Bauteile in den Chip-Desig
 - [x] #161 Bauteil-Designer: Ports automatisch (`auto_ports`), S-Matrix messen (Cache im Projekt), mit einem Klick in Bibliothek und Schaltung
 - [x] #162 3D-Rechnung der Szene (`extrude3d`): Schichtaufbau aus der Materialbibliothek, Querschnittsmode als Quelle, Flussflächen, Draufsicht und Seitenansicht live; `run --field3d`
 - [x] #163 Hilfe-Fenster (F1): Überblick, Erste Schritte, Bauteil-Labor, Chip-Designer, Tastenkürzel, Physik und Grenzen, Kommandozeile
-- [ ] #164 S-Parameter-Extraktion in 3D (Bauteil-Designer wahlweise mit 3D-Messung)
+- [x] #164 (Zwei-Ebenen-Zerlegung, Referenz mit gerader Zuleitung, Schichtaufbau in der Szene gespeichert) S-Parameter-Extraktion in 3D (Bauteil-Designer wahlweise mit 3D-Messung)
 - [ ] #165 3D-FDTD auf der Grafikkarte (OpenCL-Kerne wie in 2D, bitgleich zum Prozessor)
 - [ ] #166 Vom Chip-Designer zum Layout: Bauteile als Zellen (MZI-Schalter, Koppler, Gitterkoppler, Photodiode) platzieren, Wellenleiter routen, Heizer-Pads; GDSII für die Fertigung
 - [ ] #167 Hierarchie im Chip-Designer: Unterschaltungen (Volladdierer-Zelle 8-mal), Steuerleitungen als eigene Netze

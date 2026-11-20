@@ -64,7 +64,6 @@ class View3d {
   ThreadPool& pool_;
   ChipDesigner& designer_;
   SDL_Renderer* renderer_;
-  field::Stack3d stack_;
   bool intensity_ = false;
   std::shared_ptr<JobControl> control_;
   std::shared_ptr<Snapshot> snapshot_;

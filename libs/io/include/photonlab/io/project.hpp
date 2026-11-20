@@ -56,10 +56,12 @@ std::shared_ptr<const circuit::ComponentRegistry> make_registry(const Project& p
 // Eingabe, gleicher Wert: Grundlage des Caches der Bauteilbibliothek.
 std::string sparameter_hash(const field::FieldScene& scene);
 
-// Ergebnis der Extraktion als Tabelle für die Bauteilbibliothek.
+// Ergebnis der Extraktion als Tabelle für die Bauteilbibliothek. three_d: aus extract_sparameters_3d (eigener
+// Fingerabdruck, damit 2D- und 3D-Messung derselben Szene getrennt zwischengespeichert werden).
 circuit::SParameterTable make_sparameter_table(const field::FieldScene& scene,
                                                const field::SParameterResult& result,
-                                               const std::string& name);
+                                               const std::string& name, bool three_d = false);
+std::string sparameter_hash_3d(const field::FieldScene& scene);
 
 // Eigene Datei .sparam.json: Tabelle und die Szene, aus der sie stammt.
 std::string sparameter_to_json(const circuit::SParameterTable& table,

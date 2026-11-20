@@ -43,6 +43,32 @@ Leistung je Amplitude: N = Y·Σf²·Δ/2 (Ez) bzw. N = Z₀·Σ(f²/ε)·Δ/2 (
 Ergebnis für einen geraden Wellenleiter: |S21|² = 1 auf 2·10⁻⁴, Reflexion unter −80 dB, Phase genau
 2π·n_eff·L/λ mit dem Index auf dem Gitter.
 
+## 3D-Messung (`sparameters3d.cpp`, Bauteil-Designer: Schalter „3D“, CLI `--sparam --3d`)
+
+Die Szene wird im Schichtaufbau `scene.stack` gerechnet (siehe [`fdtd3d.md`](fdtd3d.md)). Je Port:
+
+1. **Rechnung mit dem Bauteil**: Puls mit der Querschnittsmode des Ports (eigener Modenlöser auf dem
+   3D-Gitter, quasi-TE bei Hz-Szenen), 0,3 µm hinter der Portlinie.
+2. **Referenz mit der geraden Zuleitung**: dieselbe Quelle, die Brechzahlen unter der Portlinie über das ganze
+   Gebiet fortgesetzt.
+3. **Zerlegung mit zwei Flächen**: Projektion der dominanten E-Komponente auf das Modenprofil an der
+   Portfläche (x₀) und an einer zweiten Fläche etwa λ/(4 n_eff) weiter innen;
+   `E(x) = A₊·e^{iβ_g(x−x₀)} + A₋·e^{−iβ_g(x−x₀)}` mit `β_g = 2·asin(β·Δ/2)/Δ` und β aus dem Modenlöser
+   (n_eff an drei Wellenlängen, quadratisch interpoliert). So wird kein H-Profil gebraucht: das Verhältnis
+   H/E einer stark führenden Si-Mode weicht um bis zu 25 % von n_eff/Z₀ ab (erster Versuch: scheinbare
+   Reflexion −19 dB).
+4. **Normierung**: Nahe der Quelle ist das Feld noch keine reine Mode (die beiden Flächen unterscheiden sich
+   um 3 %, die Projektion unterschätzt die Welle um etwa 4 %). Der **Betrag** der einlaufenden Welle kommt
+   deshalb vom fernen Ende der verlustfreien Referenz-Zuleitung, die **Phase** von der Portfläche. Ports auf
+   der Seite der Quelle (gleiche Lage und Richtung) bekommen den Anteil der Referenz abgezogen (Streulicht,
+   scheinbare Reflexion); auf der Gegenseite trägt die Referenz das durchgehende Licht und wird nicht
+   abgezogen.
+
+Abstrahlung nach oben und unten fehlt in der Matrix wie ein Verlust - so verhält sich das Bauteil auf dem
+Chip. Prüfung (`tests/test_extrude3d.cpp`, Gitter 50 nm): gerader Si-Draht 500 × 220 nm |S21|² = 1,001;
+Spalt 150 nm: reziprok auf 10⁻³, S11 = S22, |S11|² = 7–9 %, |S21|² = 62–67 %, Rest abgestrahlt.
+Fingerabdruck für den Zwischenspeicher: Szene plus Schichtaufbau (`sparameter_hash_3d`), getrennt von 2D.
+
 ## Bauteil in der Schaltung
 
 Die Matrix liegt an den Stützwellenlängen vor. Dazwischen werden Betrag und Phase getrennt linear

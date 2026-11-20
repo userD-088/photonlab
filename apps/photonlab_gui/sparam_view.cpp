@@ -10,6 +10,7 @@
 #include "file_dialog.hpp"
 #include "implot.h"
 #include "photonlab/core/units.hpp"
+#include "photonlab/field/extrude3d.hpp"
 #include "photonlab/io/project.hpp"
 #include "ui_util.hpp"
 
@@ -73,14 +74,17 @@ void SParamView::start() {
   error_.clear();
   control_ = std::make_shared<JobControl>();
   // Der Job besitzt eine Kopie der Szene und greift nicht auf die Oberfläche zu
-  future_ = pool_.submit([scene = designer_.project().field, control = control_, pool = &pool_] {
+  future_ = pool_.submit([scene = designer_.project().field, control = control_, pool = &pool_,
+                          three_d = three_d_] {
     Job job;
     job.scene = scene;
     try {
-      const field::SParameterResult result = field::extract_sparameters(scene, pool, control.get());
+      const field::SParameterResult result = three_d ? field::extract_sparameters_3d(scene, control.get())
+                                                     : field::extract_sparameters(scene, pool, control.get());
       job.cancelled = result.cancelled;
       if (!result.cancelled) {
-        job.table = io::make_sparameter_table(scene, result, suggested_name(scene.name));
+        job.table = io::make_sparameter_table(scene, result,
+                                              suggested_name(scene.name) + (three_d ? "_3d" : ""), three_d);
         job.warnings = result.warnings;
       }
     } catch (const std::exception& e) {
@@ -199,7 +203,8 @@ void SParamView::draw_settings(field::FieldScene& scene) {
   if (ImGui::Button("Ports automatisch setzen")) {
     auto ports = field::auto_ports(scene);
     if (ports.empty()) {
-      designer_.show_status("Kein Wellenleiter kreuzt den Rand der Szene; Ports bitte mit '+ Port' setzen.", true);
+      designer_.show_status("Kein Wellenleiter kreuzt den Rand der Szene; Ports bitte mit '+ Port' setzen.",
+                            true);
     } else {
       scene.ports = std::move(ports);
       designer_.mark_dirty();
@@ -213,6 +218,16 @@ void SParamView::draw_settings(field::FieldScene& scene) {
   if (scene.ports.empty()) return;
 
   ImGui::SeparatorText("2  Messen");
+  ImGui::BeginDisabled(future_.valid());
+  if (ImGui::RadioButton("2D (schnell)", !three_d_)) three_d_ = false;
+  ImGui::SameLine();
+  if (ImGui::RadioButton("3D (Schichtaufbau)", three_d_)) three_d_ = true;
+  ImGui::EndDisabled();
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    ImGui::SetTooltip(
+        "Messung im 3D-FDTD mit dem Schichtaufbau aus dem Reiter Feld (3D): mit Abstrahlung nach oben und\n"
+        "unten, je Port eine Rechnung mit dem Bauteil und eine Referenz mit der geraden Zuleitung.\n"
+        "Dauert Minuten statt Sekunden.");
   auto& settings = scene.sparameters;
   double start_nm = settings.wavelength_start / units::nm, stop_nm = settings.wavelength_stop / units::nm;
   const double lo = 200.0, hi = 20000.0;
@@ -242,7 +257,7 @@ void SParamView::draw_settings(field::FieldScene& scene) {
   }
 
   // Cache: gleiche Geometrie und Einstellungen liegen schon in der Bibliothek?
-  const std::string hash = io::sparameter_hash(scene);
+  const std::string hash = three_d_ ? io::sparameter_hash_3d(scene) : io::sparameter_hash(scene);
   const circuit::SParameterTable* cached = nullptr;
   for (const auto& t : designer_.project().sparameters)
     if (t.source_hash == hash) cached = &t;
@@ -273,8 +288,12 @@ void SParamView::draw_settings(field::FieldScene& scene) {
   ImGui::Spacing();
   ImGui::PushTextWrapPos(0.0f);
   ImGui::TextDisabled(
-      "Je Port ein breitbandiger Modenpuls; an allen Ports wird die ein- und auslaufende Mode "
-      "gemessen. 2D-Rechnung: Abstrahlung nach oben und unten fehlt, Brechzahlen ohne Dispersion.");
+      three_d_
+          ? "Je Port ein breitbandiger Puls mit der Querschnittsmode und eine Referenz mit der geraden "
+            "Zuleitung; an allen Ports wird die ein- und auslaufende Mode gemessen. Licht, das nach oben "
+            "oder unten abstrahlt, fehlt in der Matrix wie ein Verlust - so wie auf dem Chip."
+          : "Je Port ein breitbandiger Modenpuls; an allen Ports wird die ein- und auslaufende Mode "
+            "gemessen. 2D-Rechnung: Abstrahlung nach oben und unten fehlt, Brechzahlen ohne Dispersion.");
   ImGui::PopTextWrapPos();
 }
 

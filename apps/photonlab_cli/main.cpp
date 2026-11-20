@@ -82,7 +82,7 @@ void print_usage() {
       "Laufzeit\n"
       "  photonlab_cli run <datei> --field3d [--cell-nm 40]      Feld-Szene als 220-nm-Si-Schicht im 3D-FDTD\n"
       "  photonlab_cli run <datei> --modes            Moden des Wellenleiter-Querschnitts der Datei\n"
-      "  photonlab_cli run <datei> --sparam [--out <aus.sparam.json>] [--name <name>]\n"
+      "  photonlab_cli run <datei> --sparam [--3d] [--out <aus.sparam.json>] [--name <name>]\n"
       "                                               S-Parameter der Feld-Szene an ihren Ports extrahieren\n"
       "  photonlab_cli bands [--lattice triangular|square] [--radius 0.48] [--eps 13] [--hole-eps 1]\n"
       "                    [--pol ez|hz|both] [--cutoff 7] [--a-nm <nm>] [--csv <aus.csv>]\n"
@@ -444,7 +444,8 @@ void print_modes(const modes::CrossSection& section, const modes::CrossSectionRe
       "über vollvektoriellen Werten.\n");
 }
 
-int cmd_sparam(const std::string& file, const std::string& out_path, const std::string& name_option) {
+int cmd_sparam(const std::string& file, const std::string& out_path, const std::string& name_option,
+               bool three_d) {
   const io::Project project = io::load_project(file);
   const field::FieldScene& scene = project.field;
   if (scene.empty() || scene.ports.empty()) {
@@ -456,11 +457,16 @@ int cmd_sparam(const std::string& file, const std::string& out_path, const std::
               scene.ports.size(), settings.points, settings.wavelength_start / units::nm,
               settings.wavelength_stop / units::nm);
   ThreadPool pool;
-  const field::SParameterResult result = field::extract_sparameters(scene, &pool);
+  const field::SParameterResult result =
+      three_d ? field::extract_sparameters_3d(scene) : field::extract_sparameters(scene, &pool);
   std::printf("%zu Zeitschritte, längste Anregung %.0f fs\n", result.steps,
               result.simulated_time / units::fs);
   for (const auto& w : result.warnings) std::printf("Hinweis: %s\n", w.c_str());
-  std::printf("Hinweis: 2D-Rechnung; Abstrahlung nach oben und unten fehlt, Brechzahlen ohne Dispersion.\n");
+  if (three_d)
+    std::printf("3D-Rechnung im Schichtaufbau (%.0f nm %s auf %s); Abstrahlung erscheint als Verlust.\n",
+                scene.stack.thickness / units::nm, scene.stack.core.c_str(), scene.stack.substrate.c_str());
+  else
+    std::printf("Hinweis: 2D-Rechnung; Abstrahlung nach oben und unten fehlt, Brechzahlen ohne Dispersion.\n");
 
   const std::size_t n = result.port_count();
   const std::size_t stride = std::max<std::size_t>(1, result.wavelengths.size() / 5);
@@ -500,7 +506,7 @@ int cmd_sparam(const std::string& file, const std::string& out_path, const std::
           break;
         }
     }
-    io::save_sparameters(io::make_sparameter_table(scene, result, name), &scene, out_path);
+    io::save_sparameters(io::make_sparameter_table(scene, result, name, three_d), &scene, out_path);
     std::printf("S-Parameter als Bauteil 'sparam:%s' nach %s geschrieben\n", name.c_str(), out_path.c_str());
   }
   return 0;
@@ -1493,7 +1499,7 @@ int main(int argc, char** argv) {
     if (command == "run" && args.size() >= 2 && flag("--modes")) return cmd_modes(args[1]);
     if (command == "pcm") return cmd_pcm();
     if (command == "run" && args.size() >= 2 && flag("--sparam"))
-      return cmd_sparam(args[1], option("--out"), option("--name"));
+      return cmd_sparam(args[1], option("--out"), option("--name"), flag("--3d"));
     if (command == "run" && args.size() >= 2 && flag("--field3d")) return cmd_field3d(args[1], option("--cell-nm"));
     if (command == "run" && args.size() >= 2 && flag("--field")) return cmd_field(args[1], option("--csv"));
     if (command == "run" && args.size() >= 2 && flag("--logic")) return cmd_logic(args[1], option("--gate"));

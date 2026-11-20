@@ -156,6 +156,12 @@ ordered_json scene_to_json(const field::FieldScene& scene) {
                            {"source_offset", sp.source_offset},
                            {"decay", sp.decay},
                            {"max_time", sp.max_time}}}};
+  if (!(scene.stack == field::Stack3d{})) {
+    const auto& st = scene.stack;
+    result["stack"] = {{"thickness", st.thickness}, {"core", st.core},     {"substrate", st.substrate},
+                       {"cladding", st.cladding},   {"below", st.below},   {"above", st.above},
+                       {"cell_size", st.cell_size}, {"core_threshold", st.core_threshold}};
+  }
   if (!scene.groups.empty()) {
     ordered_json groups = ordered_json::array();
     for (const auto& g : scene.groups)
@@ -252,6 +258,18 @@ field::FieldScene scene_from_json(const ordered_json& json) {
     for (const auto& j : json.at("groups"))
       scene.groups.push_back({j.value("name", ""), j.value("x", 0.0), j.value("y", 0.0),
                               j.value("rotation", 0.0), j.value("parent", -1)});
+  if (json.contains("stack")) {
+    const auto& j = json.at("stack");
+    auto& st = scene.stack;
+    st.thickness = j.value("thickness", st.thickness);
+    st.core = j.value("core", st.core);
+    st.substrate = j.value("substrate", st.substrate);
+    st.cladding = j.value("cladding", st.cladding);
+    st.below = j.value("below", st.below);
+    st.above = j.value("above", st.above);
+    st.cell_size = j.value("cell_size", st.cell_size);
+    st.core_threshold = j.value("core_threshold", st.core_threshold);
+  }
   if (json.contains("sparameters")) {
     const auto& j = json.at("sparameters");
     auto& sp = scene.sparameters;
@@ -522,16 +540,38 @@ std::string sparameter_hash(const field::FieldScene& scene) {
   return buffer;
 }
 
+std::string sparameter_hash_3d(const field::FieldScene& scene) {
+  // der Schichtaufbau zählt in 3D immer, auch in der Voreinstellung
+  const auto& st = scene.stack;
+  char text[256];
+  std::snprintf(text, sizeof text, "%.6e/%s/%s/%s/%.6e/%.6e/%.6e/%.6e", st.thickness, st.core.c_str(),
+                st.substrate.c_str(), st.cladding.c_str(), st.below, st.above, st.cell_size, st.core_threshold);
+  std::uint64_t hash = 1469598103934665603ull;  // FNV-1a über Szene und Aufbau
+  for (unsigned char c : sparameter_hash(scene) + "|3d|" + text) {
+    hash ^= c;
+    hash *= 1099511628211ull;
+  }
+  char out[24];
+  std::snprintf(out, sizeof out, "%016llx", static_cast<unsigned long long>(hash));
+  return out;
+}
+
 circuit::SParameterTable make_sparameter_table(const field::FieldScene& scene,
                                                const field::SParameterResult& result,
-                                               const std::string& name) {
+                                               const std::string& name, bool three_d) {
   circuit::SParameterTable table;
   table.name = name;
   table.label = name;
   char text[256];
-  std::snprintf(text, sizeof text, "Aus dem 2D-FDTD extrahiert: Szene '%s', Gitter %.0f nm, Polarisation %s.",
-                scene.name.c_str(), scene.cell_size * 1e9,
-                scene.polarization == field::Polarization::ez ? "Ez" : "Hz");
+  if (three_d)
+    std::snprintf(text, sizeof text,
+                  "Aus dem 3D-FDTD extrahiert: Szene '%s', Schicht %.0f nm %s auf %s unter %s, Gitter %.0f nm.",
+                  scene.name.c_str(), scene.stack.thickness * 1e9, scene.stack.core.c_str(),
+                  scene.stack.substrate.c_str(), scene.stack.cladding.c_str(), scene.stack.cell_size * 1e9);
+  else
+    std::snprintf(text, sizeof text, "Aus dem 2D-FDTD extrahiert: Szene '%s', Gitter %.0f nm, Polarisation %s.",
+                  scene.name.c_str(), scene.cell_size * 1e9,
+                  scene.polarization == field::Polarization::ez ? "Ez" : "Hz");
   table.description = text;
   table.ports = result.ports;
   table.left_port_count = result.left_port_count;
@@ -543,7 +583,7 @@ circuit::SParameterTable make_sparameter_table(const field::FieldScene& scene,
       for (Eigen::Index j = 0; j < n; ++j) m(i, j) = values[static_cast<std::size_t>(i * n + j)];
     table.s.push_back(std::move(m));
   }
-  table.source_hash = sparameter_hash(scene);
+  table.source_hash = three_d ? sparameter_hash_3d(scene) : sparameter_hash(scene);
   try {
     circuit::validate(table);
   } catch (const circuit::CircuitError& e) {

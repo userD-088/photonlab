@@ -144,6 +144,21 @@ struct Group {
   bool operator==(const Group&) const = default;
 };
 
+// Schichtaufbau für die 3D-Rechnung der Szene (extrude3d.hpp): Silicon-on-Insulator als Voreinstellung.
+struct Stack3d {
+  double thickness = 220e-9;       // Dicke der Bauteilschicht [m]
+  std::string core = "Si";         // Material der Kerne (Materialbibliothek)
+  std::string substrate = "SiO2";  // unter der Schicht (vergrabenes Oxid)
+  std::string cladding = "SiO2";   // über der Schicht; "Luft" für einen offenen Chip
+  double below = 0.7e-6;           // Substrat unter der Schicht bis zur Randschicht [m]
+  double above = 0.7e-6;           // Mantel über der Schicht bis zur Randschicht [m]
+  double cell_size = 40e-9;        // Würfelzelle [m]
+  // Formen (und der Hintergrund) mit einer 2D-Brechzahl ab diesem Wert werden in der Schicht zum Kern.
+  // In 2D stehen dort meist effektive Indizes (2,85 für 220 nm Si); in 3D zählt das echte Material.
+  double core_threshold = 2.0;
+  bool operator==(const Stack3d&) const = default;
+};
+
 struct FieldScene {
   std::string name;
   double width = 0.0;             // Ausdehnung in x einschließlich Randschichten [m]; 0 = keine Szene
@@ -162,6 +177,7 @@ struct FieldScene {
   std::vector<Port> ports;  // nur für die S-Parameter-Extraktion; die normale Rechnung ignoriert sie
   SParameterSettings sparameters;
   std::vector<Group> groups;
+  Stack3d stack;  // Schichtaufbau der 3D-Rechnung
 
   bool empty() const { return !(width > 0.0) || !(height > 0.0); }
   bool operator==(const FieldScene&) const = default;
