@@ -131,6 +131,23 @@ Wellenlänge (1 pm bis 20 nm). Zum Vergleich: ein Silizium-Ring driftet thermisc
   hinter den Regeneratoren ist sauber, weil C1 und C2 nie zugleich leuchten). Rechenzeit auf 4 Kernen etwa
   1 h für alle Zeilen; mit Grafikkarte entsprechend kürzer.
 
+* **Volladdierer rein optisch (`field_fulladder_optical`, Gatter `optical_fulladder`, Modell):** ein Kerr-Ring
+  (Radius 3 µm, Spalt 0,35 µm, Q ≈ 520, Resonanz 1540,1 nm) wird bei 1543,6 nm rot verstimmt betrieben. A, B, Cin
+  laufen gleichphasig im oberen Wellenleiter (Amplitude ~ k). Ab k = 2 zieht der Kerr-Effekt die Resonanz auf den
+  Laser, der Ring rastet ein (Bistabilität) und gibt das Licht an den unteren Wellenleiter: Übertrag = Drop
+  (gemessen a²: k = 1: 1,7·10⁻⁷, k = 2: 4,0·10⁻⁶, k = 3: 4,6·10⁻⁶, also 13,8 dB). Summe = |Drop − k·s|²: hinter dem
+  Übertrag-Monitor wird ein Anteil der Eingänge gegenphasig zugemischt, Amplitude und Phase so abgeglichen, dass
+  k = 2 auslöscht (aus den gemessenen Zeigern; vorhergesagt Summe a²: k = 1: 1,8·10⁻⁶, k = 3: 8,4·10⁻⁷, k = 0, 2: 0).
+  Volle FDTD-Rechnung aller 8 Zeilen: alle richtig, Summe 13,8 dB, Übertrag 13,4 dB (k = 3 bei der Summe etwas
+  schwächer als vorhergesagt, 0,43 des Pegels von k = 1).
+  Ehrlichkeit: n2 = 20 m²/W ist ein Modellwert (Silizium 4,5·10⁻¹⁸ m²/W, Ferrera u. a.). Eingerastet ändert sich die
+  Brechzahl im Ring um etwa 0,04; in Silizium hieße das grob 1 W je Eingang und einige hundert Watt im Ring – nur
+  mit kurzen Pulsen denkbar, und die Zwei-Photonen-Absorption (im Modell aus) würde das Licht vorher schlucken.
+  Zusammengeführt wird durch Einspeisen nacheinander in einen Wellenleiter: das entspricht einem idealen
+  kohärenten Kombinierer mit Verstärker (ein echter 3:1-Kombinierer verliert bei einem Eingang 2/3 der Leistung).
+  Gegenläufige Pumpe als Ausgang wurde verworfen: gemessen schießt ihre Resonanz durch die doppelte
+  Kreuzphasenmodulation am Laser vorbei, der Drop sank beim Einrasten.
+
 ## Was das Zeugnis nicht sagt
 
 - Alles ist stationär: keine Schaltzeiten, keine Bitrate, keine Schaltenergie. Die Latenz ist nur die

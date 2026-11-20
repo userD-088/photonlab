@@ -1161,6 +1161,55 @@ FieldScene phc_mirror() {
   return s;
 }
 
+// Rein optischer Volladdierer mit einem Kerr-Ring (Modell, docs/physics/logic.md). A, B und Cin werden
+// gleichphasig in den oberen Wellenleiter gespeist (Amplitude ~ k = Zahl der Einsen). Der Ring ist um etwa
+// eine Linienbreite rot verstimmt: ab k = 2 zieht der Kerr-Effekt die Resonanz auf den Laser, der Ring rastet
+// ein (Bistabilität) und gibt das Licht an den unteren Wellenleiter ab: Übertrag = Drop-Leistung. Hinter dem
+// Übertrag-Monitor wird ein Anteil der Eingänge gegenphasig zugemischt: Summe = |Drop - k s|^2, bei k = 2
+// genau ausgelöscht, bei k = 1 und 3 nicht. Vereinfachung: Zusammenführen durch Einspeisen nacheinander in
+// einen Wellenleiter (verlustfrei, wie ein idealer kohärenter Kombinierer mit Verstärker). n2 ist ein
+// Modellwert, weit über Silizium; die nötige Leistung für echtes Si steht in logic.md.
+FieldScene fulladder_optical(double sum_amplitude, double sum_phase) {
+  const double w = 0.30 * um, gap = 0.35 * um, r = 3 * um, lambda = 1543.6e-9;
+  FieldScene s =
+      base("Volladdierer rein optisch (Kerr-Ring)", 18 * um, 12.5 * um, 25e-9, Polarization::hz, 5e-12);
+  const double xr = 10 * um, y1 = 2.5 * um, yc = round_pico(y1 + r + w + gap),
+               y2 = round_pico(yc + r + w + gap);
+  s.shapes = {strip("Eingang (A+B+Cin)", 0.0, y1, s.width, y1),
+              strip("Drop (Übertrag, Summe)", 0.0, y2, s.width, y2)};
+  Shape ring;
+  ring.name = "Kerr-Ring", ring.kind = ShapeKind::ring, ring.x = xr, ring.y = yc, ring.index = index_core;
+  ring.radius = r + 0.5 * w, ring.inner_radius = r - 0.5 * w;
+  ring.n2 = 20.0;  // Modellwert [m^2/W]; Silizium: 4,5e-18
+  s.shapes.push_back(ring);
+  // Phase gleicht den Ort der Einspeisung aus: Felder kommen gleichphasig an (beta aus der Schicht-Gleichung)
+  const double n_eff =
+      modes::slab_modes(index_core, index_cladding, index_cladding, w, lambda, modes::SlabPolarization::tm)
+          .front()
+          .n_eff;
+  const double beta = 2.0 * constants::pi * n_eff / lambda;
+  const char* names[] = {"A", "B", "Cin"};
+  for (int k = 0; k < 3; ++k) {
+    const double x = (1.0 + 0.8 * k) * um;
+    Source q = mode_source(names[k], x, y1, 1, 0.8 * um);
+    q.wavelength = lambda, q.amplitude = 1.0;
+    q.phase = round_pico(std::fmod(-beta * x, 2.0 * constants::pi));
+    s.sources.push_back(q);
+    // Anteil für die Summe: im unteren Wellenleiter nach links, gegenphasig zum Drop-Licht
+    const double xs = (3.4 + 0.8 * k) * um;
+    Source t = mode_source(names[k], xs, y2, -1, 0.8 * um);
+    t.name = names[k];
+    t.wavelength = lambda, t.amplitude = sum_amplitude;
+    // gemessener Abgleich: nach links strahlende Quellen kommen je 0,8 um Abstand 0,181 rad später an
+    t.phase = round_pico(std::fmod(beta * xs + sum_phase - 0.1806 * k, 2.0 * constants::pi));
+    s.sources.push_back(t);
+  }
+  s.monitors = {vertical("Mode Übertrag", MonitorKind::mode, 6.2 * um, y2, 0.8 * um),
+                vertical("Mode Summe", MonitorKind::mode, 1.2 * um, y2, 0.8 * um),
+                vertical("Durchgang", MonitorKind::mode, 16.5 * um, y1, 0.8 * um)};
+  for (auto& m : s.monitors) m.wavelength = lambda;
+  return s;
+}
 }  // namespace
 
 namespace {
@@ -1189,6 +1238,7 @@ const std::vector<std::pair<std::string, std::string>>& catalog() {
       {"field_not", "Logische Bauteile"},
       {"field_halfadder", "Logische Bauteile"},
       {"field_fulladder", "Logische Bauteile"},
+      {"field_fulladder_optical", "Logische Bauteile"},
       {"field_phc_w1", "Photonische Kristalle"},
       {"field_phc_bend", "Photonische Kristalle"},
       {"field_phc_mirror", "Photonische Kristalle"},
@@ -1238,6 +1288,7 @@ FieldScene reference_scene(std::string_view name) {
   if (name == "field_xor") return strip_gate(true);
   if (name == "field_or_and") return strip_gate(false);
   if (name == "field_not") return not_gate();
+  if (name == "field_fulladder_optical") return fulladder_optical(0.3798, 1.9231);  // auf k = 2 abgeglichen
   if (name == "field_phc_cavity") return phc_cavity();
   if (name == "field_phc_rods") return phc_rods();
   if (name == "field_phc_mirror") return phc_mirror();

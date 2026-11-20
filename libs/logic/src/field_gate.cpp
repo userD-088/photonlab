@@ -225,7 +225,8 @@ std::vector<std::string> field_gate_names() {
           "chip_fulladder",
           "phc_chip_halfadder",
           "phc_chip_fulladder",
-          "scene_fulladder"};
+          "scene_fulladder",
+          "optical_fulladder"};
 }
 
 std::string field_gate_label(std::string_view name) {
@@ -238,6 +239,7 @@ std::string field_gate_label(std::string_view name) {
   if (name == "phc_chip_halfadder") return "Halbaddierer (ein Kristall-Chip)";
   if (name == "phc_chip_fulladder") return "Volladdierer (drei Kristall-Chips, regeneriert)";
   if (name == "scene_fulladder") return "Volladdierer (eine Szene mit Regeneratoren)";
+  if (name == "optical_fulladder") return "Volladdierer rein optisch (Kerr-Ring)";
   return std::string(name);
 }
 
@@ -313,6 +315,20 @@ FieldGate field_gate(std::string_view name) {
     g.outputs = {{"S1", 0, "Mode Summe 1", s1},
                  {"Summe", 0, "Mode Summe 2", sum},
                  {"Übertrag", 0, "Mode Übertrag (Cout)", cout}};
+  } else if (name == "optical_fulladder") {
+    g.description =
+        "Rein optischer Volladdierer mit einem Kerr-Ring: A, B, Cin gleichphasig in einen Wellenleiter; ab k "
+        "= 2 "
+        "rastet der rot verstimmte Ring ein und gibt das Licht ab (Übertrag). Summe = |Drop - k s|^2: ein "
+        "gegenphasiger Anteil der Eingänge löscht bei k = 2 aus. Modell: n2 weit über Silizium, keine TPA.";
+    g.scenes = {field::reference_scene("field_fulladder_optical")};
+    g.inputs = {{"A", "A"}, {"B", "B"}, {"Cin", "Cin"}};
+    std::vector<int> sum, cout;
+    for (int r = 0; r < 8; ++r) {
+      const int a = (r >> 2) & 1, b = (r >> 1) & 1, c = r & 1;
+      sum.push_back(a ^ b ^ c), cout.push_back(a + b + c >= 2 ? 1 : 0);
+    }
+    g.outputs = {{"Summe", 0, "Mode Summe", sum}, {"Übertrag", 0, "Mode Übertrag", cout}};
   } else if (name == "chip_fulladder" || name == "phc_chip_fulladder") {
     g.description =
         "Volladdierer aus drei Halbaddierer-Chips mit Regeneration (Detektor + neuer Sender) zwischen den "
