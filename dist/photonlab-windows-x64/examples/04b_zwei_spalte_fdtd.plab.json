@@ -1,0 +1,160 @@
+{
+  "format": "photonlab.project",
+  "version": 1,
+  "units": "SI",
+  "circuit": {
+    "name": "Zwei Spalte hintereinander",
+    "instances": [],
+    "connections": []
+  },
+  "simulation": {
+    "wavelength": 1.55e-06,
+    "sweep": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 501
+    },
+    "monte_carlo": {
+      "samples": 500,
+      "seed": 1,
+      "variations": []
+    }
+  },
+  "logic": {
+    "name": "",
+    "inputs": [],
+    "outputs": []
+  },
+  "field": {
+    "name": "Zwei Spalte hintereinander",
+    "width": 9e-06,
+    "height": 3e-06,
+    "cell_size": 2.5e-08,
+    "background_index": 1.444023621703261,
+    "polarization": "ez",
+    "boundary_x": "pml",
+    "boundary_y": "pml",
+    "pml_cells": 12,
+    "courant": 0.99,
+    "duration": 2.5e-13,
+    "shapes": [
+      {
+        "name": "Kern",
+        "kind": "rectangle",
+        "x": 4.5e-06,
+        "y": 1.5e-06,
+        "width": 9e-06,
+        "height": 3e-07,
+        "rotation": 0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 2.8494894674291027
+      },
+      {
+        "name": "Spalt 1",
+        "kind": "rectangle",
+        "x": 3e-06,
+        "y": 1.5e-06,
+        "width": 1e-07,
+        "height": 3e-07,
+        "rotation": 0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 1.444023621703261
+      },
+      {
+        "name": "Spalt 2",
+        "kind": "rectangle",
+        "x": 6e-06,
+        "y": 1.5e-06,
+        "width": 1e-07,
+        "height": 3e-07,
+        "rotation": 0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 1.444023621703261
+      }
+    ],
+    "sources": [
+      {
+        "name": "Modenquelle",
+        "kind": "mode",
+        "x1": 9e-07,
+        "y1": 6e-07,
+        "x2": 9e-07,
+        "y2": 2.4e-06,
+        "beam_width": 0.0,
+        "signal": "continuous",
+        "wavelength": 1.55e-06,
+        "amplitude": 1.0,
+        "phase": 0.0,
+        "pulse_duration": 1.5e-14,
+        "ramp_periods": 4.0,
+        "mode_order": 0
+      }
+    ],
+    "monitors": [
+      {
+        "name": "Fluss davor",
+        "kind": "flux",
+        "x1": 1.4e-06,
+        "y1": 6e-07,
+        "x2": 1.4e-06,
+        "y2": 2.4e-06,
+        "mode_order": 0,
+        "wavelength": 0.0
+      },
+      {
+        "name": "Fluss dahinter",
+        "kind": "flux",
+        "x1": 7.6e-06,
+        "y1": 6e-07,
+        "x2": 7.6e-06,
+        "y2": 2.4e-06,
+        "mode_order": 0,
+        "wavelength": 0.0
+      }
+    ],
+    "ports": [
+      {
+        "name": "ein",
+        "x1": 1.5e-06,
+        "y1": 6e-07,
+        "x2": 1.5e-06,
+        "y2": 2.4e-06,
+        "mode_order": 0
+      },
+      {
+        "name": "aus",
+        "x1": 7.5e-06,
+        "y1": 6e-07,
+        "x2": 7.5e-06,
+        "y2": 2.4e-06,
+        "mode_order": 0
+      }
+    ],
+    "sparameters": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 51,
+      "source_offset": 3e-07,
+      "decay": 1e-05,
+      "max_time": 5e-12
+    }
+  },
+  "cross_section": {
+    "core": "Si",
+    "lower": "SiO2",
+    "upper": "SiO2",
+    "width": 5e-07,
+    "height": 2.2e-07,
+    "slab_height": 0.0,
+    "margin_x": 1e-06,
+    "margin_y": 8e-07,
+    "cell_size": 2e-08,
+    "wavelength": 1.55e-06,
+    "polarization": "quasi_te",
+    "modes": 4
+  },
+  "sparameters": []
+}

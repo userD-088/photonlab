@@ -1,0 +1,119 @@
+{
+  "format": "photonlab.project",
+  "version": 1,
+  "units": "SI",
+  "circuit": {
+    "name": "Totalreflexion an Glas/Luft",
+    "instances": [],
+    "connections": []
+  },
+  "simulation": {
+    "wavelength": 1.55e-06,
+    "sweep": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 501
+    },
+    "monte_carlo": {
+      "samples": 500,
+      "seed": 1,
+      "variations": []
+    }
+  },
+  "logic": {
+    "name": "",
+    "inputs": [],
+    "outputs": []
+  },
+  "field": {
+    "name": "Totalreflexion an Glas/Luft",
+    "width": 2.8e-05,
+    "height": 1.6e-05,
+    "cell_size": 4e-08,
+    "background_index": 1.0,
+    "polarization": "ez",
+    "boundary_x": "pml",
+    "boundary_y": "pml",
+    "pml_cells": 12,
+    "courant": 0.99,
+    "duration": 2.5e-13,
+    "shapes": [
+      {
+        "name": "Glas",
+        "kind": "rectangle",
+        "x": 1.4e-05,
+        "y": 1.05e-05,
+        "width": 2.8e-05,
+        "height": 1.1e-05,
+        "rotation": 0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 1.444023621703261
+      }
+    ],
+    "sources": [
+      {
+        "name": "Strahl",
+        "kind": "line",
+        "x1": 3.5e-06,
+        "y1": 6.169873e-06,
+        "x2": 8.5e-06,
+        "y2": 1.4830127e-05,
+        "beam_width": 2.4999999999999998e-06,
+        "signal": "continuous",
+        "wavelength": 1.55e-06,
+        "amplitude": 1.0,
+        "phase": 0.0,
+        "pulse_duration": 1.5e-14,
+        "ramp_periods": 4.0,
+        "mode_order": 0
+      }
+    ],
+    "monitors": [
+      {
+        "name": "Luft (durchgelassen)",
+        "kind": "flux",
+        "x1": 6e-06,
+        "y1": 3e-06,
+        "x2": 2.6e-05,
+        "y2": 3e-06,
+        "mode_order": 0,
+        "wavelength": 0.0
+      },
+      {
+        "name": "Glas (reflektiert)",
+        "kind": "flux",
+        "x1": 1.7e-05,
+        "y1": 8e-06,
+        "x2": 2.7e-05,
+        "y2": 8e-06,
+        "mode_order": 0,
+        "wavelength": 0.0
+      }
+    ],
+    "ports": [],
+    "sparameters": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 51,
+      "source_offset": 3e-07,
+      "decay": 1e-05,
+      "max_time": 5e-12
+    }
+  },
+  "cross_section": {
+    "core": "Si",
+    "lower": "SiO2",
+    "upper": "SiO2",
+    "width": 5e-07,
+    "height": 2.2e-07,
+    "slab_height": 0.0,
+    "margin_x": 1e-06,
+    "margin_y": 8e-07,
+    "cell_size": 2e-08,
+    "wavelength": 1.55e-06,
+    "polarization": "quasi_te",
+    "modes": 4
+  },
+  "sparameters": []
+}

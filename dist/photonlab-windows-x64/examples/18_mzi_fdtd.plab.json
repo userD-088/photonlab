@@ -1,0 +1,375 @@
+{
+  "format": "photonlab.project",
+  "version": 1,
+  "units": "SI",
+  "circuit": {
+    "name": "Mach-Zehnder-Interferometer",
+    "instances": [],
+    "connections": []
+  },
+  "simulation": {
+    "wavelength": 1.55e-06,
+    "sweep": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 501
+    },
+    "monte_carlo": {
+      "samples": 500,
+      "seed": 1,
+      "variations": []
+    }
+  },
+  "logic": {
+    "name": "",
+    "inputs": [],
+    "outputs": []
+  },
+  "field": {
+    "name": "Mach-Zehnder-Interferometer",
+    "width": 2.9999999999999997e-05,
+    "height": 8e-06,
+    "cell_size": 2.5e-08,
+    "background_index": 1.444023621703261,
+    "polarization": "hz",
+    "boundary_x": "pml",
+    "boundary_y": "pml",
+    "pml_cells": 12,
+    "courant": 0.99,
+    "duration": 6e-13,
+    "shapes": [
+      {
+        "name": "Eingang 1",
+        "kind": "rectangle",
+        "x": 3e-06,
+        "y": 4e-06,
+        "width": 2e-06,
+        "height": 3e-07,
+        "rotation": 0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 2.8494894674291027,
+        "group": 0
+      },
+      {
+        "name": "Arm oben 1",
+        "kind": "arc",
+        "x": 4e-06,
+        "y": -2e-06,
+        "width": 1e-06,
+        "height": 1e-06,
+        "rotation": 1.134464013796,
+        "radius": 6.15e-06,
+        "inner_radius": 5.85e-06,
+        "index": 2.8494894674291027,
+        "sweep": 0.436332312999,
+        "group": 0
+      },
+      {
+        "name": "Arm oben 1",
+        "kind": "arc",
+        "x": 9.071419e-06,
+        "y": 8.875693e-06,
+        "width": 1e-06,
+        "height": 1e-06,
+        "rotation": -2.007128639793,
+        "radius": 6.15e-06,
+        "inner_radius": 5.85e-06,
+        "index": 2.8494894674291027,
+        "sweep": 0.436332312999,
+        "group": 0
+      },
+      {
+        "name": "Arm oben 1",
+        "kind": "rectangle",
+        "x": 9.571419e-06,
+        "y": 2.875693e-06,
+        "width": 1e-06,
+        "height": 3e-07,
+        "rotation": 0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 2.8494894674291027,
+        "group": 0
+      },
+      {
+        "name": "Arm unten 1",
+        "kind": "arc",
+        "x": 4e-06,
+        "y": 1e-05,
+        "width": 1e-06,
+        "height": 1e-06,
+        "rotation": -1.570796326795,
+        "radius": 6.15e-06,
+        "inner_radius": 5.85e-06,
+        "index": 2.8494894674291027,
+        "sweep": 0.436332312999,
+        "group": 0
+      },
+      {
+        "name": "Arm unten 1",
+        "kind": "arc",
+        "x": 9.071419e-06,
+        "y": -8.75693e-07,
+        "width": 1e-06,
+        "height": 1e-06,
+        "rotation": 1.570796326795,
+        "radius": 6.15e-06,
+        "inner_radius": 5.85e-06,
+        "index": 2.8494894674291027,
+        "sweep": 0.436332312999,
+        "group": 0
+      },
+      {
+        "name": "Arm unten 1",
+        "kind": "rectangle",
+        "x": 9.571419e-06,
+        "y": 5.124307e-06,
+        "width": 1e-06,
+        "height": 3e-07,
+        "rotation": 0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 2.8494894674291027,
+        "group": 0
+      },
+      {
+        "name": "Ausgang 2",
+        "kind": "rectangle",
+        "x": 2.7e-05,
+        "y": 4e-06,
+        "width": 2e-06,
+        "height": 3e-07,
+        "rotation": -0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 2.8494894674291027,
+        "group": 1
+      },
+      {
+        "name": "Eingang oben 2",
+        "kind": "arc",
+        "x": 2.6e-05,
+        "y": -2e-06,
+        "width": 1e-06,
+        "height": 1e-06,
+        "rotation": 1.570796326795,
+        "radius": 6.15e-06,
+        "inner_radius": 5.85e-06,
+        "index": 2.8494894674291027,
+        "sweep": 0.436332312999,
+        "group": 1
+      },
+      {
+        "name": "Eingang oben 2",
+        "kind": "arc",
+        "x": 2.0928581e-05,
+        "y": 8.875693e-06,
+        "width": 1e-06,
+        "height": 1e-06,
+        "rotation": 4.712388980384,
+        "radius": 6.15e-06,
+        "inner_radius": 5.85e-06,
+        "index": 2.8494894674291027,
+        "sweep": 0.436332312999,
+        "group": 1
+      },
+      {
+        "name": "Eingang oben 2",
+        "kind": "rectangle",
+        "x": 2.0428581e-05,
+        "y": 2.875693e-06,
+        "width": 1e-06,
+        "height": 3e-07,
+        "rotation": -0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 2.8494894674291027,
+        "group": 1
+      },
+      {
+        "name": "Eingang unten 2",
+        "kind": "arc",
+        "x": 2.6e-05,
+        "y": 1e-05,
+        "width": 1e-06,
+        "height": 1e-06,
+        "rotation": 4.276056667386,
+        "radius": 6.15e-06,
+        "inner_radius": 5.85e-06,
+        "index": 2.8494894674291027,
+        "sweep": 0.436332312999,
+        "group": 1
+      },
+      {
+        "name": "Eingang unten 2",
+        "kind": "arc",
+        "x": 2.0928581e-05,
+        "y": -8.75693e-07,
+        "width": 1e-06,
+        "height": 1e-06,
+        "rotation": 1.134464013796,
+        "radius": 6.15e-06,
+        "inner_radius": 5.85e-06,
+        "index": 2.8494894674291027,
+        "sweep": 0.436332312999,
+        "group": 1
+      },
+      {
+        "name": "Eingang unten 2",
+        "kind": "rectangle",
+        "x": 2.0428581e-05,
+        "y": 5.124307e-06,
+        "width": 1e-06,
+        "height": 3e-07,
+        "rotation": -0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 2.8494894674291027,
+        "group": 1
+      },
+      {
+        "name": "Zuleitung",
+        "kind": "rectangle",
+        "x": 1e-06,
+        "y": 4e-06,
+        "width": 2e-06,
+        "height": 3e-07,
+        "rotation": 0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 2.8494894674291027
+      },
+      {
+        "name": "Ausleitung",
+        "kind": "rectangle",
+        "x": 2.9e-05,
+        "y": 4e-06,
+        "width": 2e-06,
+        "height": 3e-07,
+        "rotation": 0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 2.8494894674291027
+      },
+      {
+        "name": "Arm oben",
+        "kind": "rectangle",
+        "x": 1.5e-05,
+        "y": 2.875693e-06,
+        "width": 9.857162e-06,
+        "height": 3e-07,
+        "rotation": 0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 2.8494894674291027
+      },
+      {
+        "name": "Arm unten",
+        "kind": "rectangle",
+        "x": 1.5e-05,
+        "y": 5.124307e-06,
+        "width": 9.857162e-06,
+        "height": 3e-07,
+        "rotation": 0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 2.8494894674291027
+      },
+      {
+        "name": "Phasenschieber (H: an/aus)",
+        "kind": "rectangle",
+        "x": 1.5e-05,
+        "y": 2.875693e-06,
+        "width": 1.75e-06,
+        "height": 4.5e-07,
+        "rotation": 0.0,
+        "radius": 1e-06,
+        "inner_radius": 5e-07,
+        "index": 2.8494894674291027,
+        "enabled": false
+      }
+    ],
+    "sources": [
+      {
+        "name": "Laser",
+        "kind": "mode",
+        "x1": 1e-06,
+        "y1": 2.8e-06,
+        "x2": 1e-06,
+        "y2": 5.2e-06,
+        "beam_width": 0.0,
+        "signal": "continuous",
+        "wavelength": 1.55e-06,
+        "amplitude": 1.0,
+        "phase": 0.0,
+        "pulse_duration": 1.5e-14,
+        "ramp_periods": 4.0,
+        "mode_order": 0,
+        "direction": 1
+      }
+    ],
+    "monitors": [
+      {
+        "name": "Mode Ausgang",
+        "kind": "mode",
+        "x1": 2.85e-05,
+        "y1": 2.8e-06,
+        "x2": 2.85e-05,
+        "y2": 5.2e-06,
+        "mode_order": 0,
+        "wavelength": 0.0
+      },
+      {
+        "name": "Fluss Ausgang",
+        "kind": "flux",
+        "x1": 2.9e-05,
+        "y1": 2.8e-06,
+        "x2": 2.9e-05,
+        "y2": 5.2e-06,
+        "mode_order": 0,
+        "wavelength": 0.0
+      }
+    ],
+    "ports": [],
+    "sparameters": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 51,
+      "source_offset": 3e-07,
+      "decay": 1e-05,
+      "max_time": 5e-12
+    },
+    "groups": [
+      {
+        "name": "Y-Verzweigung (1 auf 2) 1",
+        "x": 4e-06,
+        "y": 4e-06,
+        "rotation": 0.0,
+        "parent": -1
+      },
+      {
+        "name": "Y-Kombinierer (2 auf 1) 2",
+        "x": 2.6e-05,
+        "y": 4e-06,
+        "rotation": 0.0,
+        "parent": -1
+      }
+    ]
+  },
+  "cross_section": {
+    "core": "Si",
+    "lower": "SiO2",
+    "upper": "SiO2",
+    "width": 5e-07,
+    "height": 2.2e-07,
+    "slab_height": 0.0,
+    "margin_x": 1e-06,
+    "margin_y": 8e-07,
+    "cell_size": 2e-08,
+    "wavelength": 1.55e-06,
+    "polarization": "quasi_te",
+    "modes": 4
+  },
+  "sparameters": []
+}
