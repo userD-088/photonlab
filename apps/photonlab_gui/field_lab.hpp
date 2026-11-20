@@ -18,7 +18,7 @@
 #include "photonlab/core/thread_pool.hpp"
 #include "photonlab/field/fdtd.hpp"
 #include "sparam_view.hpp"
-#include "wave3d_view.hpp"
+#include "view3d.hpp"
 
 struct SDL_Renderer;
 struct SDL_Texture;
@@ -125,12 +125,13 @@ class FieldLab {
   float ui_scale_;
   BandView band_view_;
   ModeView mode_view_;
-  Wave3dView wave3d_view_;
+  View3d view3d_;
   InverseView inverse_view_;
   SParamView sparam_view_;
   FieldGateView field_gate_view_;
   int pending_tab_ = -1;  // Reiter, der im nächsten Bild nach vorn kommt (0 Feld, 1 Bauteil)
-  int solver_page_ = 0;  // Reiter "Moden und Bänder": 0 Querschnitt, 1 Bandstruktur, 2 3D-Wellenleiter
+  int solver_page_ = 0;  // Reiter "Moden und Bänder": 0 Querschnitt, 1 Bandstruktur
+  bool mode3d_ = false;  // Reiter "Feld": 3D-Rechnung der Szene statt 2D
 
   std::uint64_t seen_generation_ = 0;
   bool scene_changed_ = false;

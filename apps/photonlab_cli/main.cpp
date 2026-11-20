@@ -29,6 +29,7 @@
 #include "photonlab/core/thread_pool.hpp"
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/fdtd.hpp"
+#include "photonlab/field/extrude3d.hpp"
 #include "photonlab/field/fdtd3d.hpp"
 #include "photonlab/field/gpu.hpp"
 #include "photonlab/field/inverse_design.hpp"
@@ -79,6 +80,7 @@ void print_usage() {
       "  photonlab_cli run <datei> --logic [--gate <aus.gate.json>]  Wahrheitstabelle und Gatter-Zeugnis\n"
       "  photonlab_cli run <datei> --field [--csv <aus.csv>]         2D-FDTD der Feld-Szene über ihre "
       "Laufzeit\n"
+      "  photonlab_cli run <datei> --field3d [--cell-nm 40]      Feld-Szene als 220-nm-Si-Schicht im 3D-FDTD\n"
       "  photonlab_cli run <datei> --modes            Moden des Wellenleiter-Querschnitts der Datei\n"
       "  photonlab_cli run <datei> --sparam [--out <aus.sparam.json>] [--name <name>]\n"
       "                                               S-Parameter der Feld-Szene an ihren Ports extrahieren\n"
@@ -913,6 +915,37 @@ bool validate_modes(const std::string& out_dir) {
 }
 
 // Feld-Szene der Datei über ihre Laufzeit rechnen und die Monitore auswerten
+// Feld-Szene der Datei als Schicht im 3D-FDTD (220 nm Si auf Oxid), Monitore als Mittel der letzten Periode
+int cmd_field3d(const std::string& file, const std::string& cell_text) {
+  const io::Project project = io::load_project(file);
+  if (project.field.empty()) {
+    std::fprintf(stderr, "Fehler: Die Datei enthält keine Feld-Szene (Abschnitt \"field\").\n");
+    return 1;
+  }
+  field::Stack3d stack;
+  if (!cell_text.empty()) stack.cell_size = std::atof(cell_text.c_str()) * units::nm;
+  const field::Extent3d e = field::extent_3d(project.field, stack);
+  std::printf("%s in 3D: %d x %d x %d Zellen (%.0f nm), %zu Schritte, etwa %.2f GB\n", project.field.name.c_str(),
+              e.nx, e.ny, e.nz, stack.cell_size / units::nm, e.steps, e.memory_bytes / 1e9);
+  field::Extruded3d sim(project.field, stack);
+  for (const auto& w : sim.warnings()) std::printf("Hinweis: %s\n", w.c_str());
+  const auto start = std::chrono::steady_clock::now();
+  sim.run(sim.steps_for(project.field.duration > 0.0 ? project.field.duration : 1e-12));
+  const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+  const field::Monitor3dData* reference = nullptr;
+  for (const auto& m : sim.monitors())
+    if (m.flux && m.mean != 0.0 && !reference) reference = &m;
+  std::printf("Kern n = %.4f, unten %.4f, oben %.4f; Rechenzeit %.1f s\n", sim.indices().core,
+              sim.indices().substrate, sim.indices().cladding, seconds);
+  for (const auto& m : sim.monitors()) {
+    if (m.flux)
+      std::printf("  %-16s Fluss %.4e W  relativ %.4f\n", m.name.c_str(), m.mean, reference ? m.mean / reference->mean : 0.0);
+    else
+      std::printf("  %-16s Amplitude %.4e V/m\n", m.name.c_str(), m.mean);
+  }
+  return 0;
+}
+
 int cmd_field(const std::string& file, const std::string& csv_path) {
   const io::Project project = io::load_project(file);
   const field::FieldScene& scene = project.field;
@@ -1461,6 +1494,7 @@ int main(int argc, char** argv) {
     if (command == "pcm") return cmd_pcm();
     if (command == "run" && args.size() >= 2 && flag("--sparam"))
       return cmd_sparam(args[1], option("--out"), option("--name"));
+    if (command == "run" && args.size() >= 2 && flag("--field3d")) return cmd_field3d(args[1], option("--cell-nm"));
     if (command == "run" && args.size() >= 2 && flag("--field")) return cmd_field(args[1], option("--csv"));
     if (command == "run" && args.size() >= 2 && flag("--logic")) return cmd_logic(args[1], option("--gate"));
     if (command == "run" && args.size() >= 2 && flag("--resonances")) return cmd_resonances(args[1]);

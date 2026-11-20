@@ -12,6 +12,7 @@ add_executable(photonlab_tests
   test_circuit_resonators.cpp
   test_circuit_solver.cpp
   test_circuit_sweep.cpp
+  test_extrude3d.cpp
   test_fdtd3d.cpp
   test_field_fdtd.cpp
   test_gpu.cpp

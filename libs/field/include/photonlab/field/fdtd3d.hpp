@@ -9,6 +9,7 @@
 // tangentialen E-Komponenten 0. Die CPML davor dämpft auslaufende Wellen.
 #include <array>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -34,6 +35,9 @@ struct Scene3d {
   int pml_cells = 10;     // CPML-Dicke an jeder Seite (0 = ideal leitende Box)
   double courant = 0.99;  // Anteil an der Stabilitätsgrenze dt = dx/(c*sqrt(3))
   std::vector<Block> blocks;
+  // Optional: Brechzahl an einem Punkt (x, y, z) statt Hintergrund und Quadern, z. B. eine extrudierte
+  // Feld-Szene (extrude3d.hpp). Wird nur im Konstruktor aufgerufen.
+  std::function<double(double x, double y, double z)> index_function;
 };
 
 enum class Component3d { ex, ey, ez, hx, hy, hz };

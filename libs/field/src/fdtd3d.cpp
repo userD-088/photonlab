@@ -13,6 +13,7 @@ namespace {
 constexpr int ex = 0, ey = 1, ez = 2, hx = 3, hy = 4, hz = 5;
 
 double index_at(const Scene3d& scene, double x, double y, double z) {
+  if (scene.index_function) return scene.index_function(x, y, z);
   double n = scene.background_index;
   for (const Block& b : scene.blocks)
     if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1 && z >= b.z0 && z <= b.z1) n = b.index;

@@ -136,7 +136,7 @@ FieldLab::FieldLab(ThreadPool& pool, ChipDesigner& designer, SDL_Renderer* rende
       ui_scale_(ui_scale),
       band_view_(pool, designer),
       mode_view_(pool, designer, renderer, ui_scale),
-      wave3d_view_(pool, renderer),
+      view3d_(pool, designer, renderer),
       inverse_view_(pool, designer, renderer),
       sparam_view_(pool, designer),
       field_gate_view_(pool, designer) {}
@@ -391,22 +391,19 @@ void FieldLab::draw() {
 
 // Eigenmoden-Rechner: Querschnitt eines Wellenleiters (n_eff, n_g) oder Bandstruktur eines Kristalls
 void FieldLab::draw_solvers_tab() {
-  const char* labels[] = {"Wellenleiter-Querschnitt (Modenlöser)", "Kristall-Bandstruktur (PWE)",
-                          "3D-Wellenleiter (Abnahme n_eff)"};
-  for (int k = 0; k < 3; ++k) {
+  const char* labels[] = {"Wellenleiter-Querschnitt (Modenlöser)", "Kristall-Bandstruktur (PWE)"};
+  for (int k = 0; k < 2; ++k) {
     if (k > 0) ImGui::SameLine();
     ImGui::RadioButton(labels[k], &solver_page_, k);
   }
   ImGui::Separator();
   if (solver_page_ == 0) {
     mode_view_.draw();
-  } else if (solver_page_ == 1) {
+  } else {
     if (band_view_.draw()) {
       scene_changed_ = true;
       clear_selection();
     }
-  } else {
-    wave3d_view_.draw();
   }
 }
 
@@ -443,6 +440,12 @@ void FieldLab::draw_field_tab() {
   ImGui::SameLine();
   ImGui::BeginChild("haupt", ImVec2(0.0f, 0.0f));
   draw_toolbar();
+  if (mode3d_) {
+    pause();  // 2D ruht, solange die 3D-Ansicht vorn ist
+    view3d_.draw();
+    ImGui::EndChild();
+    return;
+  }
   const float available = ImGui::GetContentRegionAvail().y;
   const float plot_height =
       monitors_.empty() ? 0.0f : std::max(available * 0.34f, ImGui::GetFontSize() * 9.0f);
@@ -464,6 +467,7 @@ FieldScene FieldLab::blank_scene() {
 }
 
 void FieldLab::toggle_running() {
+  if (mode3d_) return;  // die 3D-Rechnung hat ihren eigenen Knopf
   if (running()) {
     pause();
     want_running_ = false;
@@ -1266,6 +1270,30 @@ void FieldLab::draw_toolbar() {
     ImGui::TextDisabled("|");
     ImGui::SameLine();
   };
+  separator();
+  for (int k = 0; k < 2; ++k) {
+    if (k > 0) ImGui::SameLine(0.0f, 1.0f);
+    const bool active = mode3d_ == (k == 1);
+    if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    if (ImGui::Button(k == 0 ? "2D" : "3D")) mode3d_ = k == 1;
+    if (active) ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+      ImGui::SetTooltip(k == 0 ? "2D-FDTD: schnell, live, Draufsicht (Schichten als effektiver Index)"
+                               : "3D-FDTD: dieselbe Szene als Schicht auf einem Chip, mit Abstrahlung nach oben und unten");
+  }
+  if (mode3d_) {
+    separator();
+    ImGui::BeginDisabled(undo_.empty());
+    if (ImGui::ArrowButton("##rueck3", ImGuiDir_Left)) undo();
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    ImGui::BeginDisabled(redo_.empty());
+    if (ImGui::ArrowButton("##vor3", ImGuiDir_Right)) redo();
+    ImGui::EndDisabled();
+    separator();
+    if (ImGui::Button("Als Bauteil ...")) pending_tab_ = 1;
+    return;
+  }
   separator();
   ImGui::BeginDisabled(!error_.empty());
   if (ImGui::Button(want_running_ && running() ? "Pause" : "Start", ImVec2(ImGui::GetFontSize() * 4.0f, 0.0f)))

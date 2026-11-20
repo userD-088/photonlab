@@ -9,7 +9,7 @@ add_executable(photonlab_gui
   band_view.cpp
   mode_view.cpp
   sparam_view.cpp
-  wave3d_view.cpp)
+  view3d.cpp)
 target_link_libraries(photonlab_gui PRIVATE photonlab::core photonlab::circuit photonlab::logic photonlab::field photonlab::modes photonlab::pwe photonlab::materials photonlab::io photonlab::layout imgui implot)
 photonlab_warnings(photonlab_gui)
 

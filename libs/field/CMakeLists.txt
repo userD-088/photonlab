@@ -1,5 +1,6 @@
 add_library(photonlab_field
   src/fdtd.cpp
+  src/extrude3d.cpp
   src/fdtd3d.cpp
   src/gpu.cpp
   src/inverse_design.cpp

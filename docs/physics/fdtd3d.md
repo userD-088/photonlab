@@ -99,6 +99,37 @@ Konvergenz Si3N4: dx = 40 nm → 1,0 %, dx = 20 nm → 0,46 % (zweite Ordnung). 
 Literatur n_eff = 2,44: Chrostowski/Hochberg, *Silicon Photonics Design* (2015), Kap. 3 (aus dem Gedächtnis
 zitiert, wie schon in `modes.md`).
 
+## Feld-Szene in 3D (`extrude3d.*`, Bauteil-Labor: Umschalter 2D/3D)
+
+Die 2D-Szene wird zu einem Schichtaufbau (Voreinstellung Standard-SOI): Substrat SiO2 unten, Bauteilschicht der
+Dicke d (220 nm), Mantel SiO2 (oder Luft) oben, je 0,7 µm bis zur Randschicht. Brechzahlen aus der
+Materialbibliothek bei der Wellenlänge der ersten Quelle.
+
+- **Formen**: in 2D stehen meist effektive Indizes (2,85 für 220 nm Si). Festlegung: Formen und Hintergrund mit
+  einer 2D-Brechzahl ab 2 werden in der Schicht zum Kernmaterial, Luft (n = 1) bleibt Luft, andere Brechzahlen
+  bleiben unverändert; Stellen ohne Form bekommen das Material des oberen Mantels (geätzte Schicht). Kristall-
+  Szenen (Hintergrund 2,85) werden so zu einer Si-Platte mit Luftlöchern.
+- **Gitter**: Würfelzellen (Voreinstellung 40 nm, etwa 11 Zellen je Wellenlänge in Si: grob). Die Randschicht
+  ist höchstens so dick wie die der 2D-Szene, damit Quellen und Monitore außerhalb liegen.
+- **Modenquellen**: Stromfläche quer zur Linie über den ganzen Querschnitt außerhalb der Randschicht, Profil =
+  dominante E-Komponente der **echten Querschnittsmode** aus dem eigenen Modenlöser (`fde.cpp`, quasi-TE bei
+  Hz-Szenen, quasi-TM bei Ez-Szenen) auf dem 3D-Gitter; nur ohne geführte Mode das getrennte Profil
+  (2D-Mode mal Schichtmode). Gewicht 2 n_eff c dt/(ε dx) · A wie in 2D, einseitig ebenfalls wie in 2D mit dem
+  n_eff des Modenlösers. Linienquellen: gleichmäßig bzw. Gauß quer, Schichtmode senkrecht. Punktquellen:
+  ein Dipol der Hauptkomponente in der Mitte der Schicht.
+- **Flussmonitore**: Fläche quer über die Linie und den ganzen Querschnitt (ohne Randschicht);
+  `S_x = ½(E_y[i] + E_y[i+1]) H_z − ½(E_z[i] + E_z[i+1]) H_y` am Ort von H (i + ½), entsprechend S_y;
+  Mittel über die letzte Periode der ersten Quelle. Modenmonitore zählen in 3D den ganzen Fluss.
+  Einheit W (Quelle mit Amplitude 1 V/m); aussagekräftig sind die Verhältnisse der Monitore.
+- **Nicht in 3D**: Regeneratoren (bleiben aus), Kerr/TPA (linear gerechnet), periodische Ränder (Randschicht),
+  Grafikkarte.
+
+**Prüfung** (`tests/test_extrude3d.cpp`): Brechzahlen des Aufbaus an Kern, Mantel, Substrat; gerader
+Si-Wellenleiter 500 × 220 nm (Gitter 50 nm): Fluss B/A = 0,98 (Toleranz 3 %) zwischen zwei Flächen 1,6 und
+2,8 µm hinter der Quelle. Der Rest ist Streulicht der Quelle, das nach oben und unten abstrahlt: B/A steigt
+von 0,93 auf 0,98, wenn A von 0,6 auf 1,6 µm Abstand rückt, unabhängig von Zelle (40/50 nm) und Laufzeit.
+Monitore deshalb mindestens 1,5 µm hinter Quellen legen.
+
 ## Grenzen
 
 - Nur Quader, nur reelle, konstante Brechzahlen; keine Szene im Editor, kein Dateiformat (#114).
