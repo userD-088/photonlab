@@ -184,6 +184,58 @@ int port_inward_sign(const FieldScene& scene, const Port& port) {
   return port.y1 < 0.5 * scene.height ? +1 : -1;
 }
 
+std::vector<Port> auto_ports(const FieldScene& input) {
+  const FieldScene scene = active_scene(input);
+  std::vector<Port> ports;
+  if (scene.empty()) return ports;
+  const double dx = scene.cell_size;
+  // Portlinien innerhalb der Randschicht, dahinter Platz für die Anregung der Extraktion (source_offset)
+  const double behind = scene.sparameters.source_offset + 4 * dx;
+  const double inset_x = (scene.boundary_x == Boundary::pml ? scene.pml_cells * dx : 0.0) + behind;
+  const double inset_y = (scene.boundary_y == Boundary::pml ? scene.pml_cells * dx : 0.0) + behind;
+  struct Side {
+    const char* prefix;
+    bool vertical;  // Linie entlang y (linke und rechte Seite)
+    double at;      // Lage der Linie quer zu ihr
+  };
+  const Side sides[] = {{"in", true, inset_x},
+                        {"out", true, scene.width - inset_x},
+                        {"oben", false, inset_y},
+                        {"unten", false, scene.height - inset_y}};
+  for (const Side& side : sides) {
+    const double length = side.vertical ? scene.height : scene.width;
+    const double lo = side.vertical ? inset_y : inset_x, hi = length - lo;
+    // Kerne: zusammenhängende Strecken mit höherer Brechzahl als der Hintergrund
+    std::vector<std::pair<double, double>> cores;
+    bool inside = false;
+    double start = 0.0;
+    for (double t = lo; t <= hi + 0.5 * dx; t += 0.5 * dx) {
+      const double n = side.vertical ? index_at(scene, side.at, t) : index_at(scene, t, side.at);
+      const bool core = n > scene.background_index + 0.05;
+      if (core && !inside) start = t;
+      if (!core && inside) cores.emplace_back(start, t);
+      inside = core;
+    }
+    if (inside) cores.emplace_back(start, hi);
+    for (std::size_t k = 0; k < cores.size(); ++k) {
+      const auto [a, b] = cores[k];
+      // Port reicht um die Kernbreite (mindestens 1 µm) über den Kern, höchstens bis zur Mitte zum Nachbarn
+      const double margin = std::max(b - a, 1e-6);
+      double p0 = std::max(lo, a - margin), p1 = std::min(hi, b + margin);
+      if (k > 0) p0 = std::max(p0, 0.5 * (cores[k - 1].second + a));
+      if (k + 1 < cores.size()) p1 = std::min(p1, 0.5 * (b + cores[k + 1].first));
+      Port port;
+      port.name = std::string(side.prefix) + std::to_string(k + 1);
+      if (side.vertical)
+        port.x1 = port.x2 = side.at, port.y1 = p0, port.y2 = p1;
+      else
+        port.y1 = port.y2 = side.at, port.x1 = p0, port.x2 = p1;
+      ports.push_back(port);
+    }
+  }
+  return ports;
+}
+
 void validate_sparameter_setup(const FieldScene& scene) {
   validate(scene);
   const SParameterSettings& s = scene.sparameters;

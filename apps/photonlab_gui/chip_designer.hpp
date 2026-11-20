@@ -53,6 +53,8 @@ class ChipDesigner {
   // Messgrößen der Live-Lösung bei der Arbeitswellenlänge (leer, wenn die Schaltung nicht lösbar ist)
   const std::vector<circuit::InstanceMeasurement>& measurements() const { return measurements_; }
   void select_instance(const std::string& name) { selected_ = name, rename_buffer_ = name; }
+  // Bauteil an eine freie Stelle der Schaltung setzen, auswählen und den Chip-Designer zeigen
+  void place_instance(const std::string& type);
   std::uint64_t project_generation() const {
     return generation_;
   }  // zählt bei jedem neu geladenen Projekt hoch

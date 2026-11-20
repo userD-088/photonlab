@@ -356,14 +356,15 @@ void FieldLab::draw() {
   // Reiter: das Feld selbst (Szene bauen und rechnen), daraus ein Bauteil für den Chip-Designer, die
   // Logik-Prüfung von Feld-Gattern und die Hilfsrechner (Moden, Bänder, inverses Design, 3D-Wellenleiter)
   if (ImGui::BeginTabBar("ansichten")) {
-    if (ImGui::BeginTabItem("Feld")) {
+    const auto select = [&](int tab) { return pending_tab_ == tab ? ImGuiTabItemFlags_SetSelected : 0; };
+    if (ImGui::BeginTabItem("Feld", nullptr, select(0))) {
       draw_field_tab();
       ImGui::EndTabItem();
     } else {
       release_keys();  // Leertaste und Pfeile gehören dann wieder der Oberfläche
       pause();         // im anderen Reiter keine Rechenzeit verbrauchen
     }
-    if (ImGui::BeginTabItem("Bauteil für den Chip-Designer")) {
+    if (ImGui::BeginTabItem("Bauteil für den Chip-Designer", nullptr, select(1))) {
       sparam_view_.draw();
       ImGui::EndTabItem();
     }
@@ -383,6 +384,7 @@ void FieldLab::draw() {
       ImGui::EndTabItem();
     }
     ImGui::EndTabBar();
+    pending_tab_ = -1;
   }
   ImGui::End();
 }
@@ -411,8 +413,10 @@ void FieldLab::draw_solvers_tab() {
 void FieldLab::draw_field_tab() {
   FieldScene& scene = designer_.project().field;
   if (scene.empty()) {
-    draw_empty_state();
-    return;
+    // Projekt ohne Szene: gleich eine leere Szene zum Bauen (gilt nicht als Änderung des Projekts)
+    scene = blank_scene();
+    clear_selection();
+    rebuild();
   }
 
   if (running() && control_->finished) {
@@ -438,6 +442,7 @@ void FieldLab::draw_field_tab() {
   track_history();
   ImGui::SameLine();
   ImGui::BeginChild("haupt", ImVec2(0.0f, 0.0f));
+  draw_toolbar();
   const float available = ImGui::GetContentRegionAvail().y;
   const float plot_height =
       monitors_.empty() ? 0.0f : std::max(available * 0.34f, ImGui::GetFontSize() * 9.0f);
@@ -446,45 +451,16 @@ void FieldLab::draw_field_tab() {
   ImGui::EndChild();
 }
 
-void FieldLab::draw_empty_state() {
-  ImGui::PushTextWrapPos(ImGui::GetFontSize() * 42.0f);
-  ImGui::TextUnformatted("Das Bauteil-Labor rechnet Licht als elektromagnetisches Feld (2D-FDTD).");
-  ImGui::TextDisabled(
-      "Formen aus Materialien mit verschiedener Brechzahl, Quellen mit einstellbarer Phase und Monitore; das "
-      "Feld "
-      "breitet sich live aus. Gerechnet wird in zwei Dimensionen: was auf einem echten Chip nach oben und "
-      "unten "
-      "abstrahlt, fehlt, und die Brechzahlen haben keine Dispersion.");
-  ImGui::PopTextWrapPos();
-  ImGui::Spacing();
-  // Beispiele nach Gruppen; Namen einmal ermitteln (Szenen bauen kostet Zeit)
-  static const std::vector<std::pair<std::string, std::string>> examples = [] {
-    std::vector<std::pair<std::string, std::string>> list;
-    for (const auto& name : field::reference_scene_names())
-      list.emplace_back(name, field::reference_scene(name).name);
-    return list;
-  }();
-  for (const char* group : {"Grundlagen", "Logische Bauteile", "Photonische Kristalle"}) {
-    ImGui::SeparatorText(group);
-    for (const auto& [key, label] : examples)
-      if (field::reference_scene_category(key) == group && ImGui::Button(label.c_str()))
-        designer_.load_example(key);
-  }
-  ImGui::Spacing();
-  if (ImGui::Button("Leere Szene in dieses Projekt einfügen")) {
-    FieldScene scene;
-    scene.name = "Neue Szene";
-    scene.width = 10 * um, scene.height = 6 * um;
-    scene.cell_size = 40e-9;
-    field::Source source;
-    source.name = "Quelle";
-    source.kind = field::SourceKind::point;
-    source.x1 = 3 * um, source.y1 = 3 * um;
-    scene.sources = {source};
-    designer_.project().field = scene;
-    designer_.mark_dirty();
-    rebuild();
-  }
+// Leere Szene: Oxid-Mantel (SiO2) als Hintergrund, Hz (TE-artig wie auf einem Chip), 1 ps Laufzeit
+FieldScene FieldLab::blank_scene() {
+  FieldScene scene;
+  scene.name = "Neue Szene";
+  scene.width = 12 * um, scene.height = 8 * um;
+  scene.cell_size = 25e-9;
+  scene.background_index = 1.444;  // SiO2 bei 1550 nm (Malitson 1965, libs/materials)
+  scene.polarization = field::Polarization::hz;
+  scene.duration = 1000 * units::fs;
+  return scene;
 }
 
 void FieldLab::toggle_running() {
@@ -511,20 +487,6 @@ void FieldLab::draw_controls() {
     ImGui::PopTextWrapPos();
   }
   if (ImGui::CollapsingHeader("Rechnung", ImGuiTreeNodeFlags_DefaultOpen) && error_.empty()) {
-    if (ImGui::Button(want_running_ && running() ? "Pause" : "Start")) toggle_running();
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) ImGui::SetTooltip("Leertaste");
-    ImGui::SameLine();
-    if (ImGui::Button("Zurücksetzen")) reset_run();
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) ImGui::SetTooltip("Taste R");
-    ImGui::SameLine();
-    ImGui::Text("%.1f fs", time_ / units::fs);
-    if (ImGui::IsItemHovered() && sim_)
-      ImGui::SetTooltip(
-          "Simulierte Zeit. Schritt %zu, dt = %.4f fs\n\nEnergie im Gebiet: %.3e J/m (je Meter "
-          "Bauteilhöhe).\n"
-          "Prüfgröße: sie steigt, solange die Quelle einspeist, und darf ohne Quelle\nnicht wachsen - "
-          "wächst sie trotzdem, ist die Rechnung instabil.",
-          step_, sim_->time_step() / units::fs, energy_);
     if (sim_) {
       // Rechengerät: Grafikkarte (OpenCL) oder Prozessor
       if (sim_->on_gpu())
@@ -569,16 +531,7 @@ void FieldLab::draw_controls() {
     }
   }
 
-  if (ImGui::CollapsingHeader("Darstellung", ImGuiTreeNodeFlags_DefaultOpen)) {
-    int mode = display_mode_ == DisplayMode::field ? 0 : 1;
-    const char* field_name = scene.polarization == field::Polarization::ez ? "Feld Ez" : "Feld Hz";
-    const char* modes[] = {field_name, "Intensität (Feld²)"};
-    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
-    if (ImGui::Combo("##modus", &mode, modes, 2)) {
-      display_mode_ = mode == 0 ? DisplayMode::field : DisplayMode::intensity;
-      texture_dirty_ = true;
-    }
-    if (ImGui::Checkbox("Geometrie zeigen", &show_geometry_)) texture_dirty_ = true;
+  if (ImGui::CollapsingHeader("Farbskala")) {
     if (ImGui::Checkbox("schwache Felder anheben", &boost_weak_)) texture_dirty_ = true;
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
       ImGui::SetTooltip(
@@ -811,56 +764,11 @@ void FieldLab::draw_add_toolbar() {
       }
     ImGui::EndPopup();
   }
-  ImGui::SameLine();
-  ImGui::BeginDisabled(undo_.empty());
-  if (ImGui::SmallButton("<")) undo();
-  ImGui::EndDisabled();
-  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled))
-    ImGui::SetTooltip("Rückgängig (Strg+Z)");
-  ImGui::SameLine();
-  ImGui::BeginDisabled(redo_.empty());
-  if (ImGui::SmallButton(">")) redo();
-  ImGui::EndDisabled();
-  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled))
-    ImGui::SetTooltip("Wiederholen (Strg+Y)");
-  ImGui::SameLine();
-  if (ImGui::SmallButton("Tastenkürzel")) ImGui::OpenPopup("kuerzel");
   const int group = target_group();
   if (group >= 0) {
     ImGui::SameLine();
     ImGui::TextDisabled("neu in \"%s\"",
                         designer_.project().field.groups[static_cast<std::size_t>(group)].name.c_str());
-  }
-  if (ImGui::BeginPopup("kuerzel")) {
-    static const char* rows[][2] = {
-        {"Leertaste", "Start / Pause"},
-        {"R", "Zurücksetzen"},
-        {"Umschalt+R/K/I/T/B", "neues Rechteck, Kreis, Ring, Taper, Bogen"},
-        {"Umschalt+G/Q/M/P", "neue Gruppe, Quelle, Monitor, Port (in der gewählten Gruppe)"},
-        {"Entf, Rücktaste", "Löschen"},
-        {"Strg+Z, Strg+Y", "Rückgängig, Wiederholen"},
-        {"Strg+C / X / V / D", "Kopieren, Ausschneiden, Einfügen, Duplizieren"},
-        {"Strg+A, Esc", "alles auswählen, Auswahl aufheben"},
-        {"Strg+G, Strg+Umschalt+G", "gruppieren, aus Gruppe lösen"},
-        {"Pfeiltasten", "verschieben um eine Zelle (Umschalt: 10 Zellen)"},
-        {"Q / E", "drehen um -15 / +15 Grad (Alt: 1 Grad)"},
-        {"Bild auf / Bild ab", "Form ganz nach vorn / hinten"},
-        {"H", "aktivieren / deaktivieren"},
-        {"F, + / -", "Ansicht einpassen, zoomen"},
-        {"Strg+Klick / Umschalt+Klick", "einzeln / Bereich auswählen (Liste)"},
-        {"Ziehen in der Liste", "Auswahl in eine Gruppe legen (unten frei: heraus)"},
-    };
-    if (ImGui::BeginTable("kuerzel_tabelle", 2, ImGuiTableFlags_RowBg)) {
-      for (const auto& row : rows) {
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::TextUnformatted(row[0]);
-        ImGui::TableNextColumn();
-        ImGui::TextDisabled("%s", row[1]);
-      }
-      ImGui::EndTable();
-    }
-    ImGui::EndPopup();
   }
 }
 
@@ -1341,6 +1249,120 @@ void FieldLab::draw_selected_object() {
   }
 }
 
+// Werkzeugleiste über dem Bild: Titel, Rechnung, Rückgängig, Darstellung, Ansicht
+void FieldLab::draw_toolbar() {
+  FieldScene& scene = designer_.project().field;
+  char title[128];
+  std::snprintf(title, sizeof title, "%s", scene.name.c_str());
+  ImGui::SetNextItemWidth(ImGui::GetFontSize() * 13.0f);
+  if (ImGui::InputTextWithHint("##titel", "Titel der Szene", title, sizeof title)) {
+    scene.name = title;
+    designer_.mark_dirty();
+  }
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    ImGui::SetTooltip("Titel der Szene (auch Name des Bauteils im Chip-Designer)");
+  auto separator = [] {
+    ImGui::SameLine();
+    ImGui::TextDisabled("|");
+    ImGui::SameLine();
+  };
+  separator();
+  ImGui::BeginDisabled(!error_.empty());
+  if (ImGui::Button(want_running_ && running() ? "Pause" : "Start", ImVec2(ImGui::GetFontSize() * 4.0f, 0.0f)))
+    toggle_running();
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) ImGui::SetTooltip("Leertaste");
+  ImGui::SameLine();
+  if (ImGui::Button("Zurücksetzen")) reset_run();
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) ImGui::SetTooltip("Taste R");
+  ImGui::EndDisabled();
+  ImGui::SameLine();
+  if (scene.duration > 0.0)
+    ImGui::Text("%.0f / %.0f fs", time_ / units::fs, scene.duration / units::fs);
+  else
+    ImGui::Text("%.0f fs", time_ / units::fs);
+  if (ImGui::IsItemHovered() && sim_)
+    ImGui::SetTooltip(
+        "Simulierte Zeit. Schritt %zu, dt = %.4f fs\n\nEnergie im Gebiet: %.3e J/m (je Meter "
+        "Bauteilhöhe).\n"
+        "Prüfgröße: sie steigt, solange die Quelle einspeist, und darf ohne Quelle\nnicht wachsen - "
+        "wächst sie trotzdem, ist die Rechnung instabil.",
+        step_, sim_->time_step() / units::fs, energy_);
+  separator();
+  ImGui::BeginDisabled(undo_.empty());
+  if (ImGui::ArrowButton("##rueck", ImGuiDir_Left)) undo();
+  ImGui::EndDisabled();
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled))
+    ImGui::SetTooltip("Rückgängig (Strg+Z)");
+  ImGui::SameLine();
+  ImGui::BeginDisabled(redo_.empty());
+  if (ImGui::ArrowButton("##vor", ImGuiDir_Right)) redo();
+  ImGui::EndDisabled();
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled))
+    ImGui::SetTooltip("Wiederholen (Strg+Y)");
+  separator();
+  int mode = display_mode_ == DisplayMode::field ? 0 : 1;
+  const char* modes[] = {scene.polarization == field::Polarization::ez ? "Feld Ez" : "Feld Hz", "Intensität"};
+  ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.5f);
+  if (ImGui::Combo("##modus", &mode, modes, 2)) {
+    display_mode_ = mode == 0 ? DisplayMode::field : DisplayMode::intensity;
+    texture_dirty_ = true;
+  }
+  ImGui::SameLine();
+  if (ImGui::Checkbox("Formen", &show_geometry_)) texture_dirty_ = true;
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) ImGui::SetTooltip("Umrisse und Aufhellung der Formen");
+  separator();
+  if (ImGui::Button("Als Bauteil ...")) pending_tab_ = 1;
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    ImGui::SetTooltip("Diese Szene als Bauteil für den Chip-Designer messen (S-Matrix an den Ports)");
+
+  // rechts: Zoom, Einpassen, Tastenkürzel
+  char zoom_text[32];
+  std::snprintf(zoom_text, sizeof zoom_text, "%.0f %%", 100.0 * zoom_);
+  const ImGuiStyle& style = ImGui::GetStyle();
+  const float right = ImGui::CalcTextSize(zoom_text).x + ImGui::CalcTextSize("Einpassen (F)").x +
+                      ImGui::CalcTextSize("?").x + 4.0f * style.FramePadding.x + 3.0f * style.ItemSpacing.x;
+  ImGui::SameLine(std::max(ImGui::GetCursorPosX(), ImGui::GetWindowContentRegionMax().x - right));
+  ImGui::TextUnformatted(zoom_text);
+  ImGui::SameLine();
+  if (ImGui::Button("Einpassen (F)")) zoom_ = 1.0f, pan_ = {};
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    ImGui::SetTooltip("Mausrad: zoomen\nmittlere Maustaste: verschieben\nRechtsklick: Menü");
+  ImGui::SameLine();
+  if (ImGui::Button("?")) ImGui::OpenPopup("kuerzel");
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) ImGui::SetTooltip("Tastenkürzel");
+  if (ImGui::BeginPopup("kuerzel")) {
+    static const char* rows[][2] = {
+        {"Leertaste", "Start / Pause"},
+        {"R", "Zurücksetzen"},
+        {"Umschalt+R/K/I/T/B", "neues Rechteck, Kreis, Ring, Taper, Bogen"},
+        {"Umschalt+G/Q/M/P", "neue Gruppe, Quelle, Monitor, Port (in der gewählten Gruppe)"},
+        {"Entf, Rücktaste", "Löschen"},
+        {"Strg+Z, Strg+Y", "Rückgängig, Wiederholen"},
+        {"Strg+C / X / V / D", "Kopieren, Ausschneiden, Einfügen, Duplizieren"},
+        {"Strg+A, Esc", "alles auswählen, Auswahl aufheben"},
+        {"Strg+G, Strg+Umschalt+G", "gruppieren, aus Gruppe lösen"},
+        {"Pfeiltasten", "verschieben um eine Zelle (Umschalt: 10 Zellen)"},
+        {"Q / E", "drehen um -15 / +15 Grad (Alt: 1 Grad)"},
+        {"Bild auf / Bild ab", "Form ganz nach vorn / hinten"},
+        {"H", "aktivieren / deaktivieren"},
+        {"F, + / -", "Ansicht einpassen, zoomen"},
+        {"Strg+Klick / Umschalt+Klick", "einzeln / Bereich auswählen (Liste)"},
+        {"Ziehen in der Liste", "Auswahl in eine Gruppe legen (unten frei: heraus)"},
+    };
+    if (ImGui::BeginTable("kuerzel_tabelle", 2, ImGuiTableFlags_RowBg)) {
+      for (const auto& row : rows) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextUnformatted(row[0]);
+        ImGui::TableNextColumn();
+        ImGui::TextDisabled("%s", row[1]);
+      }
+      ImGui::EndTable();
+    }
+    ImGui::EndPopup();
+  }
+}
+
 void FieldLab::draw_canvas(float height) {
   FieldScene& scene = designer_.project().field;
   ImGuiIO& io = ImGui::GetIO();
@@ -1622,17 +1644,6 @@ void FieldLab::draw_canvas(float height) {
   }
   draw->PopClipRect();
 
-  // Ansicht: Zoomstufe und Einpassen (oben rechts)
-  char zoom_text[48];
-  std::snprintf(zoom_text, sizeof zoom_text, "%.0f %%", 100.0 * zoom_);
-  const float button_width = ImGui::CalcTextSize("Einpassen (F)").x + 2.0f * ImGui::GetStyle().FramePadding.x;
-  ImGui::SetCursorScreenPos(
-      {area_max.x - button_width - ImGui::CalcTextSize(zoom_text).x - 20.0f, area_min.y + 6.0f});
-  ImGui::TextUnformatted(zoom_text);
-  ImGui::SameLine();
-  if (ImGui::SmallButton("Einpassen (F)")) zoom_ = 1.0f, pan_ = {};
-  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-    ImGui::SetTooltip("Mausrad: zoomen\nmittlere Maustaste: verschieben\nRechtsklick: Menü");
   ImGui::EndChild();
 }
 

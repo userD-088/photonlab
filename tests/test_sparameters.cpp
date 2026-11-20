@@ -204,3 +204,40 @@ TEST_CASE("S-Parameter-Extraktion lehnt ungültige Ports mit Klartext ab") {
   control.cancel_requested = true;
   CHECK(field::extract_sparameters(scene, nullptr, &control).cancelled);
 }
+
+TEST_CASE("Ports automatisch: ein Port je Wellenleiter am Rand, mit derselben Messung wie von Hand") {
+  // Richtkoppler: zwei Wellenleiter laufen links hinein und rechts hinaus
+  const field::FieldScene coupler = field::reference_scene("field_coupler");
+  const auto ports = field::auto_ports(coupler);
+  REQUIRE(ports.size() == coupler.ports.size());
+  int left = 0;
+  for (const auto& p : ports) {
+    CHECK(field::port_is_vertical(coupler, p));
+    if (field::port_inward_sign(coupler, p) > 0) ++left;
+    // Jeder automatische Port liegt quer über einem Kern und endet beidseits im Mantel
+    int core_points = 0;
+    for (int k = 0; k <= 100; ++k)
+      if (field::index_at(coupler, p.x1, p.y1 + (p.y2 - p.y1) * k / 100.0) > coupler.background_index) ++core_points;
+    CHECK(core_points > 0);
+    CHECK(field::index_at(coupler, p.x1, p.y1) == doctest::Approx(coupler.background_index));
+    CHECK(field::index_at(coupler, p.x1, p.y2) == doctest::Approx(coupler.background_index));
+  }
+  CHECK(left == 2);
+  CHECK(ports[0].name == "in1");
+
+  // Gerader Wellenleiter mit automatischen Ports: |S21| = 1 wie mit den Ports von Hand
+  field::FieldScene scene = field::reference_scene("field_gap");
+  scene.shapes.resize(1);
+  scene.ports = field::auto_ports(scene);
+  REQUIRE(scene.ports.size() == 2);
+  scene.sparameters.points = 4;
+  ThreadPool pool(2);
+  const field::SParameterResult r = field::extract_sparameters(scene, &pool);
+  for (std::size_t k = 0; k < r.wavelengths.size(); ++k)
+    CHECK(std::norm(r.at(k, 1, 0)) == doctest::Approx(1.0).epsilon(2e-3));
+
+  // Szene ohne Wellenleiter am Rand: keine Ports
+  field::FieldScene empty = scene;
+  empty.shapes.clear();
+  CHECK(field::auto_ports(empty).empty());
+}

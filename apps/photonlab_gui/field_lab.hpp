@@ -75,7 +75,8 @@ class FieldLab {
 
   void draw_field_tab();
   void draw_solvers_tab();
-  void draw_empty_state();
+  static field::FieldScene blank_scene();
+  void draw_toolbar();
   void draw_controls();
   void toggle_running();  // Start/Pause (auch Leertaste)
   void reset_run();       // Zurücksetzen (auch Taste R)
@@ -128,6 +129,7 @@ class FieldLab {
   InverseView inverse_view_;
   SParamView sparam_view_;
   FieldGateView field_gate_view_;
+  int pending_tab_ = -1;  // Reiter, der im nächsten Bild nach vorn kommt (0 Feld, 1 Bauteil)
   int solver_page_ = 0;  // Reiter "Moden und Bänder": 0 Querschnitt, 1 Bandstruktur, 2 3D-Wellenleiter
 
   std::uint64_t seen_generation_ = 0;

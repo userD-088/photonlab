@@ -124,7 +124,7 @@ void SParamView::show(const circuit::SParameterTable& table, const field::FieldS
   std::snprintf(name_buffer_, sizeof name_buffer_, "%s", table.name.c_str());
 }
 
-void SParamView::add_to_library(circuit::SParameterTable table) {
+bool SParamView::add_to_library(circuit::SParameterTable table) {
   io::Project& project = designer_.project();
   // gleicher Name: ersetzen (die Bauteile in der Schaltung übernehmen die neuen Werte)
   auto existing = std::find_if(project.sparameters.begin(), project.sparameters.end(),
@@ -136,13 +136,13 @@ void SParamView::add_to_library(circuit::SParameterTable table) {
         "'" + table.name +
             "' wird in der Schaltung benutzt und hat andere Ports; bitte anderen Namen wählen.",
         true);
-    return;
+    return false;
   }
   try {
     circuit::validate(table);
   } catch (const std::exception& e) {
     designer_.show_status(e.what(), true);
-    return;
+    return false;
   }
   const std::string name = table.name;
   if (replaced)
@@ -154,6 +154,7 @@ void SParamView::add_to_library(circuit::SParameterTable table) {
   designer_.show_status(
       std::string(replaced ? "Bauteil ersetzt: " : "Bauteil in die Bibliothek übernommen: ") +
       "sparam:" + name + " (Chip-Designer, Bauteilbibliothek)");
+  return true;
 }
 
 void SParamView::draw() {
@@ -161,15 +162,19 @@ void SParamView::draw() {
   io::Project& project = designer_.project();
   field::FieldScene& scene = project.field;
 
-  ImGui::BeginChild("einstellungen", ImVec2(ImGui::GetFontSize() * 21.0f, 0.0f), ImGuiChildFlags_Borders);
-  if (scene.empty()) {
-    ImGui::PushTextWrapPos(0.0f);
-    ImGui::TextDisabled(
-        "Keine Feld-Szene im Projekt. Im Reiter 'Feld' eine Szene anlegen oder ein Beispiel laden "
-        "(z. B. 'Feld: Richtkoppler mit S-Kurven').");
-    ImGui::PopTextWrapPos();
+  ImGui::BeginChild("einstellungen", ImVec2(ImGui::GetFontSize() * 22.0f, 0.0f), ImGuiChildFlags_Borders);
+  ImGui::PushTextWrapPos(0.0f);
+  ImGui::TextDisabled(
+      "Aus der Feld-Szene wird ein Bauteil für den Chip-Designer: PhotonLab misst die S-Matrix an den Ports "
+      "(wie viel Licht von jedem Port zu jedem anderen läuft, mit Phase) und legt sie als Tabelle über der "
+      "Wellenlänge ab. Gemessen wird einmal; das Ergebnis bleibt im Projekt.");
+  ImGui::PopTextWrapPos();
+  if (scene.empty() || scene.shapes.empty()) {
+    ImGui::Spacing();
+    ImGui::TextColored(ui_color_limited, "Zuerst im Reiter 'Feld' ein Bauteil zeichnen.");
   } else {
     draw_settings(scene);
+    draw_handover();
   }
   ImGui::Spacing();
   draw_library();
@@ -181,21 +186,33 @@ void SParamView::draw() {
 }
 
 void SParamView::draw_settings(field::FieldScene& scene) {
-  ImGui::SeparatorText("Extraktion");
-  ImGui::TextWrapped("Szene: %s", scene.name.c_str());
+  ImGui::SeparatorText("1  Ports (Anschlüsse des Bauteils)");
   if (scene.ports.empty()) {
-    ImGui::PushTextWrapPos(0.0f);
-    ImGui::TextColored(ui_color_limited,
-                       "Die Szene hat keine Ports. Im Reiter 'Feld' mit '+ Port' Linien quer über die "
-                       "Wellenleiter an den Rändern des Bauteils legen.");
-    ImGui::PopTextWrapPos();
-    return;
+    ImGui::TextColored(ui_color_limited, "Noch keine Ports.");
+  } else {
+    ImGui::Text("%zu Ports:", scene.ports.size());
+    for (const auto& p : scene.ports) {
+      ImGui::SameLine();
+      ImGui::TextUnformatted(p.name.c_str());
+    }
   }
-  ImGui::Text("%zu Ports:", scene.ports.size());
-  for (const auto& p : scene.ports) {
-    ImGui::SameLine();
-    ImGui::TextUnformatted(p.name.c_str());
+  if (ImGui::Button("Ports automatisch setzen")) {
+    auto ports = field::auto_ports(scene);
+    if (ports.empty()) {
+      designer_.show_status("Kein Wellenleiter kreuzt den Rand der Szene; Ports bitte mit '+ Port' setzen.", true);
+    } else {
+      scene.ports = std::move(ports);
+      designer_.mark_dirty();
+    }
   }
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    ImGui::SetTooltip(
+        "Je Wellenleiter, der den Rand der Szene kreuzt, eine Portlinie kurz vor der Randschicht:\n"
+        "links in1, in2 ..., rechts out1, out2 ..., oben und unten entsprechend.\n"
+        "Von Hand: im Reiter 'Feld' mit '+ Port' (Linie quer über den Wellenleiter).");
+  if (scene.ports.empty()) return;
+
+  ImGui::SeparatorText("2  Messen");
   auto& settings = scene.sparameters;
   double start_nm = settings.wavelength_start / units::nm, stop_nm = settings.wavelength_stop / units::nm;
   const double lo = 200.0, hi = 20000.0;
@@ -239,14 +256,14 @@ void SParamView::draw_settings(field::FieldScene& scene) {
     if (cached) {
       ImGui::PushTextWrapPos(0.0f);
       ImGui::TextColored(ui_color_good,
-                         "Diese Szene liegt mit gleichen Einstellungen schon als 'sparam:%s' in der "
-                         "Bibliothek (Cache).",
+                         "Schon gemessen: liegt mit gleicher Geometrie und gleichen Einstellungen als "
+                         "'sparam:%s' in der Bibliothek.",
                          cached->name.c_str());
       ImGui::PopTextWrapPos();
       if (ImGui::Button("Anzeigen")) show(*cached, nullptr);
       ImGui::SameLine();
     }
-    if (ImGui::Button(cached ? "Trotzdem neu rechnen" : "S-Parameter extrahieren")) start();
+    if (ImGui::Button(cached ? "Trotzdem neu messen" : "S-Matrix messen")) start();
   }
   if (!error_.empty()) {
     ImGui::PushTextWrapPos(0.0f);
@@ -259,6 +276,32 @@ void SParamView::draw_settings(field::FieldScene& scene) {
       "Je Port ein breitbandiger Modenpuls; an allen Ports wird die ein- und auslaufende Mode "
       "gemessen. 2D-Rechnung: Abstrahlung nach oben und unten fehlt, Brechzahlen ohne Dispersion.");
   ImGui::PopTextWrapPos();
+}
+
+// Schritt 3: gemessene Tabelle als Bauteil in den Chip-Designer
+void SParamView::draw_handover() {
+  ImGui::SeparatorText("3  In den Chip-Designer");
+  if (!has_table_) {
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("Nach der Messung (oder 'Anzeigen' aus der Bibliothek).");
+    ImGui::PopTextWrapPos();
+    return;
+  }
+  ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
+  ImGui::InputText("Name", name_buffer_, sizeof name_buffer_);
+  auto handover = [&](bool place) {
+    circuit::SParameterTable copy = table_;
+    copy.name = name_buffer_;
+    copy.label = name_buffer_;
+    if (copy.name.empty()) return;
+    const std::string type = circuit::sparameter_type_name(copy.name);
+    if (add_to_library(std::move(copy)) && place) designer_.place_instance(type);
+  };
+  if (ImGui::Button("In die Bibliothek")) handover(false);
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    ImGui::SetTooltip("Steht dann im Chip-Designer in der Bauteilbibliothek (Klick fügt es ein).");
+  ImGui::SameLine();
+  if (ImGui::Button("... und in die Schaltung setzen")) handover(true);
 }
 
 void SParamView::draw_library() {
@@ -294,7 +337,12 @@ void SParamView::draw_library() {
 
 void SParamView::draw_result() {
   if (!has_table_) {
-    ImGui::TextDisabled("Noch kein Ergebnis.");
+    ImGui::PushTextWrapPos(ImGui::GetFontSize() * 36.0f);
+    ImGui::TextDisabled(
+        "Noch keine Messung. Hier erscheint die S-Matrix über der Wellenlänge: für jeden Eingangsport, wie "
+        "viel Leistung an jedem Port herauskommt (Durchgang, Übersprechen, Reflexion). Im Chip-Designer "
+        "verhält sich das Bauteil dann genau so, interpoliert zwischen den gemessenen Wellenlängen.");
+    ImGui::PopTextWrapPos();
     return;
   }
   const circuit::SParameterTable& t = table_;
@@ -321,18 +369,7 @@ void SParamView::draw_result() {
                      "  Passivität: größte Spaltensumme %.4f%s", worst_column,
                      worst_column < 0.999 ? " (Rest wird abgestrahlt)" : "");
 
-  // Übernahme
-  ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
-  ImGui::InputText("Name", name_buffer_, sizeof name_buffer_);
-  ImGui::SameLine();
-  if (ImGui::Button("In die Bauteilbibliothek übernehmen")) {
-    circuit::SParameterTable copy = t;
-    copy.name = name_buffer_;
-    copy.label = name_buffer_;
-    add_to_library(std::move(copy));
-  }
-  ImGui::SameLine();
-  if (ImGui::Button("Als .sparam.json speichern"))
+  if (ImGui::SmallButton("Als .sparam.json speichern"))
     show_file_dialog(DialogKind::save_sparam, designer_.window());
 
   // Plot: alle Ausgänge bei Anregung an einem Port

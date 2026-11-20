@@ -283,6 +283,14 @@ void ChipDesigner::add_instance(const std::string& type_name, int grid_x, int gr
   touch();
 }
 
+void ChipDesigner::place_instance(const std::string& type) {
+  int y = 2;
+  for (const auto& instance : project_.circuit.instances) y = std::max(y, instance.grid_y + 4);
+  add_instance(type, 2, project_.circuit.instances.empty() ? 2 : y);
+  fit_view_ = 3;
+  ImGui::SetWindowFocus(window_canvas);
+}
+
 void ChipDesigner::rename_selected(const std::string& new_name) {
   if (new_name == selected_) return;
   if (new_name.empty() || new_name.find('.') != std::string::npos) {

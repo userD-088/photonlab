@@ -1,6 +1,7 @@
 #pragma once
-// Reiter "S-Parameter" des Bauteil-Labors: Extraktion an den Ports der Feld-Szene (als Job), Anzeige der
-// S-Matrix über der Wellenlänge, Übernahme in die Bauteilbibliothek des Chip-Designers (Brücke 1).
+// Reiter "Bauteil für den Chip-Designer" des Bauteil-Labors (Bauteil-Designer): Ports festlegen (auch
+// automatisch), S-Matrix aus der Feld-Szene messen (Job, Ergebnis im Projekt zwischengespeichert), als
+// Bauteil "sparam:<name>" in die Bibliothek des Chip-Designers und auf Wunsch gleich in die Schaltung.
 #include <future>
 #include <memory>
 #include <string>
@@ -37,7 +38,8 @@ class SParamView {
   void draw_result();
   void draw_library();
   void show(const circuit::SParameterTable& table, const field::FieldScene* scene);
-  void add_to_library(circuit::SParameterTable table);
+  bool add_to_library(circuit::SParameterTable table);
+  void draw_handover();
 
   ThreadPool& pool_;
   ChipDesigner& designer_;

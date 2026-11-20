@@ -40,6 +40,11 @@ void validate_sparameter_setup(const FieldScene& scene);
 SParameterResult extract_sparameters(const FieldScene& scene, ThreadPool* pool = nullptr,
                                      JobControl* control = nullptr);
 
+// Ports an allen Wellenleitern, die eine Seite des Rechengebiets kreuzen (Kern = Brechzahl über dem
+// Hintergrund), je eine Linie kurz vor der Randschicht: links "in1", "in2" ... (von oben), rechts "out1" ...,
+// oben "oben1" ..., unten "unten1" .... Wellenleiter aus Löchern (Kristalle) erkennt das nicht.
+std::vector<Port> auto_ports(const FieldScene& scene);
+
 // Richtung ins Bauteil: +1, wenn sie entlang der positiven Achse zeigt (senkrechte Linie links, waagerechte
 // oben).
 int port_inward_sign(const FieldScene& scene, const Port& port);

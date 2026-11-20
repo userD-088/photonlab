@@ -1,5 +1,5 @@
 #pragma once
-// Reiter "Feld-Gatter (Kristall)" des Logik-Labors: Gatter auf Feld-Ebene (Y-Kombinierer im photonischen
+// Reiter "Logik prüfen" des Bauteil-Labors: Gatter auf Feld-Ebene (Y-Kombinierer im photonischen
 // Kristall) auswählen, die Wahrheitstabelle aus FDTD-Rechnungen erzeugen (Job mit Fortschritt) und das
 // Zeugnis mit Ampeln zeigen. Die Physik steht in libs/logic/field_gate.*.
 #include <future>

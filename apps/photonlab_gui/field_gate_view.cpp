@@ -147,7 +147,7 @@ void FieldGateView::draw_result() {
   ImGui::Spacing();
   ImGui::PushTextWrapPos(0.0f);
   ImGui::TextDisabled(
-      "Wellenlänge %.0f nm, Rechenzeit %.0f s. Schwellen der Ampeln wie im Logik-Labor der Schaltung "
+      "Wellenlänge %.0f nm, Rechenzeit %.0f s. Schwellen der Ampeln wie im Fenster Logik des Chip-Designers "
       "(Festlegung von PhotonLab, docs/physics/logic.md). Die Leistung ist der gemittelte Fluss durch die "
       "Monitorlinie; nur Verhältnisse haben Bedeutung.",
       report.wavelength / units::nm, result_.seconds);
@@ -197,7 +197,7 @@ void FieldGateView::draw() {
   } else {
     if (ImGui::Button("Wahrheitstabelle erzeugen")) start();
     ImGui::SameLine();
-    if (ImGui::Button("Szene im Bauteil-Labor öffnen")) designer_.load_example(scene_key(gate.name));
+    if (ImGui::Button("Szene im Reiter Feld öffnen")) designer_.load_example(scene_key(gate.name));
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
       ImGui::SetTooltip(
           "Lädt die Feld-Szene als Beispiel (ersetzt das Projekt, fragt bei ungespeicherten Änderungen).");
