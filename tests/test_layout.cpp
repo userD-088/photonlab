@@ -5,6 +5,8 @@
 
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/reference_scenes.hpp"
+#include "photonlab/io/project.hpp"
+#include "photonlab/layout/circuit_layout.hpp"
 #include "photonlab/layout/gds.hpp"
 #include "photonlab/layout/layout.hpp"
 
@@ -143,4 +145,56 @@ TEST_CASE("Layout: Taper als Trapez (Fläche exakt), Bogen als Ringausschnitt") 
   CHECK(signed_area(p[0]) == doctest::Approx(4000.0 * 0.5 * (500.0 + 1500.0)).epsilon(1e-12).scale(0.0));
   const double quarter = 0.25 * constants::pi * (3000.0 * 3000.0 - 2500.0 * 2500.0);
   CHECK(signed_area(p[1]) == doctest::Approx(quarter).epsilon(0.01).scale(0.0));
+}
+
+TEST_CASE("Layout der Schaltung: Kopplungslänge, gerader Weg, 8-Bit-Addierer als GDSII") {
+  const layout::CircuitLayoutSettings settings;
+  // gekoppelte Leistung sin²(kappa L): 50 % bei L = pi/(4 kappa), alles bei pi/(2 kappa)
+  CHECK(layout::coupler_length(0.5, settings) ==
+        doctest::Approx(constants::pi / (4.0 * settings.coupling_per_length)).epsilon(1e-12));
+  CHECK(layout::coupler_length(1.0, settings) ==
+        doctest::Approx(constants::pi / (2.0 * settings.coupling_per_length)).epsilon(1e-12));
+
+  // zwei Wellenleiter in einer Reihe, verbunden: drei gerade Stücke, Fläche = Länge * Breite
+  circuit::Circuit line;
+  line.add("a", "waveguide", {}, 0, 0);
+  line.add("b", "waveguide", {}, 10, 0);
+  line.connect("a.out", "b.in");
+  const auto& registry = circuit::ComponentRegistry::builtin();
+  layout::CircuitLayoutReport report;
+  const layout::Layout straight = layout::circuit_to_layout(line, registry, {}, settings, &report);
+  REQUIRE(straight.cells.size() == 1);
+  double area_nm2 = 0.0;
+  for (const auto& polygon : straight.cells[0].polygons)
+    if (polygon.layer == layout::layers::waveguide) area_nm2 += layout::signed_area(polygon);
+  const double pitch_um = settings.pitch / 1e-6;
+  const double length_um = 5.0 * pitch_um + 5.0 * pitch_um + 5.0 * pitch_um;  // a, Verbindung, b
+  CHECK(area_nm2 * 1e-6 == doctest::Approx(length_um * 0.5).epsilon(1e-3));
+  CHECK(report.crossings == 0);
+
+  // 8-Bit-Addierer: alle Heizer gezeichnet (33 Schalter mit je zwei), GDSII hin und zurück
+  const io::Project adder = io::reference_project("adder8");
+  const layout::Layout chip = layout::circuit_to_layout(adder.circuit, registry, {}, settings, &report);
+  int heaters = 0, germanium = 0, grating = 0;
+  for (const auto& polygon : chip.cells[0].polygons) {
+    heaters += polygon.layer == layout::layers::heater;
+    germanium += polygon.layer == layout::layers::germanium;
+    grating += polygon.layer == layout::layers::grating;
+  }
+  CHECK(heaters == 2 * 33);
+  CHECK(germanium == 9);  // acht Summen und der Übertrag
+  CHECK(grating == 20);   // ein Gitterkoppler mit 20 Zähnen
+  CHECK(report.width > 1e-3);  // gut 1,5 mm lang bei 25 µm Raster
+  MESSAGE("8-Bit-Addierer: ", report.width * 1e3, " x ", report.height * 1e3, " mm, ", report.crossings,
+          " Kreuzungen");
+  const layout::Layout back = layout::read_gds(layout::write_gds(chip));
+  REQUIRE(back.cells.size() == 1);
+  CHECK(back.cells[0].polygons.size() == chip.cells[0].polygons.size());
+
+  // Addierer aus Zellen: Kasten im Chip, Inneres als eigene Zelle
+  const io::Project cells = io::reference_project("adder8_cells");
+  const layout::Layout hierarchical =
+      layout::circuit_to_layout(cells.circuit, *io::make_registry(cells), cells.subcircuits, settings, &report);
+  REQUIRE(hierarchical.cells.size() == 2);
+  CHECK(hierarchical.cells[1].name == "SUB_volladdierer");
 }

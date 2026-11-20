@@ -16,6 +16,7 @@
 #include "photonlab/circuit/sweep.hpp"
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/reference_scenes.hpp"
+#include "photonlab/layout/circuit_layout.hpp"
 #include "photonlab/layout/gds.hpp"
 #include "photonlab/layout/layout.hpp"
 #include "ui_util.hpp"
@@ -252,8 +253,8 @@ void ChipDesigner::handle_dialog_result() {
     std::string path = result->path;
     if (path_from_utf8(path).extension().empty()) path += ".gds";
     if (gds_writer_) try {
-        gds_writer_(path);
         set_status("Layout gespeichert: " + path);
+        gds_writer_(path);  // darf die Meldung ergänzen (Größe, Kreuzungen, Hinweise)
       } catch (const std::exception& e) {
         set_status(std::string("GDSII-Export fehlgeschlagen: ") + e.what(), true);
       }
@@ -717,6 +718,26 @@ void ChipDesigner::draw_file_menu(const std::function<void()>& more_examples) {
   if (ImGui::MenuItem("Speichern unter...", "Strg+Umschalt+S"))
     show_file_dialog(DialogKind::save_project, window_);
   ImGui::Separator();
+  if (ImGui::MenuItem("Schaltung als Chip-Layout (GDSII) exportieren...", nullptr, false,
+                      !project_.circuit.instances.empty())) {
+    request_gds_export([this, circuit = project_.circuit, subs = project_.subcircuits,
+                        registry = active_registry_ptr()](const std::string& path) {
+      layout::CircuitLayoutReport report;
+      const layout::Layout chip = layout::circuit_to_layout(circuit, *registry, subs, {}, &report);
+      layout::write_gds_file(chip, path_from_utf8(path).string());
+      char text[160];
+      std::snprintf(text, sizeof text, "Chip-Layout gespeichert: %.2f x %.2f mm, %d Kreuzungen. ",
+                    report.width * 1e3, report.height * 1e3, report.crossings);
+      std::string notes;
+      for (const auto& n : report.notes) notes += n + " ";
+      set_status(text + notes, report.crossings > 0);
+    });
+  }
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled))
+    ImGui::SetTooltip(
+        "Je Bauteil eine Zelle (Koppler aus Kopplungslänge, MZI-Schalter mit Heizern, Ringe, Gitterkoppler,\n"
+        "Photodioden), platziert nach dem Raster (25 µm je Zelle), Verbindungen als Wellenleiter mit Bögen.\n"
+        "Ein Entwurf: Heizer nicht zu Bondflächen verdrahtet, keine Prüfung der Abstände.");
   if (ImGui::MenuItem("Feld-Szene als GDSII exportieren...", nullptr, false, !project_.field.empty())) {
     request_gds_export([scene = project_.field](const std::string& path) {
       layout::write_gds_file(layout::scene_to_layout(scene), path_from_utf8(path).string());

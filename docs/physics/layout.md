@@ -41,4 +41,33 @@ Referenzen). Er dient den Tests (Hin und Zurück) und ist kein allgemeiner GDSII
 - Kein Gegentest mit KLayout oder gdstk im Projekt (keine zusätzliche Abhängigkeit); geprüft sind Satzaufbau,
   Zahlenformat und Hin und Zurück.
 - Nur Polygone (BOUNDARY), eine Zelle je Layout, keine Hierarchie, keine Texte (#120).
-- Die Schaltung des Chip-Designers hat keine Geometrie; exportiert werden Feld-Szenen und inverse Designs.
+- Die Schaltung des Chip-Designers wird als Entwurf gezeichnet (nächster Abschnitt), nicht als fertige Maske.
+
+## Chip-Layout aus der Schaltung (`circuit_layout.*`)
+
+Oberfläche: Datei → „Schaltung als Chip-Layout (GDSII) exportieren ...". CLI: `photonlab_cli gds <datei> --chip
+--out <aus.gds>`. Zelle „CHIP“, Unterschaltungen als Kasten mit eigener Zelle „SUB_<name>“.
+
+- **Platzierung** nach dem Raster des Editors: eine Rasterzelle = 30 µm, ein Bauteil 5 Zellen (150 µm) breit,
+  Ports 2 Zellen (60 µm) übereinander, linke Ports links, rechte rechts – wie auf der Zeichenfläche.
+- **Wellenleiter** 500 nm breit, Bögen mit 5 µm Radius (enger, wenn der Platz fehlt: S-Bögen zwischen nahen
+  Ports); Wege nur waagerecht/senkrecht, Ecken als Kreisbögen (je 90° mindestens 16 Stücke).
+  Senkrechte Stücke verschiedener Verbindungen bekommen eigene Bahnen im Abstand von 3 µm; Kreuzungen
+  werden gezählt und gemeldet (dort gehören Kreuzungsbauteile hin).
+- **Richtkoppler**: zwei parallele Stücke mit 200 nm Spalt, Länge aus der Kopplung:
+  `P_kreuz = sin²(κ·L)` ⇒ `L = asin(√κ²)/κ` mit κ = 0,12 µm⁻¹ (Annahme, Größenordnung für 500 × 220 nm mit
+  200 nm Spalt; im Bauteil-Labor nachmessen). 50:50 ⇒ 6,5 µm.
+- **MZI-Schalter**: Koppler – Arme 12 µm auseinander mit TiN-Heizern (Länge = Parameter, 2 µm breit) –
+  Koppler; Kontakte 20 µm. Reicht der Platz nicht, wird der Heizer gekürzt (Hinweis).
+- **Ringe**: echter Radius, Bus mit 200 nm Spalt; Add-Drop mit zwei Bussen; PN-Ring mit p- und n-Gebiet.
+- **Gitterkoppler**: 20 Perioden zu 0,63 µm (halb geätzt, Lage 2), 12 µm breit, 15 µm Taper.
+- **Photodiode/Detektor**: Germanium-Block 14 × 4 µm am Wellenleiterende, zwei Kontakte.
+- **Laser** liegen außerhalb des Chips (Faser auf den Gitterkoppler) und werden nicht gezeichnet.
+- **Lagen**: 1 Si (voll geätzt), 2 Gitter, 11 Heizer, 12 Metall, 20 Ge, 21/22 p/n, 23 GST, 24 III-V, 99 Umriss
+  von Bauteilen ohne Geometrie (gemessene S-Parameter, Plugins). Die Nummern sind frei gewählt; vor der
+  Fertigung auf die Lagen des Prozesses (PDK) umsetzen.
+
+Nicht enthalten: Verdrahtung der Heizer zu Bondflächen, Abstandsregeln (DRC), Meanderlängen nach dem
+Parameter „Länge“ (Wellenleiterlängen folgen dem Raster), Kreuzungsbauteile. Prüfung (`test_layout.cpp`):
+Kopplungslänge gegen die Formel, gerader Weg mit Fläche Länge × Breite, 8-Bit-Addierer mit allen 66 Heizern,
+9 Photodioden, 20 Gitterzähnen und GDSII hin und zurück, Addierer aus Zellen mit eigener Zelle.

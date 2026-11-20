@@ -182,6 +182,14 @@ void chip_designer() {
   bullet("Verbinden: von Port zu Port ziehen; Trennen: Rechtsklick auf einen Port.");
   bullet("Verschieben: Bauteil ziehen; Löschen: Entf oder Rechtsklick.");
   bullet("Ansicht: Fläche ziehen verschiebt, Mausrad zoomt, 'Alles zeigen' passt ein.");
+  heading("Vom Schaltplan zum Chip");
+  paragraph(
+      "Datei > 'Schaltung als Chip-Layout (GDSII) exportieren' zeichnet die Schaltung als Maskenentwurf: "
+      "jedes "
+      "Bauteil als Zelle (Koppler mit berechneter Länge, MZI-Schalter mit Heizern, Ringe, Gitterkoppler, "
+      "Photodioden), platziert wie im Editor (30 µm je Rasterzelle), Verbindungen als Wellenleiter mit "
+      "Bögen. "
+      "Kreuzungen und fehlende Teile (Bondflächen, Abstandsregeln) meldet die Statuszeile.");
   heading("Baubar");
   paragraph(
       "Die Addierer-Beispiele bestehen nur aus Teilen eines Standard-Siliziumprozesses: Gitterkoppler, "

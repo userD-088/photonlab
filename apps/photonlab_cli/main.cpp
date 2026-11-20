@@ -38,6 +38,7 @@
 #include "photonlab/field/spectrum.hpp"
 #include "photonlab/field/waveguide3d.hpp"
 #include "photonlab/io/project.hpp"
+#include "photonlab/layout/circuit_layout.hpp"
 #include "photonlab/layout/gds.hpp"
 #include "photonlab/layout/layout.hpp"
 #include "photonlab/logic/field_gate.hpp"
@@ -106,6 +107,7 @@ void print_usage() {
       "Modenlöser\n"
       "  photonlab_cli bench [--size N] [--threads N] Geschwindigkeit von 2D- und 3D-FDTD (Mio. Zellen je "
       "Sekunde)\n"
+      "  photonlab_cli gds <datei.plab.json> --chip --out <aus.gds>   Schaltung als Chip-Layout (GDSII)\n"
       "  photonlab_cli gds <datei.plab.json> --out <aus.gds>   Feld-Szene als GDSII-Layout (je Brechzahl "
       "eine "
       "Lage)\n"
@@ -1382,12 +1384,25 @@ int cmd_plugins() {
   return 0;
 }
 
-int cmd_gds(const std::string& file, const std::string& out) {
+int cmd_gds(const std::string& file, const std::string& out, bool chip) {
   if (out.empty()) {
     std::fprintf(stderr, "Fehler: Zieldatei fehlt (--out <aus.gds>)\n");
     return 2;
   }
   const io::Project project = io::load_project(file);
+  if (chip) {
+    // Schaltung des Chip-Designers als Layout (Bauteil-Zellen, Wellenleiter mit Bögen)
+    layout::CircuitLayoutReport report;
+    const layout::Layout lay = layout::circuit_to_layout(project.circuit, *io::make_registry(project),
+                                                         project.subcircuits, {}, &report);
+    layout::write_gds_file(lay, out);
+    std::printf("GDSII: %zu Zelle(n), %d Bauteile, Chip %.3f x %.3f mm, %d Kreuzungen, nach %s\n",
+                lay.cells.size(), report.instances, report.width * 1e3, report.height * 1e3, report.crossings,
+                out.c_str());
+    for (const auto& l : lay.layers) std::printf("  Lage %d: %s\n", l.layer, l.name.c_str());
+    for (const auto& n : report.notes) std::printf("Hinweis: %s\n", n.c_str());
+    return 0;
+  }
   if (project.field.empty()) {
     std::fprintf(stderr, "Fehler: Die Datei enthält keine Feld-Szene (Abschnitt \"field\").\n");
     return 1;
@@ -1516,7 +1531,7 @@ int main(int argc, char** argv) {
       return cmd_bands(option("--lattice"), option("--radius"), option("--eps"), option("--hole-eps"),
                        option("--pol"), option("--cutoff"), option("--a-nm"), option("--csv"));
     if (command == "validate") return cmd_validate(option("--out"));
-    if (command == "gds" && args.size() >= 2) return cmd_gds(args[1], option("--out"));
+    if (command == "gds" && args.size() >= 2) return cmd_gds(args[1], option("--out"), flag("--chip"));
     if (command == "inverse-design")
       return cmd_inverse_design(option("--iterations"), option("--out-gds"), option("--csv"));
     if (command == "plugins") return cmd_plugins();
