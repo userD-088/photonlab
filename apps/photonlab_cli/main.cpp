@@ -29,6 +29,7 @@
 #include "photonlab/core/units.hpp"
 #include "photonlab/field/fdtd.hpp"
 #include "photonlab/field/fdtd3d.hpp"
+#include "photonlab/field/gpu.hpp"
 #include "photonlab/field/inverse_design.hpp"
 #include "photonlab/field/reference_scenes.hpp"
 #include "photonlab/field/sparameters.hpp"
@@ -125,6 +126,8 @@ void print_usage() {
       "                                               90-Grad-Knick per Adjoint-Methode optimieren (2D-FDTD, "
       "Ez)\n"
       "  photonlab_cli plugins                        geladene Bauteil-Plugins und ihre Bauteile\n"
+      "  Option für alle Befehle: --gpu                2D-FDTD auf der Grafikkarte (OpenCL), falls "
+      "vorhanden\n"
       "  Option für alle Befehle: --plugin <datei>    Plugin laden (zusätzlich: Ordner plugins neben dem "
       "Programm,\n"
       "                                               Umgebungsvariable PHOTONLAB_PLUGINS mit Pfaden)\n"
@@ -699,11 +702,20 @@ int cmd_field_gate(const std::string& name, const std::string& csv_path) {
     std::printf("\n");
   }
   std::printf("\n");
+  // Einheit des Ausgangs: Fluss in W/m, Modenmonitor als Mittel von a^2
+  auto unit_of = [&](std::size_t k) -> std::string {
+    const auto& out = gate.outputs[k];
+    const auto& scene = gate.scenes[out.scene];
+    for (const auto& m : scene.monitors)
+      if (m.name == out.monitor && m.kind == field::MonitorKind::mode)
+        return scene.polarization == field::Polarization::ez ? "(V/m)^2" : "(A/m)^2";
+    return "W/m";
+  };
   for (std::size_t k = 0; k < gate.outputs.size(); ++k) {
     const auto& a = report.outputs[k];
-    std::printf("%s: Funktion %s, schlechteste 1 / schlechteste 0 = Kontrast %s, Schwelle %.3g W/m\n",
+    std::printf("%s: Funktion %s, schlechteste 1 / schlechteste 0 = Kontrast %s, Schwelle %.3g %s\n",
                 gate.outputs[k].name.c_str(), a.separable ? "korrekt" : "FALSCH",
-                logic::format_db(a.contrast_db).c_str(), a.threshold);
+                logic::format_db(a.contrast_db).c_str(), a.threshold, unit_of(k).c_str());
   }
   std::printf("\nZeugnis (Wellenlaenge %.0f nm):\n", report.wavelength / units::nm);
   for (const auto& c : report.criteria)
@@ -714,7 +726,8 @@ int cmd_field_gate(const std::string& name, const std::string& csv_path) {
     csv.precision(8);
     for (const auto& in : gate.inputs) csv << in.name << ',';
     for (std::size_t k = 0; k < gate.outputs.size(); ++k)
-      csv << gate.outputs[k].name << "_W_per_m,erwartet" << (k + 1 < gate.outputs.size() ? "," : "");
+      csv << gate.outputs[k].name << (unit_of(k) == "W/m" ? "_W_per_m" : "_a2") << ",erwartet"
+          << (k + 1 < gate.outputs.size() ? "," : "");
     csv << '\n';
     for (std::size_t r = 0; r < report.table.rows.size(); ++r) {
       for (const int b : report.table.rows[r].bits) csv << b << ',';
@@ -1404,6 +1417,18 @@ int cmd_bench(const std::string& size_text, const std::string& threads_text) {
                   polarization == field::Polarization::ez ? "Ez" : "Hz", sim.threads(), rate / 1e6,
                   rate / reference);
     }
+    if (field::gpu::enabled()) {  // mit --gpu: dieselbe Rechnung auf der Grafikkarte
+      field::Fdtd sim(scene);
+      sim.run(5);
+      sim.field();  // warten, bis die Grafikkarte fertig ist
+      const auto start = std::chrono::steady_clock::now();
+      sim.run(static_cast<std::size_t>(steps));
+      sim.field();
+      const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+      const double rate = static_cast<double>(n) * n * steps / seconds;
+      std::printf("2D %s, Grafikkarte:                         %8.1f Mio. Zellen/s  (%.1fx Referenz)\n",
+                  polarization == field::Polarization::ez ? "Ez" : "Hz", rate / 1e6, rate / reference);
+    }
   }
   {
     field::Scene3d scene;
@@ -1657,6 +1682,13 @@ int main(int argc, char** argv) {
 
   try {
     load_cli_plugins(argc > 0 ? argv[0] : "", args);
+    if (flag("--gpu")) {
+      field::gpu::set_enabled(true);
+      const auto& device = field::gpu::device();
+      std::fprintf(
+          stderr, "Grafikkarte: %s\n",
+          device.available ? (device.name + " (" + device.platform + ")").c_str() : device.reason.c_str());
+    }
     const std::string& command = args[0];
     if (command == "--info") return cmd_info();
     if (command == "components") return cmd_components();

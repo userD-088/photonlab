@@ -204,6 +204,21 @@ void validate(const FieldScene& scene) {
     }
     if (!(source.ramp_periods >= 0.0) || !(source.beam_width >= 0.0))
       throw FieldError(who + "ungültige Einstellung");
+    if (source.direction != 0 && (source.kind != SourceKind::mode ||
+                                  source.signal != SignalKind::continuous || std::abs(source.direction) != 1))
+      throw FieldError(who +
+                       "nur eine Modenquelle mit Dauerstrich strahlt einseitig (Richtung -1, 0 oder 1)");
+    if (!source.trigger.empty()) {
+      const auto monitor = std::find_if(scene.monitors.begin(), scene.monitors.end(),
+                                        [&](const Monitor& m) { return m.name == source.trigger; });
+      if (monitor == scene.monitors.end() || monitor->kind == MonitorKind::point)
+        throw FieldError(who + "der Auslöser '" + source.trigger +
+                         "' muss ein Fluss- oder Modenmonitor der Szene sein");
+      if (source.signal != SignalKind::continuous)
+        throw FieldError(who + "ein Regenerator sendet Dauerstrich (kein Puls)");
+      if (!(source.trigger_threshold >= 0.0) || !(source.trigger_delay >= 0.0))
+        throw FieldError(who + "Schwelle und Verzögerung dürfen nicht negativ sein");
+    }
   }
   for (const auto& monitor : scene.monitors) {
     const std::string who = "Monitor '" + monitor.name + "': ";

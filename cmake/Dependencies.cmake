@@ -23,6 +23,19 @@ FetchContent_Declare(nlohmann_json
   GIT_SHALLOW    TRUE)
 FetchContent_MakeAvailable(nlohmann_json)
 
+if(PHOTONLAB_OPENCL)
+  # OpenCL-Header von Khronos (nur Header). Keine Bibliothek zum Linken: libs/field lädt OpenCL.dll bzw.
+  # libOpenCL.so des Grafiktreibers zur Laufzeit.
+  FetchContent_Declare(opencl_headers
+    GIT_REPOSITORY https://github.com/KhronosGroup/OpenCL-Headers.git
+    GIT_TAG        v2024.10.24
+    GIT_SHALLOW    TRUE
+    SOURCE_SUBDIR  photonlab-kein-cmake)
+  FetchContent_MakeAvailable(opencl_headers)
+  add_library(photonlab_opencl_headers INTERFACE)
+  target_include_directories(photonlab_opencl_headers SYSTEM INTERFACE ${opencl_headers_SOURCE_DIR})
+endif()
+
 if(PHOTONLAB_BUILD_GUI)
   # SDL3 – statisch gelinkt, damit unter Windows keine DLL kopiert werden muss
   set(SDL_SHARED OFF CACHE BOOL "" FORCE)

@@ -11,6 +11,9 @@ option(PHOTONLAB_BUILD_TESTS "Tests bauen"                 ON)
 # Befehlssatz des eigenen Prozessors (AVX2 usw.): im 3D-FDTD etwa ein Drittel schneller, das Programm läuft
 # dann aber nur auf Prozessoren mit denselben Befehlen (docs/performance.md)
 option(PHOTONLAB_NATIVE      "Für den eigenen Prozessor optimieren" OFF)
+# Grafikkarte über OpenCL für das 2D-FDTD (docs/performance.md). Gebraucht werden nur die Header; die
+# OpenCL-Bibliothek des Treibers wird zur Laufzeit geladen, ohne sie rechnet alles auf dem Prozessor.
+option(PHOTONLAB_OPENCL      "2D-FDTD auf der Grafikkarte (OpenCL)" ON)
 if(PHOTONLAB_NATIVE)
   if(MSVC)
     add_compile_options(/arch:AVX2)

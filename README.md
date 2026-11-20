@@ -26,6 +26,8 @@ S-Parameter vom Feld in die Schaltung, Modenlöser, Schaltungen und Logik-Labor.
 3. **Git** (git-scm.com)
 4. **VS Code** mit den empfohlenen Erweiterungen (VS Code schlägt sie beim Öffnen vor)
 
+Grafikkarte (optional): Das 2D-FDTD rechnet über OpenCL auf der Grafikkarte, wenn der Grafiktreiber OpenCL mitbringt (AMD Adrenalin, NVIDIA, Intel). Nichts zusätzlich zu installieren; ohne passenden Treiber rechnet alles auf dem Prozessor. Umschalten unter Ansicht > Grafikkarte, in der Kommandozeile mit `--gpu`.
+
 Unter Linux: `gcc`/`clang`, `cmake`, `ninja` und die X11/Wayland-Entwicklungspakete (siehe `.github/workflows/ci.yml`).
 
 ## Bauen und starten

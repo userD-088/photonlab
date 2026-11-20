@@ -12,6 +12,7 @@
 #include "imgui_internal.h"  // SetKeyOwner (Leertaste)
 #include "implot.h"
 #include "photonlab/core/units.hpp"
+#include "photonlab/field/gpu.hpp"
 #include "photonlab/field/reference_scenes.hpp"
 #include "photonlab/field/sparameters.hpp"
 #include "photonlab/field/spectrum.hpp"
@@ -32,6 +33,7 @@ const ImU32 color_source = field_lab_color_source;
 const ImU32 color_monitor = field_lab_color_monitor;
 const ImU32 color_disabled = IM_COL32(150, 150, 150, 90);  // deaktivierte Objekte
 const ImU32 color_group = IM_COL32(120, 190, 255, 255);
+const ImU32 color_link = IM_COL32(255, 220, 90, 200);  // Regenerator: Detektor -> Sender
 const ImU32 color_port = IM_COL32(214, 132, 255, 255);
 const ImU32 color_outline = IM_COL32(227, 232, 239, 110);
 const ImU32 color_selected = IM_COL32(255, 255, 255, 255);
@@ -241,6 +243,7 @@ void FieldLab::rebuild() {
   if (!fixed_scale_) scale_ = 0.0f;
   const FieldScene& scene = designer_.project().field;
   if (scene.empty()) return;
+  gpu_setting_ = field::gpu::enabled();
   try {
     sim_ = std::make_shared<field::Fdtd>(scene);
   } catch (const std::exception& e) {
@@ -344,6 +347,7 @@ void FieldLab::draw() {
 
   const bool visible = ImGui::Begin(window_name);
   if (!visible) {
+    release_keys();
     pause();  // unsichtbar: keine Rechenzeit verbrauchen
     ImGui::End();
     return;
@@ -355,7 +359,8 @@ void FieldLab::draw() {
       draw_field_tab();
       ImGui::EndTabItem();
     } else {
-      pause();  // im anderen Reiter keine Rechenzeit verbrauchen
+      release_keys();  // Leertaste und Pfeile gehören dann wieder der Oberfläche
+      pause();         // im anderen Reiter keine Rechenzeit verbrauchen
     }
     if (ImGui::BeginTabItem("Querschnitt (Moden)")) {
       mode_view_.draw();
@@ -399,6 +404,7 @@ void FieldLab::draw_field_tab() {
     pause();
     want_running_ = false;
   }
+  if (sim_ && field::gpu::enabled() != gpu_setting_) reset_run();  // Ansicht > Grafikkarte umgeschaltet
   if (want_running_ && !running() && sim_) start();
   if (running()) fetch_snapshot();
   update_texture();
@@ -414,6 +420,7 @@ void FieldLab::draw_field_tab() {
   draw_scene_settings();
   ImGui::EndChild();
   handle_shortcuts();
+  track_history();
   ImGui::SameLine();
   ImGui::BeginChild("haupt", ImVec2(0.0f, 0.0f));
   const float available = ImGui::GetContentRegionAvail().y;
@@ -494,6 +501,18 @@ void FieldLab::draw_controls() {
           "Prüfgröße: sie steigt, solange die Quelle einspeist, und darf ohne Quelle\nnicht wachsen - "
           "wächst sie trotzdem, ist die Rechnung instabil.",
           step_, sim_->time_step() / units::fs, energy_);
+    if (sim_) {
+      // Rechengerät: Grafikkarte (OpenCL) oder Prozessor
+      if (sim_->on_gpu())
+        ImGui::TextDisabled("Grafikkarte: %s", field::gpu::device().name.c_str());
+      else
+        ImGui::TextDisabled("Prozessor, %d Thread(s)", sim_->threads());
+      if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip("%s", sim_->on_gpu() ? "Umschalten: Ansicht > Grafikkarte"
+                                : field::gpu::device().available
+                                    ? "Kerr-Formen rechnen nur auf dem Prozessor."
+                                    : field::gpu::device().reason.c_str());
+    }
 
     // Ein Regler für das Tempo: Schritte je Bild, ganz rechts "max" = rechnen, so schnell es geht
     int tempo = full_speed_ ? 61 : steps_per_frame_;
@@ -748,6 +767,39 @@ void FieldLab::draw_add_toolbar() {
     if (ImGui::SmallButton(entries[k].label)) add_new(entries[k].what);
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) ImGui::SetTooltip("%s", entries[k].tip);
   }
+  if (ImGui::SmallButton("Bausteine ...")) ImGui::OpenPopup("bausteine");
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    ImGui::SetTooltip(
+        "Fertige Teile als Gruppe: Y-Verzweigung, Richtkoppler, Halbaddierer-Chip, Regenerator ...");
+  if (ImGui::BeginPopup("bausteine")) {
+    FieldScene& scene = designer_.project().field;
+    for (const auto& name : field::building_block_names())
+      if (ImGui::MenuItem(field::building_block_label(name).c_str())) {
+        const int parent = target_group();
+        double x = 0.5 * scene.width, y = 0.5 * scene.height;
+        if (parent >= 0)
+          x = scene.groups[static_cast<std::size_t>(parent)].x,
+          y = scene.groups[static_cast<std::size_t>(parent)].y;
+        const int group = field::add_building_block(scene, name, x, y, parent);
+        select({ObjectKind::group, group}, false);
+        scene_changed_ = true;
+        designer_.mark_dirty();
+      }
+    ImGui::EndPopup();
+  }
+  ImGui::SameLine();
+  ImGui::BeginDisabled(undo_.empty());
+  if (ImGui::SmallButton("<")) undo();
+  ImGui::EndDisabled();
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled))
+    ImGui::SetTooltip("Rückgängig (Strg+Z)");
+  ImGui::SameLine();
+  ImGui::BeginDisabled(redo_.empty());
+  if (ImGui::SmallButton(">")) redo();
+  ImGui::EndDisabled();
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled))
+    ImGui::SetTooltip("Wiederholen (Strg+Y)");
+  ImGui::SameLine();
   if (ImGui::SmallButton("Tastenkürzel")) ImGui::OpenPopup("kuerzel");
   const int group = target_group();
   if (group >= 0) {
@@ -762,6 +814,7 @@ void FieldLab::draw_add_toolbar() {
         {"Umschalt+R/K/I/T/B", "neues Rechteck, Kreis, Ring, Taper, Bogen"},
         {"Umschalt+G/Q/M/P", "neue Gruppe, Quelle, Monitor, Port (in der gewählten Gruppe)"},
         {"Entf, Rücktaste", "Löschen"},
+        {"Strg+Z, Strg+Y", "Rückgängig, Wiederholen"},
         {"Strg+C / X / V / D", "Kopieren, Ausschneiden, Einfügen, Duplizieren"},
         {"Strg+A, Esc", "alles auswählen, Auswahl aufheben"},
         {"Strg+G, Strg+Umschalt+G", "gruppieren, aus Gruppe lösen"},
@@ -1082,6 +1135,20 @@ void FieldLab::draw_selected_object() {
       ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
       if (ImGui::DragInt("Modenordnung", &s.mode_order, 0.05f, 0, 9, "%d", ImGuiSliderFlags_AlwaysClamp))
         changed = true;
+      const bool vertical = std::abs(s.x2 - s.x1) < std::abs(s.y2 - s.y1);
+      const char* directions[] = {"nach beiden Seiten",
+                                  vertical ? "nur nach rechts (+x)" : "nur nach unten (+y)",
+                                  vertical ? "nur nach links (-x)" : "nur nach oben (-y)"};
+      int direction = s.direction == 0 ? 0 : s.direction > 0 ? 1 : 2;
+      ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
+      if (ImGui::Combo("Richtung", &direction, directions, 3)) {
+        s.direction = direction == 0 ? 0 : direction == 1 ? 1 : -1;
+        changed = true;
+      }
+      if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip(
+            "Einseitig: eine zweite Stromschicht löscht die Gegenrichtung aus (nur Dauerstrich).\nNützlich, "
+            "wenn hinter der Quelle ein anderes Bauteil liegt.");
       ImGui::TextDisabled(
           "Linie quer über den Wellenleiter legen\n(waagerecht oder senkrecht, bis in den Mantel).");
     }
@@ -1122,6 +1189,64 @@ void FieldLab::draw_selected_object() {
         s.pulse_duration = fs * units::fs;
         changed = true;
       }
+    }
+    // Regenerator: ein Fluss- oder Modenmonitor schaltet die Quelle (Detektor + Elektronik + Sender)
+    std::vector<const field::Monitor*> detectors;
+    for (const auto& m : scene.monitors)
+      if (m.kind != field::MonitorKind::point) detectors.push_back(&m);
+    bool regenerator = !s.trigger.empty();
+    ImGui::BeginDisabled(detectors.empty() && !regenerator);
+    if (ImGui::Checkbox("vom Detektor geschaltet (Regenerator)", &regenerator)) {
+      s.trigger = regenerator && !detectors.empty() ? detectors.front()->name : std::string();
+      if (regenerator) s.signal = field::SignalKind::continuous;
+      changed = true;
+    }
+    ImGui::EndDisabled();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled))
+      ImGui::SetTooltip(
+          "Empfänger + Elektronik + Laser: liegt das Licht am Detektor (Fluss- oder Modenmonitor) über\n"
+          "der Schwelle, geht diese Quelle nach der Verzögerung an, sonst aus. So lassen sich\n"
+          "Gatter hintereinanderschalten (z. B. Volladdierer aus zwei Halbaddierern).");
+    if (regenerator) {
+      ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
+      if (ImGui::BeginCombo("Detektor", s.trigger.c_str())) {
+        for (const auto* m : detectors)
+          if (ImGui::Selectable(m->name.c_str(), m->name == s.trigger)) s.trigger = m->name, changed = true;
+        ImGui::EndCombo();
+      }
+      const double t_lo = 1e-30, t_hi = 1e3;
+      ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7.0f);
+      if (ImGui::DragScalar("Schwelle", ImGuiDataType_Double, &s.trigger_threshold, 0.01f, &t_lo, &t_hi,
+                            "%.3g", ImGuiSliderFlags_Logarithmic))
+        changed = true;
+      // aktueller Pegel am Detektor: Mittel über eine Periode (Fluss) bzw. Mittel von a^2 (Mode)
+      for (const auto& data : monitors_)
+        if (data.name == s.trigger && data.sample_interval > 0.0 && !data.values.empty()) {
+          const auto window = std::min<std::size_t>(
+              data.values.size(),
+              std::max<std::size_t>(
+                  1, static_cast<std::size_t>(s.wavelength / constants::c0 / data.sample_interval)));
+          double sum = 0.0;
+          for (std::size_t k = data.values.size() - window; k < data.values.size(); ++k)
+            sum += data.kind == field::MonitorKind::mode ? data.values[k] * data.values[k] : data.values[k];
+          const double level = std::abs(sum / static_cast<double>(window));
+          ImGui::TextDisabled("Detektor jetzt: %.3g (%s)", level, level > s.trigger_threshold ? "an" : "aus");
+          if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+            ImGui::SetTooltip(
+                "Fluss: W/m, Mode: Mittel von a^2. Schwelle zwischen den Pegeln für 0 und 1 wählen.");
+        }
+      double delay_fs = s.trigger_delay / units::fs;
+      const double d_lo = 0.0, d_hi = 10000.0;
+      ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
+      if (ImGui::DragScalar("Verzögerung", ImGuiDataType_Double, &delay_fs, 1.0f, &d_lo, &d_hi, "%.0f fs",
+                            ImGuiSliderFlags_AlwaysClamp)) {
+        s.trigger_delay = delay_fs * units::fs;
+        changed = true;
+      }
+      if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip(
+            "Echte Empfänger brauchen 10-100 ps; hier zeitlich gestaucht, damit die Rechnung kurz bleibt.");
+      if (ImGui::Checkbox("invertiert (NICHT)", &s.trigger_invert)) changed = true;
     }
     if (ImGui::SmallButton("Quelle löschen")) {
       delete_selection();
@@ -1400,6 +1525,21 @@ void FieldLab::draw_canvas(float height) {
                   color_group, 2.0f);
     draw->AddText({a.x + r + 3.0f, a.y + 2.0f}, color_group, group.name.c_str());
   }
+  for (const auto& s : scene.sources) {
+    // Regenerator: gestrichelte Linie vom Detektor zum Sender (elektrische Verbindung)
+    if (s.trigger.empty()) continue;
+    for (const auto& m : scene.monitors) {
+      if (m.name != s.trigger) continue;
+      const ImVec2 from = to_screen(0.5 * (m.x1 + m.x2), 0.5 * (m.y1 + m.y2)), to = to_screen(s.x1, s.y1);
+      const float length = std::hypot(to.x - from.x, to.y - from.y), dash = 6.0f * ui_scale_;
+      for (float t = 0.0f; t < length; t += 2.0f * dash) {
+        const float t1 = std::min(length, t + dash);
+        draw->AddLine({from.x + (to.x - from.x) * t / length, from.y + (to.y - from.y) * t / length},
+                      {from.x + (to.x - from.x) * t1 / length, from.y + (to.y - from.y) * t1 / length},
+                      color_link, 1.5f);
+      }
+    }
+  }
   for (int i = 0; i < static_cast<int>(scene.sources.size()); ++i) {
     const auto& s = scene.sources[static_cast<std::size_t>(i)];
     const bool selected = is_selected(ObjectKind::source, i);
@@ -1653,6 +1793,12 @@ void FieldLab::paste(bool from_selection) {
     scene.ports.push_back(p);
     select({ObjectKind::port, static_cast<int>(scene.ports.size()) - 1}, true);
   }
+  // Kopien aus einem anderen Projekt können auf Gruppen zeigen, die es hier nicht gibt
+  const int groups = static_cast<int>(scene.groups.size());
+  for (auto& sh : scene.shapes) sh.group = sh.group < groups ? sh.group : -1;
+  for (auto& q : scene.sources) q.group = q.group < groups ? q.group : -1;
+  for (auto& m : scene.monitors) m.group = m.group < groups ? m.group : -1;
+  for (auto& p : scene.ports) p.group = p.group < groups ? p.group : -1;
   move_selection(0.0, 0.0);  // in das Rechengebiet zurückholen
   scene_changed_ = true;
   designer_.mark_dirty();
@@ -1875,15 +2021,65 @@ void FieldLab::ungroup_selection() {
   designer_.mark_dirty();
 }
 
+void FieldLab::track_history() {
+  // Eine Änderung gilt als abgeschlossen, wenn kein Regler mehr gezogen wird: dann ein Schnappschuss
+  const FieldScene& scene = designer_.project().field;
+  if (history_generation_ != designer_.project_generation()) {
+    history_generation_ = designer_.project_generation();
+    undo_.clear(), redo_.clear();
+    last_scene_ = scene;
+    return;
+  }
+  if (dragging_ || ImGui::IsAnyItemActive() || scene == last_scene_) return;
+  undo_.push_back(std::move(last_scene_));
+  if (undo_.size() > 100) undo_.erase(undo_.begin());
+  redo_.clear();
+  last_scene_ = scene;
+}
+
+void FieldLab::undo() {
+  if (undo_.empty()) return;
+  FieldScene& scene = designer_.project().field;
+  redo_.push_back(scene);
+  scene = std::move(undo_.back());
+  undo_.pop_back();
+  last_scene_ = scene;
+  clear_selection();
+  scene_changed_ = true;
+  designer_.mark_dirty();
+}
+
+void FieldLab::redo() {
+  if (redo_.empty()) return;
+  FieldScene& scene = designer_.project().field;
+  undo_.push_back(scene);
+  scene = std::move(redo_.back());
+  redo_.pop_back();
+  last_scene_ = scene;
+  clear_selection();
+  scene_changed_ = true;
+  designer_.mark_dirty();
+}
+
+void FieldLab::release_keys() {
+  for (ImGuiKey key :
+       {ImGuiKey_Space, ImGuiKey_LeftArrow, ImGuiKey_RightArrow, ImGuiKey_UpArrow, ImGuiKey_DownArrow})
+    if (key_owner_ != 0 && ImGui::GetKeyOwner(key) == key_owner_)
+      ImGui::SetKeyOwner(key, ImGuiKeyOwner_NoOwner);
+}
+
 void FieldLab::handle_shortcuts() {
   // nur, wenn das Bauteil-Labor den Fokus hat und kein Textfeld bearbeitet wird
   const ImGuiID space_owner = ImGui::GetID("leertaste");
+  key_owner_ = space_owner;
   if (ImGui::GetIO().WantTextInput || !ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
-    for (ImGuiKey key :
-         {ImGuiKey_Space, ImGuiKey_LeftArrow, ImGuiKey_RightArrow, ImGuiKey_UpArrow, ImGuiKey_DownArrow})
-      if (ImGui::GetKeyOwner(key) == space_owner) ImGui::SetKeyOwner(key, ImGuiKeyOwner_NoOwner);
+    release_keys();
     return;
   }
+  if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z)) undo();
+  if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Y) ||
+      ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Z))
+    redo();
   // Leertaste gehört hier Start/Pause: Besitz anmelden, damit sie keinen fokussierten Knopf mehr auslöst
   ImGui::SetKeyOwner(ImGuiKey_Space, space_owner);
   if (ImGui::IsKeyPressed(ImGuiKey_Space, ImGuiInputFlags_None, space_owner) && sim_) toggle_running();

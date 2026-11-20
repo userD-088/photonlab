@@ -29,6 +29,15 @@ class Fdtd {
  public:
   // Baut Gitter, Materialverteilung, Randschichten und Quellen. Wirft FieldError bei ungültiger Szene.
   explicit Fdtd(const FieldScene& scene);
+  ~Fdtd();
+  Fdtd(const Fdtd&) = delete;
+  Fdtd& operator=(const Fdtd&) = delete;
+
+  // Grafikkarte (OpenCL, siehe gpu.hpp): true schaltet um, wenn Gerät und Szene es erlauben (keine
+  // Kerr-Formen, keine zusätzlichen Einspeisungen); Rückgabe: rechnet jetzt auf der Grafikkarte. false holt
+  // den Zustand zurück auf den Prozessor. Ergebnisse sind gleich bis auf die Rundung (doppelte Genauigkeit).
+  bool use_gpu(bool on);
+  bool on_gpu() const { return gpu_ != nullptr; }
 
   void step();
   // Threads je Zeitschritt: 0 = automatisch (Kerne, aber mindestens etwa 32000 Zellen je Thread), 1 =
@@ -52,11 +61,24 @@ class Fdtd {
 
   // Skalarfeld senkrecht zur Ebene: Ez [V/m] bzw. Hz [A/m], Zeile für Zeile (Index i + nx*j).
   // Ez liegt auf den Gitterknoten (i*dx, j*dx), Hz in den Zellmitten.
-  const std::vector<double>& field() const { return f_; }
-  std::vector<double>& field() { return f_; }
+  const std::vector<double>& field() const {
+    gpu_sync();
+    return f_;
+  }
+  // Zum Setzen eines Anfangsfeldes; schaltet von der Grafikkarte zurück auf den Prozessor.
+  std::vector<double>& mutable_field() {
+    use_gpu(false);
+    return f_;
+  }
   // Felder in der Ebene, einen halben Zeitschritt versetzt: Hx, Hy [A/m] bzw. Ex, Ey [V/m].
-  const std::vector<double>& in_plane_x() const { return gx_; }
-  const std::vector<double>& in_plane_y() const { return gy_; }
+  const std::vector<double>& in_plane_x() const {
+    gpu_sync();
+    return gx_;
+  }
+  const std::vector<double>& in_plane_y() const {
+    gpu_sync();
+    return gy_;
+  }
   // Relative Permittivität an den Orten des Skalarfeldes (für Darstellung und Energie).
   const std::vector<double>& permittivity() const { return eps_f_; }
   // Ladungsträgerdichte [m^-3] am Knoten nahe (x, y); 0 ohne Ladungsträgermodell (Ez, Kerr-Zellen)
@@ -66,7 +88,10 @@ class Fdtd {
   // (Skalarfeld als Produkt aufeinanderfolgender Zeitschritte).
   double energy() const;
 
-  const std::vector<MonitorData>& monitors() const { return monitors_; }
+  const std::vector<MonitorData>& monitors() const {
+    gpu_sync();
+    return monitors_;
+  }
 
   // --- für inverses Design (Phase 13, nur Ez-Polarisation, ohne Kerr-Zellen) ---
   // Relative Permittivität am Knoten index ändern (vor oder während der Rechnung).
@@ -93,7 +118,34 @@ class Fdtd {
   struct ActiveSource {
     Source source;
     std::vector<SourceCell> cells;
+    // einseitige Modenquelle: zweite Schicht, deren Signal um extra_phase verschoben ist
+    std::vector<SourceCell> cells2;
+    double extra_phase = 0.0;
+    // Regenerator: Monitor, Fenster (Schritte je Periode), geplante Umschaltungen und laufende Rampe
+    bool triggered = false;
+    std::size_t monitor = 0;
+    bool mode_power = false;  // Modenmonitor: a^2 mitteln
+    std::size_t window = 1;
+    bool target = false;                                    // zuletzt entschiedener Zustand
+    std::vector<std::pair<double, bool>> pending;           // (Zeit, Zustand), nach Zeit geordnet
+    double ramp_start = 0.0, env_from = 0.0, env_to = 0.0;  // laufende Rampe der Einhüllenden
+    double envelope(double time) const;
   };
+  void update_triggers();  // Entscheidungen der Regeneratoren nach record(), alle decision_interval_ Schritte
+  // Signale aller Quellen zur Zeit t, zwei Plätze je Quelle (Schicht 1 und 2); übernimmt fällige
+  // Umschaltungen der Regeneratoren (deshalb nicht const)
+  void source_signals(double time, std::vector<double>& out);
+  std::size_t decision_interval_ = 0;  // 0 = keine Regeneratoren
+  std::vector<double> signals_;
+
+  // Grafikkarte: Zustand in gpu.cpp; die Felder auf dem Prozessor sind dann nur Zwischenspeicher
+  struct GpuState;
+  struct GpuStateDeleter {
+    void operator()(GpuState* state) const;
+  };
+  std::unique_ptr<GpuState, GpuStateDeleter> gpu_;
+  void gpu_step();
+  void gpu_sync() const;  // Felder und Messreihen holen, falls die Grafikkarte weiter ist
   struct FluxLine {
     std::size_t monitor;   // Index in monitors_
     bool vertical = true;  // senkrechte Linie: Fluss in +x, sonst in +y
@@ -125,9 +177,9 @@ class Fdtd {
   bool periodic_x_ = false, periodic_y_ = false;
   std::size_t steps_ = 0;
 
-  std::vector<double> f_, f_prev_, gx_, gy_;
-  std::vector<double> zero_row_;  // Nachbarzeile jenseits einer ideal leitenden Wand
-  std::vector<double> eps_f_;     // relative Permittivität am Skalarfeld
+  mutable std::vector<double> f_, f_prev_, gx_, gy_;  // mutable: Zwischenspeicher beim Rechnen auf der GPU
+  std::vector<double> zero_row_;                      // Nachbarzeile jenseits einer ideal leitenden Wand
+  std::vector<double> eps_f_;                         // relative Permittivität am Skalarfeld
   // Kerr-Zellen (nur Ez): D/eps0 wird mitgeführt, E aus eps*E + chi3*E^3 = D/eps0 per Newton-Verfahren
   struct KerrCell {
     std::size_t index;
@@ -160,7 +212,7 @@ class Fdtd {
   std::unique_ptr<StepTeam> team_;
 
   std::vector<ActiveSource> sources_;
-  std::vector<MonitorData> monitors_;
+  mutable std::vector<MonitorData> monitors_;
   std::vector<PointProbe> probes_;
   std::vector<FluxLine> flux_lines_;
   std::vector<ModeProbe> mode_probes_;

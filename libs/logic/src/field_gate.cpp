@@ -217,9 +217,15 @@ FieldGateReport characterize_field_gate(const FieldGate& gate, ThreadPool* pool,
 }
 
 std::vector<std::string> field_gate_names() {
-  return {"phc_or_and",         "phc_xor",           "phc_not",
-          "phc_halfadder",      "chip_halfadder",    "chip_fulladder",
-          "phc_chip_halfadder", "phc_chip_fulladder"};
+  return {"phc_or_and",
+          "phc_xor",
+          "phc_not",
+          "phc_halfadder",
+          "chip_halfadder",
+          "chip_fulladder",
+          "phc_chip_halfadder",
+          "phc_chip_fulladder",
+          "scene_fulladder"};
 }
 
 FieldGate field_gate(std::string_view name) {
@@ -279,6 +285,21 @@ FieldGate field_gate(std::string_view name) {
     g.scenes = {field::reference_scene("field_phc_halfadder")};
     g.inputs = {{"A", "A"}, {"B", "B"}};
     g.outputs = {{"Summe", 0, "Fluss Summe", {0, 1, 1, 0}}, {"Übertrag", 0, "Fluss Übertrag", {0, 0, 0, 1}}};
+  } else if (name == "scene_fulladder") {
+    g.description =
+        "Volladdierer in einer Feld-Szene: zwei Halbaddierer-Chips und ein Y-Kombinierer (ODER), verbunden "
+        "über Regeneratoren in der Szene (Detektor + Elektronik + Sender, einseitige Modenquellen). Die "
+        "Rechnung läuft die Stufen zeitlich nacheinander durch; gemessen wird am Ende.";
+    g.scenes = {field::reference_scene("field_fulladder")};
+    g.inputs = {{"A", "A"}, {"B", "B"}, {"Cin", "Cin"}};
+    std::vector<int> s1, sum, cout;
+    for (int r = 0; r < 8; ++r) {
+      const int a = (r >> 2) & 1, b = (r >> 1) & 1, c = r & 1;
+      s1.push_back(a ^ b), sum.push_back(a ^ b ^ c), cout.push_back((a & b) | ((a ^ b) & c));
+    }
+    g.outputs = {{"S1", 0, "Mode Summe 1", s1},
+                 {"Summe", 0, "Mode Summe 2", sum},
+                 {"Übertrag", 0, "Mode Übertrag (Cout)", cout}};
   } else if (name == "chip_fulladder" || name == "phc_chip_fulladder") {
     g.description =
         "Volladdierer aus drei Halbaddierer-Chips mit Regeneration (Detektor + neuer Sender) zwischen den "

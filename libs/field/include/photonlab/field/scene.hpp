@@ -78,6 +78,18 @@ struct Source {
   int mode_order = 0;              // Modenquelle: Ordnung der Mode (0 = Grundmode); Linie achsenparallel
   bool enabled = true;
   int group = -1;
+  // Regenerator (Detektor + Elektronik + Sender, O/E/O): ist trigger gesetzt, schaltet der Monitor dieses
+  // Namens (Fluss oder Mode) die Quelle. Gemittelt wird über eine Periode der Quelle (Fluss: Mittel, Mode:
+  // Mittel von a^2); liegt der Wert über der Schwelle, geht die Quelle nach der Verzögerung sanft an
+  // (Rampe über ramp_periods), sonst aus; invertiert umgekehrt (NICHT). Nur Dauerstrich.
+  std::string trigger;
+  double trigger_threshold = 0.0;  // Schwelle in der Einheit des Monitors (W/m bzw. a^2)
+  double trigger_delay = 50e-15;   // Verzögerung der Elektronik [s] (zeitlich gestaucht, siehe fdtd.md)
+  bool trigger_invert = false;
+  // Modenquelle, Dauerstrich: 0 = strahlt nach beiden Seiten; +1 / -1 = nur in +x bzw. -x (senkrechte Linie)
+  // oder +y bzw. -y (waagerechte Linie). Zweite Stromschicht im Abstand lambda/(4 n_eff) mit der Phase
+  // pi + k*d löscht die Gegenrichtung aus (docs/physics/fdtd.md).
+  int direction = 0;
   bool operator==(const Source&) const = default;
 };
 

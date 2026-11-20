@@ -67,7 +67,7 @@ TEST_CASE("Abnahme Phase 4: numerische Dispersionsrelation des Yee-Schemas") {
       const double kx = 2 * pi * mx / (n * dx), ky = 2 * pi * my / (n * dx);
       for (int j = 0; j < n; ++j)
         for (int i = 0; i < n; ++i)
-          sim.field()[static_cast<std::size_t>(i + n * j)] = std::cos(kx * i * dx + ky * j * dx);
+          sim.mutable_field()[static_cast<std::size_t>(i + n * j)] = std::cos(kx * i * dx + ky * j * dx);
 
       const double s = c0 * sim.time_step() / dx;
       const double expected =
@@ -102,7 +102,7 @@ TEST_CASE("Abnahme Phase 4: Energieerhaltung im verlustfreien Gitter mit Dielekt
       // Anfangszustand: Gauß-Fleck im Skalarfeld
       for (int j = 0; j < sim.ny(); ++j)
         for (int i = 0; i < sim.nx(); ++i)
-          sim.field()[static_cast<std::size_t>(i + sim.nx() * j)] =
+          sim.mutable_field()[static_cast<std::size_t>(i + sim.nx() * j)] =
               std::exp(-(std::pow(i - 22.0, 2) + std::pow(j - 27.0, 2)) / 18.0);
       sim.step();
       const double start = sim.energy();
@@ -553,4 +553,103 @@ TEST_CASE("Gruppen: Verschieben und Drehen nehmen Mitglieder und Untergruppen mi
   CHECK(s.monitors[0].group == -1);
   s.groups[0].parent = 0;  // Zyklus
   CHECK_THROWS_AS(validate(s), FieldError);
+}
+
+TEST_CASE("Regenerator: Detektor schaltet eine Quelle nach der Verzögerung ein (und invertiert aus)") {
+  FieldScene s;
+  s.width = 6e-6, s.height = 3e-6, s.cell_size = 50e-9, s.duration = 200e-15;
+  Source x;
+  x.name = "X", x.kind = SourceKind::point, x.x1 = x.x2 = 1.0e-6, x.y1 = x.y2 = 1.5e-6;
+  Source y = x;
+  y.name = "Y", y.x1 = y.x2 = 5.0e-6;
+  y.trigger = "Detektor", y.trigger_threshold = 1e-30, y.trigger_delay = 40e-15;
+  s.sources = {x, y};
+  // Detektor nahe X, Ausgang nahe Y: Y liegt weit genug weg, dass X dort in 200 fs kaum ankommt
+  s.monitors = {{"Detektor", MonitorKind::flux, 1.5e-6, 1.0e-6, 1.5e-6, 2.0e-6},
+                {"Ausgang", MonitorKind::point, 5.0e-6, 1.6e-6, 0, 0}};
+  auto run = [](FieldScene scene) {
+    Fdtd sim(scene);
+    sim.run(static_cast<std::size_t>(scene.duration / sim.time_step()));
+    return sim.monitors()[1].values;
+  };
+  const auto on = run(s);
+  FieldScene without = s;
+  without.sources[1].enabled = false;
+  const auto reference = run(without);
+  // Y wirkt erst nach Verzögerung + erster Entscheidung (eine Periode), dann deutlich
+  std::size_t first = 0;
+  while (first < on.size() && on[first] == reference[first]) ++first;
+  CHECK(static_cast<double>(first) * Fdtd(s).time_step() > 40e-15);
+  CHECK(max_abs(on) > 2.0 * max_abs(reference));
+  FieldScene dark = s;
+  dark.sources[0].amplitude = 0.0;  // X aus: Detektor bleibt dunkel, Y bleibt aus
+  CHECK(max_abs(run(dark)) == 0.0);
+
+  FieldScene inverted = dark;  // NICHT: dunkler Detektor schaltet Y ein
+  inverted.sources[1].trigger_invert = true;
+  CHECK(max_abs(run(inverted)) > 0.0);
+
+  FieldScene wrong = s;
+  wrong.sources[1].trigger = "Ausgang";  // Punktmonitor taugt nicht als Detektor
+  CHECK_THROWS_AS(validate(wrong), FieldError);
+}
+
+TEST_CASE("Einseitige Modenquelle: Gegenrichtung unter 1 % der Leistung, vorwärts wie die beidseitige") {
+  for (Polarization polarization : {Polarization::ez, Polarization::hz}) {
+    FieldScene s;
+    s.width = 12e-6, s.height = 4e-6, s.cell_size = 25e-9, s.duration = 150e-15;
+    s.background_index = 1.444;
+    s.polarization = polarization;
+    s.shapes = {{"Kern", ShapeKind::rectangle, 6e-6, 2e-6, 12e-6, 0.3e-6, 0.0, 1e-6, 0.5e-6, 2.85}};
+    Source source;
+    source.kind = SourceKind::mode;
+    source.x1 = source.x2 = 6e-6, source.y1 = 0.8e-6, source.y2 = 3.2e-6;
+    s.sources = {source};
+    s.monitors = {{"links", MonitorKind::flux, 3e-6, 0.8e-6, 3e-6, 3.2e-6},
+                  {"rechts", MonitorKind::flux, 9e-6, 0.8e-6, 9e-6, 3.2e-6}};
+    auto mean_flux = [&](const FieldScene& scene, std::size_t m) {
+      Fdtd sim(scene);
+      sim.run(static_cast<std::size_t>(scene.duration / sim.time_step()));
+      return average_over_periods(sim.monitors()[m].values, sim.time_step(), source.wavelength / c0, 4);
+    };
+    const double both = mean_flux(s, 1);
+    s.sources[0].direction = 1;
+    const double forward = mean_flux(s, 1), backward = mean_flux(s, 0);
+    MESSAGE("einseitig: vorwärts " << forward / both << ", rückwärts " << -backward / forward);
+    CHECK(std::abs(backward) < 0.01 * forward);
+    CHECK(forward == doctest::Approx(both).epsilon(0.05).scale(0.0));
+    s.sources[0].direction = -1;  // Spiegelbild
+    CHECK(-mean_flux(s, 0) == doctest::Approx(forward).epsilon(0.02).scale(0.0));
+  }
+}
+
+TEST_CASE("Bausteine: jeder lässt sich als Gruppe einfügen, die Szene bleibt gültig") {
+  FieldScene s;
+  s.width = 90e-6, s.height = 30e-6, s.cell_size = 50e-9, s.background_index = 1.444;
+  double x = 10e-6;
+  for (const auto& name : building_block_names()) {
+    const std::size_t before = s.shapes.size() + s.sources.size() + s.monitors.size();
+    const int group = add_building_block(s, name, x, 15e-6);
+    CHECK(group == static_cast<int>(s.groups.size()) - 1);
+    CHECK(s.shapes.size() + s.sources.size() + s.monitors.size() > before);
+    for (const auto& sh : s.shapes)
+      if (sh.group == group) CHECK(contains(sh, sh.x, sh.y) == (sh.kind != ShapeKind::ring && sh.kind != ShapeKind::arc));
+    x += name == "halfadder" ? 0.0 : 9e-6;
+    if (name == "halfadder") {  // groß: in eine eigene Szene prüfen
+      FieldScene chip;
+      chip.width = 30e-6, chip.height = 26e-6, chip.cell_size = 50e-9, chip.background_index = 1.444;
+      add_building_block(chip, name, 15e-6, 13e-6);
+      CHECK_NOTHROW(validate(chip));
+      s.shapes.erase(std::remove_if(s.shapes.begin(), s.shapes.end(), [&](const Shape& sh) { return sh.group == group; }),
+                     s.shapes.end());
+      std::erase_if(s.sources, [&](const Source& q) { return q.group == group; });
+      std::erase_if(s.monitors, [&](const Monitor& m) { return m.group == group; });
+    }
+  }
+  CHECK_NOTHROW(validate(s));
+  // der Regenerator verbindet seinen Detektor mit seinem Sender
+  const auto regenerator = std::find_if(s.sources.begin(), s.sources.end(), [](const Source& q) { return !q.trigger.empty(); });
+  REQUIRE(regenerator != s.sources.end());
+  CHECK(std::any_of(s.monitors.begin(), s.monitors.end(), [&](const Monitor& m) { return m.name == regenerator->trigger; }));
+  CHECK_THROWS_AS(add_building_block(s, "gibt_es_nicht", 0.0, 0.0), FieldError);
 }

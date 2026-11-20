@@ -23,6 +23,7 @@
 #include "photonlab/circuit/plugin.hpp"
 #include "photonlab/circuit/registry.hpp"
 #include "photonlab/core/thread_pool.hpp"
+#include "photonlab/field/gpu.hpp"
 #include "quantum_view.hpp"
 
 namespace {
@@ -203,6 +204,8 @@ int main(int argc, char** argv) {
   ImGui_ImplSDLRenderer3_Init(renderer);
 
   int exit_code = 0;
+  // Feld auf der Grafikkarte, wenn eine da ist (Ansicht > Grafikkarte); sonst rechnet alles auf dem Prozessor
+  photonlab::field::gpu::set_enabled(true);
   {
     photonlab::ThreadPool pool;
     ChipDesigner chip_designer(pool, window, ui_scale);
@@ -249,6 +252,13 @@ int main(int argc, char** argv) {
           ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Ansicht")) {
+          const auto& device = photonlab::field::gpu::device();
+          bool use_gpu = photonlab::field::gpu::enabled();
+          if (ImGui::MenuItem("Grafikkarte für das Feld (OpenCL)", nullptr, &use_gpu, device.available))
+            photonlab::field::gpu::set_enabled(use_gpu);
+          if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip("%s", device.available ? device.name.c_str() : device.reason.c_str());
+          ImGui::Separator();
           if (ImGui::MenuItem("Vollbild", "F11", (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) != 0))
             SDL_SetWindowFullscreen(window, (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) == 0);
           if (ImGui::MenuItem("Standard-Layout wiederherstellen")) reset_layout = true;

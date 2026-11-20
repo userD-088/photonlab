@@ -7,6 +7,7 @@
 #include "cpml.hpp"
 #include "photonlab/core/step_team.hpp"
 #include "photonlab/core/units.hpp"
+#include "photonlab/field/gpu.hpp"
 #include "photonlab/modes/profile.hpp"
 
 namespace photonlab::field {
@@ -29,6 +30,7 @@ double Fdtd::carrier_density_at(double x, double y) const {
 }
 
 void Fdtd::set_permittivity(std::size_t index, double eps) {
+  use_gpu(false);  // inverses Design rechnet auf dem Prozessor
   if (polarization_ != Polarization::ez) throw FieldError("Permittivität setzen: nur bei Ez-Polarisation");
   if (!kerr_cells_.empty()) throw FieldError("Permittivität setzen: nicht mit nichtlinearen Formen");
   if (index >= eps_f_.size() || !(eps >= 1.0))
@@ -46,7 +48,9 @@ Fdtd::ModeWeights Fdtd::mode_weights(std::size_t monitor) const {
 void Fdtd::add_injection(const std::vector<std::size_t>& cells, const std::vector<double>& weights,
                          const Source& signal) {
   if (cells.size() != weights.size()) throw FieldError("Quelle: Zellen und Gewichte passen nicht zusammen");
-  ActiveSource active{signal, {}};
+  use_gpu(false);  // zusätzliche Einspeisungen gibt es nur auf dem Prozessor
+  ActiveSource active;
+  active.source = signal;
   for (std::size_t k = 0; k < cells.size(); ++k) {
     if (cells[k] >= f_.size()) throw FieldError("Quelle: Zelle außerhalb des Gitters");
     active.cells.push_back({cells[k], weights[k] * signal.amplitude});
@@ -70,6 +74,15 @@ double Fdtd::signal(const Source& source, double time) {
     ramp = s * s;
   }
   return ramp * std::sin(omega * time + source.phase);
+}
+
+double Fdtd::ActiveSource::envelope(double time) const {
+  // Rampe sin^2 über ramp_periods Perioden von env_from nach env_to ab ramp_start
+  const double ramp_time = source.ramp_periods * source.wavelength / constants::c0;
+  if (time <= ramp_start) return env_from;
+  if (!(ramp_time > 0.0) || time >= ramp_start + ramp_time) return env_to;
+  const double s = std::sin(0.5 * constants::pi * (time - ramp_start) / ramp_time);
+  return env_from + (env_to - env_from) * s * s;
 }
 
 Fdtd::Fdtd(const FieldScene& input) : polarization_(input.polarization) {
@@ -214,7 +227,8 @@ Fdtd::Fdtd(const FieldScene& input) : polarization_(input.polarization) {
   };
 
   for (const auto& source : scene.sources) {
-    ActiveSource active{source, {}};
+    ActiveSource active;
+    active.source = source;
     int i = 0, j = 0;
     if (source.kind == SourceKind::mode) {
       // Stromschicht mit Modenprofil f: Zuwachs 2*n_eff*c*dt/(n²*dx) * A * f, für Hz zusätzlich 1/eta0.
@@ -222,10 +236,30 @@ Fdtd::Fdtd(const FieldScene& input) : polarization_(input.polarization) {
       const auto cells = line_cells(source.x1, source.y1, source.x2, source.y2);
       const modes::ProfileMode mode =
           mode_under(cells, source.wavelength, source.mode_order, "Quelle '" + source.name + "': ");
+      // einseitig: zweite Schicht d Zellen in Strahlrichtung, Phase pi + k*d; Summe vorwärts 2|sin(kd)| A
+      int shift = 0;
+      double scale = 1.0;
+      if (source.direction != 0) {
+        const double k_mode = 2.0 * constants::pi * mode.n_eff / source.wavelength;
+        shift = std::max(1, static_cast<int>(std::lround(source.wavelength / (4.0 * mode.n_eff * dx_))));
+        const double kd = k_mode * shift * dx_;
+        active.extra_phase = constants::pi + kd;
+        scale = 1.0 / (2.0 * std::abs(std::sin(kd)));
+        shift *= source.direction;
+      }
+      const bool vertical = std::abs(source.x2 - source.x1) < 0.5 * dx_;
       for (std::size_t k = 0; k < cells.size(); ++k) {
         const double base =
-            2.0 * mode.n_eff * constants::c0 * dt_ / (eps_f_[cells[k]] * dx_) * source.amplitude;
-        active.cells.push_back({cells[k], (ez ? base : base / eta0) * mode.field[k]});
+            2.0 * mode.n_eff * constants::c0 * dt_ / (eps_f_[cells[k]] * dx_) * source.amplitude * scale;
+        const double weight = (ez ? base : base / eta0) * mode.field[k];
+        active.cells.push_back({cells[k], weight});
+        if (shift != 0) {
+          const int i2 = static_cast<int>(cells[k] % static_cast<std::size_t>(nx_)) + (vertical ? shift : 0);
+          const int j2 = static_cast<int>(cells[k] / static_cast<std::size_t>(nx_)) + (vertical ? 0 : shift);
+          if (i2 < 0 || j2 < 0 || i2 >= nx_ || j2 >= ny_)
+            throw FieldError("Quelle '" + source.name + "': zweite Schicht liegt außerhalb des Gebiets");
+          active.cells2.push_back({at(i2, j2), weight});
+        }
       }
     } else if (source.kind == SourceKind::point) {
       cell_of(source.x1, source.y1, &i, &j);
@@ -304,7 +338,26 @@ Fdtd::Fdtd(const FieldScene& input) : polarization_(input.polarization) {
     }
     monitors_.push_back(std::move(data));
   }
+
+  // Regeneratoren: Monitor zuordnen, Fenster = eine Periode der Quelle; entschieden wird für alle gemeinsam
+  // im kürzesten Fenster (auf Prozessor und Grafikkarte gleich)
+  for (auto& active : sources_) {
+    if (active.source.trigger.empty()) continue;
+    for (std::size_t m = 0; m < scene.monitors.size(); ++m)
+      if (scene.monitors[m].name == active.source.trigger) {
+        active.triggered = true;
+        active.monitor = m;
+        active.mode_power = scene.monitors[m].kind == MonitorKind::mode;
+      }
+    active.window = std::max<std::size_t>(
+        1, static_cast<std::size_t>(std::lround(active.source.wavelength / constants::c0 / dt_)));
+    decision_interval_ =
+        decision_interval_ == 0 ? active.window : std::min(decision_interval_, active.window);
+  }
+  if (gpu::enabled()) use_gpu(true);
 }
+
+Fdtd::~Fdtd() = default;
 
 void Fdtd::run(std::size_t steps, JobControl* control) {
   for (std::size_t s = 0; s < steps; ++s) {
@@ -346,19 +399,73 @@ void Fdtd::for_rows(const Body& body) {
 }
 
 void Fdtd::step() {
+  if (gpu_) {
+    gpu_step();
+    return;
+  }
   if (polarization_ == Polarization::ez)
     step_ez();
   else
     step_hz();
 
   // Quellen wirken zur halben Zeit des Schritts (zwischen altem und neuem Skalarfeld)
-  const double source_time = (static_cast<double>(steps_) + 0.5) * dt_;
-  for (const auto& source : sources_) {
-    const double s = source_scale_ * signal(source.source, source_time);
-    for (const auto& cell : source.cells) f_[cell.index] += cell.weight * s;
+  source_signals((static_cast<double>(steps_) + 0.5) * dt_, signals_);
+  for (std::size_t q = 0; q < sources_.size(); ++q) {
+    const double s = signals_[2 * q], s2 = signals_[2 * q + 1];
+    if (s != 0.0)
+      for (const auto& cell : sources_[q].cells) f_[cell.index] += cell.weight * s;
+    if (s2 != 0.0)
+      for (const auto& cell : sources_[q].cells2) f_[cell.index] += cell.weight * s2;
   }
   ++steps_;
   record();
+  update_triggers();
+}
+
+void Fdtd::source_signals(double time, std::vector<double>& out) {
+  out.assign(2 * sources_.size(), 0.0);
+  for (std::size_t q = 0; q < sources_.size(); ++q) {
+    ActiveSource& source = sources_[q];
+    Source shifted = source.source;  // zweite Schicht: gleiches Signal, Phase um extra_phase verschoben
+    shifted.phase += source.extra_phase;
+    if (source.triggered) {
+      // fällige Umschaltungen übernehmen: neue Rampe ab dem aktuellen Wert der Einhüllenden
+      while (!source.pending.empty() && source.pending.front().first <= time) {
+        const auto [when, state] = source.pending.front();
+        source.env_from = source.envelope(when);
+        source.env_to = state ? 1.0 : 0.0;
+        source.ramp_start = when;
+        source.pending.erase(source.pending.begin());
+      }
+      const double envelope = source.envelope(time);
+      if (envelope == 0.0) continue;
+      const double omega = omega_from_wavelength(source.source.wavelength);
+      out[2 * q] = source_scale_ * envelope * std::sin(omega * time + source.source.phase);
+      if (!source.cells2.empty())
+        out[2 * q + 1] = source_scale_ * envelope * std::sin(omega * time + shifted.phase);
+    } else {
+      out[2 * q] = source_scale_ * signal(source.source, time);
+      if (!source.cells2.empty()) out[2 * q + 1] = source_scale_ * signal(shifted, time);
+    }
+  }
+}
+
+void Fdtd::update_triggers() {
+  if (decision_interval_ == 0 || steps_ % decision_interval_ != 0) return;
+  for (auto& source : sources_) {
+    if (!source.triggered) continue;
+    const auto& values = monitors_[source.monitor].values;
+    if (values.size() < source.window) continue;
+    double sum = 0.0;
+    for (std::size_t k = values.size() - source.window; k < values.size(); ++k)
+      sum += source.mode_power ? values[k] * values[k] : values[k];
+    const double mean = std::abs(sum / static_cast<double>(source.window));
+    const bool state = (mean > source.source.trigger_threshold) != source.source.trigger_invert;
+    if (state != source.target) {
+      source.target = state;
+      source.pending.emplace_back(time() + source.source.trigger_delay, state);
+    }
+  }
 }
 
 // Die Hilfsfelder psi der CPML sind außerhalb der Randschicht exakt 0 (b = c = 0). Dort entfallen sie: Die
@@ -645,6 +752,7 @@ void Fdtd::record() {
 }
 
 double Fdtd::energy() const {
+  gpu_sync();
   const bool ez = polarization_ == Polarization::ez;
   double scalar = 0.0, in_plane = 0.0;
   for (std::size_t k = 0; k < f_.size(); ++k) {

@@ -82,6 +82,29 @@ Kalibrierung in [`modes.md`](modes.md).
 Zeitsignale: Dauerstrich `sin(ωt + φ)` mit sin²-Rampe über 4 Perioden; Gauß-Puls
 `e^{−((t−t₀)/τ)²}·sin(ω(t−t₀) + φ)` mit `t₀ = 4τ`.
 
+### Einseitige Modenquelle
+
+Eine Stromschicht strahlt nach beiden Seiten. Für `direction = ±1` legt der Löser eine zweite Schicht mit
+demselben Modenprofil d Zellen in Strahlrichtung, d = round(λ / (4 n_eff Δx)), mit der Phase
+ψ = π + k d (k = 2π n_eff / λ). Rückwärts: sin(ωt + k(x−x0)) + sin(ωt + k(x−x0) − kd + ψ) = 0. Vorwärts addieren
+sich beide mit der Phase 2kd + π; der Betrag 2|sin(kd)| wird durch die Gewichte ausgeglichen, so dass vorwärts
+dieselbe Amplitude wie bei der beidseitigen Quelle ankommt. Exakt nur für Dauerstrich einer Wellenlänge; die
+numerische Dispersion des Gitters lässt einen Rest. Gemessen (Wellenleiter 0,30 µm, 25 nm Zellen): Rückwärts
+3·10⁻⁶ (Ez) bzw. 2·10⁻⁴ (Hz) der Leistung, vorwärts 1,000 bzw. 0,998 der beidseitigen Quelle
+(`tests/test_field_fdtd.cpp`).
+
+### Regenerator (Detektor + Elektronik + Sender)
+
+Eine Quelle mit `trigger` wird von einem Fluss- oder Modenmonitor geschaltet: alle Δn Schritte (Δn = kürzeste
+Periode aller Regeneratoren in Schritten) mittelt der Löser den Detektor über eine Periode der Quelle (Fluss:
+Mittelwert, Mode: Mittel von a²). Liegt der Wert über der Schwelle (invertiert: darunter), geht die Quelle nach
+der Verzögerung `trigger_delay` an, sonst aus; die Einhüllende folgt einer sin²-Rampe über `ramp_periods`
+Perioden (kein breitbandiger Schaltstoß). Das ist ein idealer Empfänger mit Entscheider und Laser (O/E/O):
+keine Rauschquelle, keine Energiekosten; die Verzögerung ist gegenüber echten Empfängern (10–100 ps) zeitlich
+gestaucht, damit die Rechnung kurz bleibt. Damit lassen sich passive Interferenz-Gatter in einer Szene
+hintereinanderschalten (Volladdierer `field_fulladder`). Festlegung: Schwellen der Beispiele aus den gemessenen
+Pegeln (logic.md).
+
 ## Monitore
 
 - **Punkt**: Zeitverlauf des Skalarfeldes; Spektrum per direkter Fourier-Summe.

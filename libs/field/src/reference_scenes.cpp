@@ -636,7 +636,272 @@ FieldScene phc_halfadder(int extra_steps, double b_phase, double a_amplitude, do
   return s;
 }
 
+// --- Bausteine ---------------------------------------------------------------------------------------------
+
+// Weg aus geraden Stücken und Bögen ab einem Punkt mit Richtung heading (Bildschirm: y nach unten, Winkel im
+// Uhrzeigersinn). turn > 0: Bogen im Uhrzeigersinn (nach rechts in Laufrichtung), turn < 0: dagegen.
+struct Path {
+  double x = 0.0, y = 0.0, heading = 0.0;
+  double width = 0.30 * um;
+  std::vector<Shape>* out = nullptr;
+  std::string name;
+  void straight(double length) {
+    Shape sh;
+    sh.name = name;
+    sh.x = round_pico(x + 0.5 * length * std::cos(heading));
+    sh.y = round_pico(y + 0.5 * length * std::sin(heading));
+    sh.width = round_pico(length), sh.height = width, sh.rotation = round_pico(heading);
+    sh.index = index_core;
+    out->push_back(sh);
+    x += length * std::cos(heading), y += length * std::sin(heading);
+  }
+  void bend(double radius, double turn) {
+    const double side = turn > 0.0 ? 0.5 * constants::pi : -0.5 * constants::pi;
+    const double cx = x + radius * std::cos(heading + side), cy = y + radius * std::sin(heading + side);
+    const double phi0 = heading - side;  // Winkel des Startpunkts vom Mittelpunkt aus
+    const double phi1 = phi0 + turn;
+    Shape sh;
+    sh.name = name;
+    sh.kind = ShapeKind::arc;
+    sh.x = round_pico(cx), sh.y = round_pico(cy);
+    sh.radius = round_pico(radius + 0.5 * width), sh.inner_radius = round_pico(radius - 0.5 * width);
+    sh.rotation = round_pico(std::min(phi0, phi1)), sh.sweep = round_pico(std::abs(turn));
+    sh.index = index_core;
+    out->push_back(sh);
+    x = cx + radius * std::cos(phi1), y = cy + radius * std::sin(phi1);
+    heading += turn;
+  }
+};
+
+std::vector<std::string> block_names() {
+  return {"y_splitter",    "y_combiner", "s_bend",    "bend90",     "coupler",
+          "phase_shifter", "ring_bus",   "halfadder", "regenerator"};
+}
+
 }  // namespace
+
+std::vector<std::string> building_block_names() { return block_names(); }
+
+std::string building_block_label(std::string_view name) {
+  if (name == "y_splitter") return "Y-Verzweigung (1 auf 2)";
+  if (name == "y_combiner") return "Y-Kombinierer (2 auf 1)";
+  if (name == "s_bend") return "S-Bogen (2 um Versatz)";
+  if (name == "bend90") return "90-Grad-Bogen";
+  if (name == "coupler") return "Richtkoppler";
+  if (name == "phase_shifter") return "Phasenschieber (Verbreiterung)";
+  if (name == "ring_bus") return "Ringresonator am Bus";
+  if (name == "halfadder") return "Halbaddierer-Chip";
+  if (name == "regenerator") return "Regenerator (Detektor + Sender)";
+  throw FieldError("Unbekannter Baustein '" + std::string(name) + "'");
+}
+
+int add_building_block(FieldScene& scene, std::string_view name, double x, double y, int parent_group) {
+  const std::string label = building_block_label(name);  // prüft den Namen
+  std::vector<Shape> shapes;
+  std::vector<Source> sources;
+  std::vector<Monitor> monitors;
+  const double w = 0.30 * um, pi = constants::pi;
+  Path path;
+  path.out = &shapes;
+  auto start = [&](const char* part, double px, double py, double heading) {
+    path.name = part, path.x = px, path.y = py, path.heading = heading;
+  };
+  // Bezugspunkt (0, 0); Koordinaten relativ, am Ende verschoben
+  if (name == "y_splitter" || name == "y_combiner") {
+    // Eingang 2 um, dann je ein S-Bogen (Radius 6 um, 25 Grad) nach oben und unten, 1 um Ausgänge
+    const double r = 6 * um, a = 25.0 * pi / 180.0;
+    start("Eingang", -2 * um, 0.0, 0.0);
+    path.straight(2 * um);
+    for (int side : {-1, 1}) {
+      start(side < 0 ? "Arm oben" : "Arm unten", 0.0, 0.0, 0.0);
+      path.bend(r, side * a);
+      path.bend(r, -side * a);
+      path.straight(1 * um);
+    }
+    if (name == "y_combiner")  // gespiegelt: zwei Eingänge links, Ausgang rechts
+      for (Shape& sh : shapes) {
+        sh.x = -sh.x;
+        if (sh.kind == ShapeKind::arc)
+          sh.rotation = round_pico(pi - sh.rotation - sh.sweep);
+        else
+          sh.rotation = round_pico(-sh.rotation);
+        if (sh.name == "Eingang")
+          sh.name = "Ausgang";
+        else if (sh.name.rfind("Arm", 0) == 0)
+          sh.name = "Eingang" + sh.name.substr(3);
+      }
+  } else if (name == "s_bend") {
+    // Versatz 2 um nach unten: zwei Bögen gleichen Radius, je arccos(1 - d/(2r))
+    const double r = 5 * um, turn = std::acos(1.0 - 2 * um / (2.0 * r));
+    start("S-Bogen", -r * std::sin(turn), -1 * um, 0.0);
+    path.bend(r, turn);
+    path.bend(r, -turn);
+  } else if (name == "bend90") {
+    start("Bogen", 0.0, 0.0, 0.0);
+    path.bend(2.5 * um, 0.5 * pi);
+  } else if (name == "coupler") {
+    // zwei Wellenleiter, die sich über 5 um auf 0,2 um Spalt nähern (S-Bögen ein und aus)
+    const double r = 5 * um, gap = 0.2 * um, offset = 1 * um, turn = std::acos(1.0 - offset / (2.0 * r));
+    const double run_in = 2.0 * r * std::sin(turn), length = 5 * um;
+    for (int side : {-1, 1}) {
+      const double yc = side * 0.5 * (gap + w);
+      start(side < 0 ? "Arm oben" : "Arm unten", -0.5 * length - run_in, yc + side * offset, 0.0);
+      path.bend(r, -side * turn);
+      path.bend(r, side * turn);
+      path.straight(length);
+      path.bend(r, side * turn);
+      path.bend(r, -side * turn);
+    }
+  } else if (name == "phase_shifter") {
+    // Verbreiterung 0,30 -> 0,45 um über 1,75 um: bei Hz und 1550 nm etwa pi (gemessen im Halbaddierer)
+    start("Zuleitung", -2.875 * um, 0.0, 0.0);
+    path.straight(2 * um);
+    path.width = 0.45 * um, path.name = "Verbreiterung";
+    path.straight(1.75 * um);
+    path.width = w, path.name = "Ableitung";
+    path.straight(2 * um);
+  } else if (name == "ring_bus") {
+    start("Bus", -6 * um, 0.0, 0.0);
+    path.straight(12 * um);
+    Shape ring;
+    ring.name = "Ring", ring.kind = ShapeKind::ring;
+    ring.radius = 3 * um + 0.5 * w, ring.inner_radius = 3 * um - 0.5 * w;
+    ring.x = 0.0, ring.y = round_pico(3 * um + w + 0.2 * um), ring.index = index_core;
+    shapes.push_back(ring);
+  } else if (name == "halfadder") {
+    // ganzer Chip samt Quellen und Monitoren, um seine Mitte
+    const FieldScene chip = halfadder(1.75 * um);
+    for (Shape sh : chip.shapes) {
+      sh.x = round_pico(sh.x - 0.5 * chip.width), sh.y = round_pico(sh.y - 0.5 * chip.height);
+      shapes.push_back(sh);
+    }
+    for (Source q : chip.sources) {
+      q.x1 -= 0.5 * chip.width, q.x2 -= 0.5 * chip.width, q.y1 -= 0.5 * chip.height,
+          q.y2 -= 0.5 * chip.height;
+      sources.push_back(q);
+    }
+    for (Monitor m : chip.monitors) {
+      m.x1 -= 0.5 * chip.width, m.x2 -= 0.5 * chip.width, m.y1 -= 0.5 * chip.height,
+          m.y2 -= 0.5 * chip.height;
+      monitors.push_back(m);
+    }
+  } else if (name == "regenerator") {
+    // Detektor (Flussmonitor) links, Sender (Punktquelle) rechts: funktionieren überall. Auf einem
+    // Wellenleiter besser als Modenmonitor und Modenquelle quer über den Kern legen (nur geführtes Licht).
+    // Die Schwelle ist ein Startwert und muss zum Pegel passen.
+    Monitor detector;
+    detector.kind = MonitorKind::flux;
+    detector.x1 = detector.x2 = -1 * um, detector.y1 = -1.2 * um, detector.y2 = 1.2 * um;
+    Source sender;
+    sender.kind = SourceKind::point;
+    sender.x1 = sender.x2 = 1 * um, sender.y1 = sender.y2 = 0.0;
+    sender.trigger_threshold = 1e-9;
+    if (!scene.sources.empty()) sender.wavelength = scene.sources.front().wavelength;
+    monitors.push_back(detector);
+    sources.push_back(sender);
+  }
+
+  // eindeutige Namen: Baustein-Nummer anhängen
+  const int number = static_cast<int>(scene.groups.size()) + 1;
+  const std::string suffix = " " + std::to_string(number);
+  const int group = static_cast<int>(scene.groups.size());
+  scene.groups.push_back({label + suffix, round_pico(x), round_pico(y), 0.0, parent_group});
+  for (Shape& sh : shapes) {
+    sh.name += suffix;
+    sh.x = round_pico(sh.x + x), sh.y = round_pico(sh.y + y);
+    sh.group = group;
+    scene.shapes.push_back(sh);
+  }
+  for (Monitor& m : monitors) {
+    m.name = (m.name.empty() ? std::string("Detektor") : m.name) + suffix;
+    m.x1 += x, m.x2 += x, m.y1 += y, m.y2 += y;
+    m.group = group;
+    scene.monitors.push_back(m);
+  }
+  for (Source& q : sources) {
+    q.name = (q.name.empty() ? std::string("Sender") : q.name) + suffix;
+    if (name == "regenerator") q.trigger = "Detektor" + suffix;
+    q.x1 += x, q.x2 += x, q.y1 += y, q.y2 += y;
+    q.group = group;
+    scene.sources.push_back(q);
+  }
+  return group;
+}
+
+// Volladdierer in einer Szene: Halbaddierer-Chip 1 (A, B) und Chip 2 (S1, Cin) nebeneinander, rechts ein
+// Y-Kombinierer als ODER für den Übertrag. Verbunden über Regeneratoren (Detektor + Elektronik + Sender): der
+// Modenmonitor der Summe von Chip 1 schaltet den Sender S1 von Chip 2, die Überträge beider Chips schalten
+// die Sender C1 und C2 am Kombinierer. Alle Sender strahlen einseitig ins Bauteil, damit kein Licht über die
+// Lücken in den Nachbar-Chip läuft. Schwellen aus den gemessenen Pegeln des Chips (logic.md).
+FieldScene fulladder_scene() {
+  const FieldScene chip = halfadder(1.75 * um);
+  const double gap = 6 * um, w = 0.30 * um;
+  const double x_or = 2 * chip.width + 2 * gap;  // Anfang der Eingangsarme des Kombinierers
+  FieldScene s;
+  s.name = "Volladdierer (zwei Halbaddierer + ODER, Regeneratoren)";
+  s.width = round_pico(x_or + 14 * um), s.height = chip.height;
+  s.cell_size = chip.cell_size;
+  s.background_index = chip.background_index;
+  s.polarization = chip.polarization;
+  s.duration = 3.6e-12;  // drei Stufen nacheinander, je etwa 1 ps bis zum stationären Zustand
+
+  for (int n = 0; n < 2; ++n) {
+    const double dx = n * (chip.width + gap);
+    const int group = static_cast<int>(s.groups.size());
+    const std::string tag = " " + std::to_string(n + 1);
+    s.groups.push_back(
+        {"Halbaddierer" + tag, round_pico(dx + 0.5 * chip.width), round_pico(0.5 * chip.height), 0.0, -1});
+    for (Shape sh : chip.shapes) {
+      sh.x = round_pico(sh.x + dx), sh.name += tag, sh.group = group;
+      s.shapes.push_back(sh);
+    }
+    for (Monitor m : chip.monitors) {
+      if (m.kind != MonitorKind::mode) continue;  // Flussmonitore des Chips werden hier nicht gebraucht
+      m.x1 = round_pico(m.x1 + dx), m.x2 = round_pico(m.x2 + dx), m.name += tag, m.group = group;
+      s.monitors.push_back(m);
+    }
+    for (std::size_t q = 0; q < chip.sources.size(); ++q) {
+      Source src = chip.sources[q];
+      src.x1 = round_pico(src.x1 + dx), src.x2 = src.x1, src.group = group;
+      src.direction = q == 0 ? 1 : -1;  // links nach rechts, rechts nach links: ins Bauteil
+      if (n == 0) {
+        src.name = q == 0 ? "A" : "B";
+      } else if (q == 0) {
+        src.name = "S1";  // Regenerator: Summe von Chip 1
+        src.trigger = "Mode Summe 1", src.trigger_threshold = 5e-8;
+      } else {
+        src.name = "Cin";
+      }
+      s.sources.push_back(src);
+    }
+  }
+
+  // ODER: Y-Kombinierer, Ausgang bis an den rechten Rand verlängert
+  const double r = 6 * um, a = 25.0 * constants::pi / 180.0;
+  const double arm_dx = 2 * r * std::sin(a) + 1 * um, arm_dy = 2 * r * (1 - std::cos(a));
+  const double yc = 0.5 * chip.height;
+  const int or_group = add_building_block(s, "y_combiner", round_pico(x_or + arm_dx), yc);
+  s.groups[static_cast<std::size_t>(or_group)].name = "ODER (Übertrag)";
+  Shape tail;
+  tail.name = "Ausgang ODER", tail.group = or_group, tail.index = index_core;
+  tail.x = round_pico(0.5 * (x_or + arm_dx + 2 * um + s.width)), tail.y = yc;
+  tail.width = round_pico(s.width - (x_or + arm_dx + 2 * um)), tail.height = w;
+  s.shapes.push_back(tail);
+  for (int side : {-1, 1}) {
+    Source src;
+    src.name = side < 0 ? "C1" : "C2";
+    src.kind = SourceKind::mode, src.direction = 1, src.group = or_group;
+    src.x1 = src.x2 = round_pico(x_or + 0.5 * um);
+    src.y1 = round_pico(yc + side * arm_dy - 0.9 * um), src.y2 = round_pico(yc + side * arm_dy + 0.9 * um);
+    src.trigger = side < 0 ? "Mode Übertrag 1" : "Mode Übertrag 2";
+    src.trigger_threshold = 1.1e-6;
+    s.sources.push_back(src);
+  }
+  s.monitors.push_back({"Mode Übertrag (Cout)", MonitorKind::mode, round_pico(s.width - 3 * um),
+                        round_pico(yc - 1.2 * um), round_pico(s.width - 3 * um), round_pico(yc + 1.2 * um)});
+  s.monitors.back().group = or_group;
+  return s;
+}
 
 std::vector<std::string> reference_scene_names() {
   return {"field_waveguide", "field_interface", "field_interference", "field_ring",
@@ -662,6 +927,7 @@ FieldScene reference_scene(std::string_view name) {
   if (name == "field_bragg") return bragg();
   if (name == "field_lens") return lens();
   if (name == "field_halfadder") return halfadder(1.75 * um);
+  if (name == "field_fulladder") return fulladder_scene();
   if (name == "field_phc_halfadder") return phc_halfadder(1, 0.25, 1.3, phc_wavelength);
   throw FieldError("Unbekannte Referenz-Szene '" + std::string(name) + "'");
 }

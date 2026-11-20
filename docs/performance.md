@@ -57,6 +57,28 @@ Speicherbandbreite fällt der Gewinn kleiner aus; `bench` zeigt den eigenen Wert
 - Zeitliches Blocken (mehrere Schritte je Speicherdurchgang) und einfache Genauigkeit (`float`): würden den
   Speicherverkehr weiter senken, ändern aber die Ergebnisse; offen als #112.
 
+## Grafikkarte (OpenCL)
+
+Das 2D-FDTD rechnet auf Wunsch auf der Grafikkarte (`libs/field/src/gpu.cpp`, Schalter Ansicht > Grafikkarte
+bzw. `--gpu` in der Kommandozeile). Gebaut wird nur gegen die OpenCL-Header von Khronos (gepinnt in
+`cmake/Dependencies.cmake`); die Bibliothek des Treibers (`OpenCL.dll`, `libOpenCL.so.1`) wird zur Laufzeit
+geladen. Fehlt sie oder kann das Gerät keine doppelte Genauigkeit, rechnet alles auf dem Prozessor.
+
+* Kerne: dieselben Formeln und dieselbe Reihenfolge wie `step_ez`/`step_hz`/`record`, doppelte Genauigkeit,
+  `FP_CONTRACT OFF`. Quellen (einseitig, Regeneratoren) und Monitore laufen auf der Karte; Signale werden je
+  Block (128 Schritte bzw. Entscheidungsabstand der Regeneratoren) vorab berechnet, Messreihen je Block
+  zurückgeholt. Felder kommen nur auf Anfrage zurück (`field()`, `energy()`).
+* Abnahme: auf OpenCL für Prozessoren (PoCL) **bitgleich** zum Prozessor-Kern für Ez, Hz, Randschichten,
+  periodische Ränder, Punkt-/Linien-/Modenquellen, einseitige Quellen und Regeneratoren (`tests/test_gpu.cpp`,
+  mit `PHOTONLAB_OPENCL_DEVICE=any`). Auf Grafikkarten gilt die Toleranz 1e-12 relativ (IEEE-Rundung von
+  Addition und Multiplikation ist dort ebenfalls exakt; Division kommt in den Kernen nicht vor).
+* Auf dem Prozessor bleiben: Kerr-Formen (Newton je Zelle), inverses Design (setzt Permittivitäten und
+  Einspeisungen) und die S-Parameter-Extraktion (liest das Feld in jedem Schritt; ein Fourier-Monitor auf der
+  Karte fehlt noch).
+* Geschwindigkeit: `photonlab_cli bench --gpu`. Das FDTD ist durch die Speicherbandbreite begrenzt: eine
+  Grafikkarte mit 400 GB/s liegt etwa 5–10-mal über einem Desktop-Prozessor, auch in doppelter Genauigkeit.
+  Gemessen wurde in der Entwicklungsumgebung nur PoCL auf dem Prozessor (keine Grafikkarte vorhanden).
+
 ## Profiling
 
 Wo die Zeit hingeht, zeigt `perf` (Linux) bzw. der Visual-Studio-Profiler. Beobachtung: Der 2D-Schritt ist durch

@@ -77,7 +77,8 @@ Offen aus Phase 5 (Folge-Issues):
 - [ ] #51 Vollvektorieller Modenlöser (Ex und Ey gekoppelt), damit stark führende Si-Drähte genauer werden
 - [ ] #52 Vergleich mit Meep/MPB als Validierungsbericht (Bauplan, Abnahme Phase 5)
 - [ ] #53 Dispersionskurve n_eff(lambda) und Breiten-Sweep als Plot; Zuordnung der Moden über Feldüberlapp
-- [ ] #54 Einseitig strahlende Modenquelle (Gesamtfeld/Streufeld) und richtungsgetrennter Modenmonitor
+- [x] #54a Einseitig strahlende Modenquelle (zweite Stromschicht, Rückwärts 3e-6 bzw. 2e-4)
+- [ ] #54 Richtungsgetrennter Modenmonitor
 - [ ] #55 Materialdispersion im FDTD (Lorentz-Pole per ADE, Bauplan 4.4)
 
 ## Phase 6 – Brücke 1: vom Bauteil zum Chip
@@ -150,7 +151,8 @@ Offen aus Phase 6 (Folge-Issues):
 - [x] #108 3D-FDTD (Yee, CPML in den Schichten, Quader, Threads) mit Tests: Hohlraum-Dispersion exakt, Randschicht -94 dB
 - [x] #109 Abnahme 3D-Wellenleiter = Modenlöser: Schicht 0,05 % zur analytischen Lösung, Si-Draht 0,2 % zum vollvektoriellen Literaturwert
 - [x] #110 `photonlab_cli bench` (mit Referenzkern von Phase 11), `photonlab_cli fdtd3d`, Reiter 3D-Wellenleiter, Option PHOTONLAB_NATIVE
-- [ ] #111 GPU-Backend (SDL3-GPU-Compute in apps/ oder CUDA/OpenCL als neue Abhängigkeit – Rückfrage)
+- [x] #111 GPU-Backend: OpenCL für das 2D-FDTD (Ez, Hz, Randschichten, Quellen, Regeneratoren, Monitore), bitgleich zum Prozessor auf PoCL; OpenCL-Bibliothek zur Laufzeit geladen
+- [ ] #111b S-Parameter-Extraktion auf der Grafikkarte (Fourier-Monitor in den Kernen), Kerr-Zellen auf der Grafikkarte, 3D-FDTD auf der Grafikkarte
 - [ ] #112 Zeitliches Blocken und float-Variante des FDTD (weniger Speicherverkehr, ändert Ergebnisse im letzten Bit)
 - [ ] #113 3D: Dispersion, Verluste, Nichtlinearität; geneigte und gekrümmte Formen mit Mittelung (Subpixel)
 - [ ] #114 3D-Szenen im Editor und im Dateiformat (.plab.json), Feldbilder live
@@ -174,7 +176,7 @@ Bauteil-Labor, Feld (2D-FDTD):
 - [x] #125 Ansicht: Mausrad-Zoom um den Mauszeiger, Verschieben mit mittlerer Maustaste, Einpassen (F)
 - [x] #126 Seitenleiste neu geordnet: Rechnung (mit Laufzeit) - Neues Objekt - Ausgewählt - Objektliste - Rechengebiet
 - [x] #127 Gruppen (leeres Objekt mit Lage und Drehung, verschachtelbar): `FieldScene::groups`, `transform_group`; Objektliste als Baum, Strg+G gruppieren, Gruppe ziehen/drehen nimmt Mitglieder mit
-- [ ] #128 Rückgängig/Wiederholen im Szenen-Editor (Szene als Schnappschuss je Änderung; siehe #11, #44)
+- [x] #128 Rückgängig/Wiederholen im Szenen-Editor (Schnappschuss je abgeschlossener Änderung, Strg+Z/Strg+Y)
 - [ ] #129 Ladebildschirm/Fortschritt beim Öffnen großer Projekte und beim Aufsetzen des Lösers (Modenquellen, große Gitter) als Job
 - [ ] #130 Weitere Materialien in `libs/materials` (Ge, InP, GaAs, LiNbO3, Al2O3, Polymere, Luft/Metalle mit Drude-Modell) - jede Zahl mit Quelle; Dispersion im FDTD (Lorentz/Drude) als eigenes Issue
 - [x] #131a Formen Taper und Bogen (Ringausschnitt), auch im GDSII-Export
@@ -207,3 +209,9 @@ Obere Leiste, Bedienung:
 - [ ] #146 Sprachen Deutsch/Englisch: alle Oberflächentexte über eine Übersetzungstabelle (Latin-1 bleibt Pflicht)
 - [ ] #147 Design: Farbschema überarbeiten, Symbole in Werkzeugleisten
 - [ ] #148 3D-Simulator mit derselben Bedienung wie 2D (Editor, Objekte, Monitore; baut auf #114, #115 auf)
+
+## Phase 15 – Regenerator, Bausteine, Grafikkarte (Nov. 2026)
+- [x] #152 Regenerator als Quelle mit Auslöser (Detektor, Schwelle, Verzögerung, invertiert): O/E/O in der Feld-Szene; Verbindungslinie im Editor
+- [x] #153 Bausteine im Editor: Y-Verzweigung, Y-Kombinierer, S-Bogen, 90-Grad-Bogen, Richtkoppler, Phasenschieber, Ring am Bus, Halbaddierer-Chip, Regenerator (je als Gruppe)
+- [x] #154 Volladdierer als eine Feld-Szene (`field_fulladder`, Gatter `scene_fulladder`): zwei Halbaddierer-Chips + Y-Kombinierer, drei Regeneratoren, einseitige Quellen
+- [x] #155 Fehler: Leertaste/Pfeiltasten blieben im Besitz des Feld-Labors, wenn ein anderer Reiter vorn lag; eingefügte Objekte aus anderen Projekten zeigten auf fehlende Gruppen; Feld-Gatter mit Modenmonitor meldeten die Schwelle in W/m

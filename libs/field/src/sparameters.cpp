@@ -319,6 +319,7 @@ SParameterResult extract_sparameters(const FieldScene& scene, ThreadPool* pool, 
         source.mode_order = driven.mode_order;
         run_scene.sources = {source};
         Fdtd sim(run_scene);
+        sim.use_gpu(false);  // liest das Feld in jedem Schritt: auf dem Prozessor schneller (siehe gpu.hpp)
         sim.set_threads(StepTeam::share_for(port_count, pool ? pool->size() : 0));
 
         // Fourier-Summen aller Ports

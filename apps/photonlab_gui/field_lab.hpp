@@ -105,6 +105,10 @@ class FieldLab {
   void move_selection(double dx, double dy);
   bool selection_enabled() const;  // true, wenn mindestens ein ausgewähltes Objekt aktiv ist
   void handle_shortcuts();
+  void release_keys();   // Leertaste und Pfeiltasten wieder der Oberfläche überlassen
+  void track_history();  // Schnappschuss nach jeder abgeschlossenen Änderung (Rückgängig)
+  void undo();
+  void redo();
   ObjectRef pick(ImVec2 mouse) const;  // Objekt unter dem Mauszeiger (Bildschirmkoordinaten)
   ImVec2 to_screen(double x, double y) const {
     return {canvas_origin_.x + static_cast<float>(x) * px_per_m_,
@@ -130,7 +134,9 @@ class FieldLab {
   std::shared_ptr<Control> control_;
   std::shared_ptr<Snapshot> snapshot_;
   std::future<void> job_;
-  bool want_running_ = true;  // läuft, sobald der Arbeitsbereich sichtbar ist
+  bool want_running_ = true;
+  bool gpu_setting_ = false;  // Stand von gpu::enabled() beim Aufsetzen des Lösers  // läuft, sobald der
+                              // Arbeitsbereich sichtbar ist
   bool stop_at_duration_ = true;
   int steps_per_frame_ = 8;
   bool full_speed_ = false;
@@ -169,6 +175,12 @@ class FieldLab {
   ImVec2 pan_{};
   ImVec2 canvas_origin_{};  // Bildschirmort von (0, 0) im letzten Bild
   float px_per_m_ = 1.0f;
+
+  // Rückgängig/Wiederholen: Szenen vor bzw. nach den Änderungen
+  std::vector<field::FieldScene> undo_, redo_;
+  field::FieldScene last_scene_;
+  std::uint64_t history_generation_ = static_cast<std::uint64_t>(-1);
+  ImGuiID key_owner_ = 0;
 
   // Spektrum der Punkt-Monitore
   std::vector<double> spectrum_wavelength_nm_;

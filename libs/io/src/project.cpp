@@ -96,6 +96,13 @@ ordered_json scene_to_json(const field::FieldScene& scene) {
                            {"mode_order", q.mode_order}};
     if (!q.enabled) source["enabled"] = false;  // nur wenn deaktiviert: bestehende Dateien bleiben gleich
     if (q.group >= 0) source["group"] = q.group;
+    if (q.direction != 0) source["direction"] = q.direction;
+    if (!q.trigger.empty()) {
+      source["trigger"] = q.trigger;
+      source["trigger_threshold"] = q.trigger_threshold;
+      source["trigger_delay"] = q.trigger_delay;
+      source["trigger_invert"] = q.trigger_invert;
+    }
     sources.push_back(std::move(source));
   }
   for (const auto& m : scene.monitors) {
@@ -206,6 +213,11 @@ field::FieldScene scene_from_json(const ordered_json& json) {
       q.mode_order = j.value("mode_order", 0);
       q.enabled = j.value("enabled", true);
       q.group = j.value("group", -1);
+      q.trigger = j.value("trigger", "");
+      q.direction = j.value("direction", 0);
+      q.trigger_threshold = j.value("trigger_threshold", 0.0);
+      q.trigger_delay = j.value("trigger_delay", q.trigger_delay);
+      q.trigger_invert = j.value("trigger_invert", false);
       scene.sources.push_back(std::move(q));
     }
   if (json.contains("monitors"))

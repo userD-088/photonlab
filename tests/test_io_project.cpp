@@ -67,6 +67,11 @@ TEST_CASE("Projekt: Gruppen, Taper und Bogen überstehen Speichern und Laden") {
   project.field.shapes[1].kind = field::ShapeKind::arc;
   project.field.shapes[1].sweep = 1.234;
   project.field.ports.push_back({"p", 0.0, 0.0, 0.0, 1e-6, 0, 0});
+  project.field.sources.resize(1);
+  project.field.sources[0].trigger = "d";
+  project.field.sources[0].trigger_threshold = 1.5e-12;
+  project.field.sources[0].trigger_delay = 33e-15;
+  project.field.sources[0].trigger_invert = true;
   const io::Project loaded = io::project_from_json(io::project_to_json(project));
   CHECK(loaded.field == project.field);
 }
