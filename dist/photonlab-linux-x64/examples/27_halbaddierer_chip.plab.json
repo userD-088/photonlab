@@ -1,0 +1,238 @@
+{
+  "format": "photonlab.project",
+  "version": 1,
+  "units": "SI",
+  "circuit": {
+    "name": "Halbaddierer (MZI-Schalter, Directed Logic)",
+    "instances": [
+      {
+        "name": "laser",
+        "type": "laser",
+        "params": {
+          "power": 0.01
+        },
+        "grid": [
+          0,
+          0
+        ]
+      },
+      {
+        "name": "koppler_ein",
+        "type": "grating_coupler",
+        "params": {},
+        "grid": [
+          6,
+          0
+        ]
+      },
+      {
+        "name": "verteiler",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.5
+        },
+        "grid": [
+          13,
+          0
+        ]
+      },
+      {
+        "name": "s",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          20,
+          0
+        ]
+      },
+      {
+        "name": "g",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          20,
+          4
+        ]
+      },
+      {
+        "name": "c",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          27,
+          4
+        ]
+      },
+      {
+        "name": "det_s",
+        "type": "photodiode",
+        "params": {},
+        "grid": [
+          34,
+          0
+        ]
+      },
+      {
+        "name": "det_c",
+        "type": "photodiode",
+        "params": {},
+        "grid": [
+          34,
+          4
+        ]
+      }
+    ],
+    "connections": [
+      {
+        "from": "laser.out",
+        "to": "koppler_ein.fiber"
+      },
+      {
+        "from": "koppler_ein.wg",
+        "to": "verteiler.in1"
+      },
+      {
+        "from": "verteiler.out1",
+        "to": "s.in1"
+      },
+      {
+        "from": "verteiler.out2",
+        "to": "g.in1"
+      },
+      {
+        "from": "g.out1",
+        "to": "c.in2"
+      },
+      {
+        "from": "s.out1",
+        "to": "det_s.in"
+      },
+      {
+        "from": "c.out1",
+        "to": "det_c.in"
+      }
+    ]
+  },
+  "simulation": {
+    "wavelength": 1.55e-06,
+    "sweep": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 201
+    },
+    "monte_carlo": {
+      "samples": 500,
+      "seed": 1,
+      "variations": [
+        {
+          "type": "mzi_switch",
+          "param": "power_coupling",
+          "sigma": 0.01,
+          "relative": false,
+          "correlated": false
+        },
+        {
+          "type": "mzi_switch",
+          "param": "thermal_resistance",
+          "sigma": 0.03,
+          "relative": true,
+          "correlated": false
+        }
+      ]
+    }
+  },
+  "logic": {
+    "name": "Halbaddierer",
+    "inputs": [
+      {
+        "name": "A",
+        "instance": "s",
+        "param": "power_a",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "g",
+          "c"
+        ]
+      },
+      {
+        "name": "B",
+        "instance": "s",
+        "param": "power_b",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical",
+        "more_instances": [
+          "c"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "S",
+        "instance": "det_s",
+        "measurement": "Leistung",
+        "expected": [
+          0,
+          1,
+          1,
+          0
+        ],
+        "threshold": 0.000995268
+      },
+      {
+        "name": "C",
+        "instance": "det_c",
+        "measurement": "Leistung",
+        "expected": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "threshold": 0.000995268
+      }
+    ]
+  },
+  "field": {
+    "name": "",
+    "width": 0.0,
+    "height": 0.0,
+    "cell_size": 2.5e-08,
+    "background_index": 1.0,
+    "polarization": "ez",
+    "boundary_x": "pml",
+    "boundary_y": "pml",
+    "pml_cells": 12,
+    "courant": 0.99,
+    "duration": 0.0,
+    "shapes": [],
+    "sources": [],
+    "monitors": [],
+    "ports": [],
+    "sparameters": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 51,
+      "source_offset": 3e-07,
+      "decay": 1e-05,
+      "max_time": 5e-12
+    }
+  },
+  "cross_section": {
+    "core": "Si",
+    "lower": "SiO2",
+    "upper": "SiO2",
+    "width": 5e-07,
+    "height": 2.2e-07,
+    "slab_height": 0.0,
+    "margin_x": 1e-06,
+    "margin_y": 8e-07,
+    "cell_size": 2e-08,
+    "wavelength": 1.55e-06,
+    "polarization": "quasi_te",
+    "modes": 4
+  },
+  "sparameters": []
+}

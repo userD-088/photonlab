@@ -1,0 +1,778 @@
+{
+  "format": "photonlab.project",
+  "version": 1,
+  "units": "SI",
+  "circuit": {
+    "name": "8-Bit-Addierer aus Volladdierer-Zellen",
+    "instances": [
+      {
+        "name": "laser",
+        "type": "laser",
+        "params": {
+          "power": 0.01
+        },
+        "grid": [
+          0,
+          0
+        ]
+      },
+      {
+        "name": "koppler_ein",
+        "type": "grating_coupler",
+        "params": {},
+        "grid": [
+          6,
+          0
+        ]
+      },
+      {
+        "name": "verteiler0",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.1111111111111111
+        },
+        "grid": [
+          13,
+          0
+        ]
+      },
+      {
+        "name": "verteiler1",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.125
+        },
+        "grid": [
+          23,
+          0
+        ]
+      },
+      {
+        "name": "verteiler2",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.14285714285714285
+        },
+        "grid": [
+          37,
+          0
+        ]
+      },
+      {
+        "name": "verteiler3",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.16666666666666666
+        },
+        "grid": [
+          51,
+          0
+        ]
+      },
+      {
+        "name": "verteiler4",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.2
+        },
+        "grid": [
+          65,
+          0
+        ]
+      },
+      {
+        "name": "verteiler5",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.25
+        },
+        "grid": [
+          79,
+          0
+        ]
+      },
+      {
+        "name": "verteiler6",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.3333333333333333
+        },
+        "grid": [
+          93,
+          0
+        ]
+      },
+      {
+        "name": "verteiler7",
+        "type": "coupler",
+        "params": {
+          "power_coupling": 0.5
+        },
+        "grid": [
+          107,
+          0
+        ]
+      },
+      {
+        "name": "cin",
+        "type": "mzi_switch",
+        "params": {},
+        "grid": [
+          20,
+          4
+        ]
+      },
+      {
+        "name": "fa0",
+        "type": "sub:volladdierer",
+        "params": {},
+        "grid": [
+          30,
+          4
+        ]
+      },
+      {
+        "name": "fa1",
+        "type": "sub:volladdierer",
+        "params": {},
+        "grid": [
+          44,
+          4
+        ]
+      },
+      {
+        "name": "fa2",
+        "type": "sub:volladdierer",
+        "params": {},
+        "grid": [
+          58,
+          4
+        ]
+      },
+      {
+        "name": "fa3",
+        "type": "sub:volladdierer",
+        "params": {},
+        "grid": [
+          72,
+          4
+        ]
+      },
+      {
+        "name": "fa4",
+        "type": "sub:volladdierer",
+        "params": {},
+        "grid": [
+          86,
+          4
+        ]
+      },
+      {
+        "name": "fa5",
+        "type": "sub:volladdierer",
+        "params": {},
+        "grid": [
+          100,
+          4
+        ]
+      },
+      {
+        "name": "fa6",
+        "type": "sub:volladdierer",
+        "params": {},
+        "grid": [
+          114,
+          4
+        ]
+      },
+      {
+        "name": "fa7",
+        "type": "sub:volladdierer",
+        "params": {},
+        "grid": [
+          128,
+          4
+        ]
+      },
+      {
+        "name": "det_cout",
+        "type": "photodiode",
+        "params": {},
+        "grid": [
+          142,
+          4
+        ]
+      }
+    ],
+    "connections": [
+      {
+        "from": "laser.out",
+        "to": "koppler_ein.fiber"
+      },
+      {
+        "from": "koppler_ein.wg",
+        "to": "verteiler0.in1"
+      },
+      {
+        "from": "verteiler0.out1",
+        "to": "verteiler1.in1"
+      },
+      {
+        "from": "verteiler1.out1",
+        "to": "verteiler2.in1"
+      },
+      {
+        "from": "verteiler2.out1",
+        "to": "verteiler3.in1"
+      },
+      {
+        "from": "verteiler3.out1",
+        "to": "verteiler4.in1"
+      },
+      {
+        "from": "verteiler4.out1",
+        "to": "verteiler5.in1"
+      },
+      {
+        "from": "verteiler5.out1",
+        "to": "verteiler6.in1"
+      },
+      {
+        "from": "verteiler6.out1",
+        "to": "verteiler7.in1"
+      },
+      {
+        "from": "verteiler0.out2",
+        "to": "cin.in1"
+      },
+      {
+        "from": "verteiler1.out2",
+        "to": "fa0.feed"
+      },
+      {
+        "from": "cin.out1",
+        "to": "fa0.c_in"
+      },
+      {
+        "from": "cin.out2",
+        "to": "fa0.n_in"
+      },
+      {
+        "from": "verteiler2.out2",
+        "to": "fa1.feed"
+      },
+      {
+        "from": "fa0.c_out",
+        "to": "fa1.c_in"
+      },
+      {
+        "from": "fa0.n_out",
+        "to": "fa1.n_in"
+      },
+      {
+        "from": "verteiler3.out2",
+        "to": "fa2.feed"
+      },
+      {
+        "from": "fa1.c_out",
+        "to": "fa2.c_in"
+      },
+      {
+        "from": "fa1.n_out",
+        "to": "fa2.n_in"
+      },
+      {
+        "from": "verteiler4.out2",
+        "to": "fa3.feed"
+      },
+      {
+        "from": "fa2.c_out",
+        "to": "fa3.c_in"
+      },
+      {
+        "from": "fa2.n_out",
+        "to": "fa3.n_in"
+      },
+      {
+        "from": "verteiler5.out2",
+        "to": "fa4.feed"
+      },
+      {
+        "from": "fa3.c_out",
+        "to": "fa4.c_in"
+      },
+      {
+        "from": "fa3.n_out",
+        "to": "fa4.n_in"
+      },
+      {
+        "from": "verteiler6.out2",
+        "to": "fa5.feed"
+      },
+      {
+        "from": "fa4.c_out",
+        "to": "fa5.c_in"
+      },
+      {
+        "from": "fa4.n_out",
+        "to": "fa5.n_in"
+      },
+      {
+        "from": "verteiler7.out2",
+        "to": "fa6.feed"
+      },
+      {
+        "from": "fa5.c_out",
+        "to": "fa6.c_in"
+      },
+      {
+        "from": "fa5.n_out",
+        "to": "fa6.n_in"
+      },
+      {
+        "from": "verteiler7.out1",
+        "to": "fa7.feed"
+      },
+      {
+        "from": "fa6.c_out",
+        "to": "fa7.c_in"
+      },
+      {
+        "from": "fa6.n_out",
+        "to": "fa7.n_in"
+      },
+      {
+        "from": "fa7.c_out",
+        "to": "det_cout.in"
+      }
+    ]
+  },
+  "simulation": {
+    "wavelength": 1.55e-06,
+    "sweep": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 201
+    },
+    "monte_carlo": {
+      "samples": 500,
+      "seed": 1,
+      "variations": [
+        {
+          "type": "mzi_switch",
+          "param": "power_coupling",
+          "sigma": 0.01,
+          "relative": false,
+          "correlated": false
+        },
+        {
+          "type": "mzi_switch",
+          "param": "thermal_resistance",
+          "sigma": 0.03,
+          "relative": true,
+          "correlated": false
+        }
+      ]
+    }
+  },
+  "logic": {
+    "name": "8-Bit-Addierer (Zellen)",
+    "inputs": [
+      {
+        "name": "A7",
+        "instance": "fa7",
+        "param": "A",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "A6",
+        "instance": "fa6",
+        "param": "A",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "A5",
+        "instance": "fa5",
+        "param": "A",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "A4",
+        "instance": "fa4",
+        "param": "A",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "A3",
+        "instance": "fa3",
+        "param": "A",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "A2",
+        "instance": "fa2",
+        "param": "A",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "A1",
+        "instance": "fa1",
+        "param": "A",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "A0",
+        "instance": "fa0",
+        "param": "A",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "B7",
+        "instance": "fa7",
+        "param": "B",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "B6",
+        "instance": "fa6",
+        "param": "B",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "B5",
+        "instance": "fa5",
+        "param": "B",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "B4",
+        "instance": "fa4",
+        "param": "B",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "B3",
+        "instance": "fa3",
+        "param": "B",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "B2",
+        "instance": "fa2",
+        "param": "B",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "B1",
+        "instance": "fa1",
+        "param": "B",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "B0",
+        "instance": "fa0",
+        "param": "B",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      },
+      {
+        "name": "Cin",
+        "instance": "cin",
+        "param": "power_a",
+        "value0": 0.0,
+        "value1": 0.02477,
+        "encoding": "electrical"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "Cout",
+        "instance": "det_cout",
+        "measurement": "Leistung",
+        "expected": [],
+        "threshold": 9.5207e-05
+      },
+      {
+        "name": "S7",
+        "instance": "fa7",
+        "measurement": "det_s: Leistung",
+        "expected": [],
+        "threshold": 1.0579e-05
+      },
+      {
+        "name": "S6",
+        "instance": "fa6",
+        "measurement": "det_s: Leistung",
+        "expected": [],
+        "threshold": 1.1754e-05
+      },
+      {
+        "name": "S5",
+        "instance": "fa5",
+        "measurement": "det_s: Leistung",
+        "expected": [],
+        "threshold": 1.306e-05
+      },
+      {
+        "name": "S4",
+        "instance": "fa4",
+        "measurement": "det_s: Leistung",
+        "expected": [],
+        "threshold": 1.4511e-05
+      },
+      {
+        "name": "S3",
+        "instance": "fa3",
+        "measurement": "det_s: Leistung",
+        "expected": [],
+        "threshold": 1.6123e-05
+      },
+      {
+        "name": "S2",
+        "instance": "fa2",
+        "measurement": "det_s: Leistung",
+        "expected": [],
+        "threshold": 1.7915e-05
+      },
+      {
+        "name": "S1",
+        "instance": "fa1",
+        "measurement": "det_s: Leistung",
+        "expected": [],
+        "threshold": 1.9905e-05
+      },
+      {
+        "name": "S0",
+        "instance": "fa0",
+        "measurement": "det_s: Leistung",
+        "expected": [],
+        "threshold": 2.2117e-05
+      }
+    ]
+  },
+  "field": {
+    "name": "",
+    "width": 0.0,
+    "height": 0.0,
+    "cell_size": 2.5e-08,
+    "background_index": 1.0,
+    "polarization": "ez",
+    "boundary_x": "pml",
+    "boundary_y": "pml",
+    "pml_cells": 12,
+    "courant": 0.99,
+    "duration": 0.0,
+    "shapes": [],
+    "sources": [],
+    "monitors": [],
+    "ports": [],
+    "sparameters": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 51,
+      "source_offset": 3e-07,
+      "decay": 1e-05,
+      "max_time": 5e-12
+    }
+  },
+  "cross_section": {
+    "core": "Si",
+    "lower": "SiO2",
+    "upper": "SiO2",
+    "width": 5e-07,
+    "height": 2.2e-07,
+    "slab_height": 0.0,
+    "margin_x": 1e-06,
+    "margin_y": 8e-07,
+    "cell_size": 2e-08,
+    "wavelength": 1.55e-06,
+    "polarization": "quasi_te",
+    "modes": 4
+  },
+  "sparameters": [],
+  "subcircuits": [
+    {
+      "name": "volladdierer",
+      "label": "Volladdierer-Zelle",
+      "description": "Ein Bit des Ripple-Carry-Addierers aus MZI-Schaltern; Summe am inneren Detektor det_s",
+      "circuit": {
+        "name": "Volladdierer-Zelle",
+        "instances": [
+          {
+            "name": "g",
+            "type": "mzi_switch",
+            "params": {},
+            "grid": [
+              0,
+              0
+            ]
+          },
+          {
+            "name": "tap_c",
+            "type": "coupler",
+            "params": {
+              "power_coupling": 0.1
+            },
+            "grid": [
+              0,
+              5
+            ]
+          },
+          {
+            "name": "tap_n",
+            "type": "coupler",
+            "params": {
+              "power_coupling": 0.1
+            },
+            "grid": [
+              0,
+              10
+            ]
+          },
+          {
+            "name": "c",
+            "type": "mzi_switch",
+            "params": {},
+            "grid": [
+              7,
+              3
+            ]
+          },
+          {
+            "name": "n",
+            "type": "mzi_switch",
+            "params": {},
+            "grid": [
+              7,
+              9
+            ]
+          },
+          {
+            "name": "s",
+            "type": "mzi_switch",
+            "params": {},
+            "grid": [
+              7,
+              15
+            ]
+          },
+          {
+            "name": "det_s",
+            "type": "photodiode",
+            "params": {},
+            "grid": [
+              14,
+              17
+            ]
+          }
+        ],
+        "connections": [
+          {
+            "from": "tap_c.out1",
+            "to": "c.in1"
+          },
+          {
+            "from": "g.out1",
+            "to": "c.in2"
+          },
+          {
+            "from": "tap_n.out1",
+            "to": "n.in1"
+          },
+          {
+            "from": "g.out2",
+            "to": "n.in2"
+          },
+          {
+            "from": "tap_c.out2",
+            "to": "s.in1"
+          },
+          {
+            "from": "tap_n.out2",
+            "to": "s.in2"
+          },
+          {
+            "from": "s.out2",
+            "to": "det_s.in"
+          }
+        ]
+      },
+      "ports": [
+        {
+          "name": "feed",
+          "inner": "g.in1"
+        },
+        {
+          "name": "c_in",
+          "inner": "tap_c.in1"
+        },
+        {
+          "name": "n_in",
+          "inner": "tap_n.in1"
+        },
+        {
+          "name": "c_out",
+          "inner": "c.out1"
+        },
+        {
+          "name": "n_out",
+          "inner": "n.out1"
+        }
+      ],
+      "params": [
+        {
+          "name": "A",
+          "param": "power_a",
+          "instances": [
+            "g",
+            "c",
+            "n",
+            "s"
+          ],
+          "default": 0.0
+        },
+        {
+          "name": "B",
+          "param": "power_b",
+          "instances": [
+            "c",
+            "n",
+            "s"
+          ],
+          "default": 0.0
+        }
+      ]
+    }
+  ]
+}

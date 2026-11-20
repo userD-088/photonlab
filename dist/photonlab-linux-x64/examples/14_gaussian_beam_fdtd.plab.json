@@ -1,0 +1,116 @@
+{
+  "format": "photonlab.project",
+  "version": 1,
+  "units": "SI",
+  "circuit": {
+    "name": "Gauß-Strahl im freien Raum",
+    "instances": [],
+    "connections": []
+  },
+  "simulation": {
+    "wavelength": 1.55e-06,
+    "sweep": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 501
+    },
+    "monte_carlo": {
+      "samples": 500,
+      "seed": 1,
+      "variations": []
+    }
+  },
+  "logic": {
+    "name": "",
+    "inputs": [],
+    "outputs": []
+  },
+  "field": {
+    "name": "Gauß-Strahl im freien Raum",
+    "width": 1.9999999999999998e-05,
+    "height": 1.2e-05,
+    "cell_size": 4e-08,
+    "background_index": 1.0,
+    "polarization": "ez",
+    "boundary_x": "pml",
+    "boundary_y": "pml",
+    "pml_cells": 12,
+    "courant": 0.99,
+    "duration": 1.5e-13,
+    "shapes": [],
+    "sources": [
+      {
+        "name": "Strahl",
+        "kind": "line",
+        "x1": 2e-06,
+        "y1": 3e-06,
+        "x2": 2e-06,
+        "y2": 9e-06,
+        "beam_width": 8e-07,
+        "signal": "continuous",
+        "wavelength": 1.55e-06,
+        "amplitude": 1.0,
+        "phase": 0.0,
+        "pulse_duration": 1.5e-14,
+        "ramp_periods": 4.0,
+        "mode_order": 0
+      }
+    ],
+    "monitors": [
+      {
+        "name": "nah",
+        "kind": "point",
+        "x1": 4e-06,
+        "y1": 6e-06,
+        "x2": 0.0,
+        "y2": 0.0,
+        "mode_order": 0,
+        "wavelength": 0.0
+      },
+      {
+        "name": "mittel",
+        "kind": "point",
+        "x1": 9.999999999999999e-06,
+        "y1": 6e-06,
+        "x2": 0.0,
+        "y2": 0.0,
+        "mode_order": 0,
+        "wavelength": 0.0
+      },
+      {
+        "name": "fern",
+        "kind": "point",
+        "x1": 1.7e-05,
+        "y1": 6e-06,
+        "x2": 0.0,
+        "y2": 0.0,
+        "mode_order": 0,
+        "wavelength": 0.0
+      }
+    ],
+    "ports": [],
+    "sparameters": {
+      "wavelength_start": 1.5e-06,
+      "wavelength_stop": 1.6e-06,
+      "points": 51,
+      "source_offset": 3e-07,
+      "decay": 1e-05,
+      "max_time": 5e-12
+    }
+  },
+  "cross_section": {
+    "core": "Si",
+    "lower": "SiO2",
+    "upper": "SiO2",
+    "width": 5e-07,
+    "height": 2.2e-07,
+    "slab_height": 0.0,
+    "margin_x": 1e-06,
+    "margin_y": 8e-07,
+    "cell_size": 2e-08,
+    "wavelength": 1.55e-06,
+    "polarization": "quasi_te",
+    "modes": 4
+  },
+  "sparameters": []
+}
