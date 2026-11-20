@@ -485,7 +485,8 @@ class Heater final : public Component {
         length_(p.at("length")),
         power_(p.at("power_el")),
         r_th_(p.at("thermal_resistance")),
-        dn_dt_(p.at("dn_dT")) {}
+        dn_dt_(p.at("dn_dT")),
+        tau_(p.at("thermal_time")) {}
   int port_count() const override { return 2; }
   CMatrix s_matrix(double wavelength) const override {
     return two_port(path_.transmission(wavelength, length_) *
@@ -493,12 +494,15 @@ class Heater final : public Component {
   }
   std::vector<Measurement> measure(const CVector& /*a*/, const CVector& /*b*/) const override {
     return {{"Temperaturerhöhung", r_th_ * power_, "K"},
-            {"Zusatzphase", heater_phase(path_.wavelength_ref, length_, dn_dt_, r_th_, power_), "rad"}};
+            {"Zusatzphase", heater_phase(path_.wavelength_ref, length_, dn_dt_, r_th_, power_), "rad"},
+            {"Heizleistung", power_, "W"},
+            {"P_pi", heater_p_pi(path_.wavelength_ref, length_, dn_dt_, r_th_), "W"},
+            {"Schaltzeit (10-90 %)", 2.2 * tau_, "s"}};
   }
 
  private:
   GuidedPath path_;
-  double length_, power_, r_th_, dn_dt_;
+  double length_, power_, r_th_, dn_dt_, tau_;
 };
 
 // MZI-Schalter: Koppler - zwei Arme mit je einem Heizer - Koppler. Gleiche Arme (gleiche Heizleistung)
@@ -514,14 +518,19 @@ class MziSwitch final : public Component {
         r_th_(p.at("thermal_resistance")),
         dn_dt_(p.at("dn_dT")),
         kappa2_(p.at("power_coupling")),
-        excess_loss_db_(p.at("excess_loss_db")) {}
+        excess_loss_db_(p.at("excess_loss_db")),
+        crosstalk_(p.at("crosstalk")),
+        tau_(p.at("thermal_time")) {}
   int port_count() const override { return 4; }
   CMatrix s_matrix(double wavelength) const override {
     const double a = amplitude_from_loss_db(excess_loss_db_);
     const cplx t = a * std::sqrt(1.0 - kappa2_), ik = a * I * std::sqrt(kappa2_);
     const cplx arm = path_.transmission(wavelength, length_);
-    const cplx ea = arm * expi(heater_phase(wavelength, length_, dn_dt_, r_th_, power_a_));
-    const cplx eb = arm * expi(heater_phase(wavelength, length_, dn_dt_, r_th_, power_b_));
+    // thermisches Übersprechen: jeder Arm bekommt den Anteil chi der Phase des Nachbarn
+    const double phi_a = heater_phase(wavelength, length_, dn_dt_, r_th_, power_a_);
+    const double phi_b = heater_phase(wavelength, length_, dn_dt_, r_th_, power_b_);
+    const cplx ea = arm * expi(phi_a + crosstalk_ * phi_b);
+    const cplx eb = arm * expi(phi_b + crosstalk_ * phi_a);
     // M = C diag(ea, eb) C mit C = [[t, ik], [ik, t]]; Portreihenfolge in1, in2, out1, out2
     const cplx m11 = t * ea * t + ik * eb * ik, m12 = t * ea * ik + ik * eb * t;
     const cplx m21 = ik * ea * t + t * eb * ik, m22 = ik * ea * ik + t * eb * t;
@@ -531,12 +540,14 @@ class MziSwitch final : public Component {
     return s;
   }
   std::vector<Measurement> measure(const CVector& /*a*/, const CVector& /*b*/) const override {
-    return {{"Heizleistung", power_a_ + power_b_, "W"}};
+    return {{"Heizleistung", power_a_ + power_b_, "W"},
+            {"P_pi", heater_p_pi(path_.wavelength_ref, length_, dn_dt_, r_th_) / (1.0 - crosstalk_), "W"},
+            {"Schaltzeit (10-90 %)", 2.2 * tau_, "s"}};
   }
 
  private:
   GuidedPath path_;
-  double length_, power_a_, power_b_, r_th_, dn_dt_, kappa2_, excess_loss_db_;
+  double length_, power_a_, power_b_, r_th_, dn_dt_, kappa2_, excess_loss_db_, crosstalk_, tau_;
 };
 
 PnSection pn_section(const ParamMap& p) {
@@ -796,19 +807,42 @@ void register_builtin_components(ComponentRegistry& registry) {
     // 10487 (2014) (Si-Heizer ohne Unterätzung); P_pi = lambda / (2 L dn/dT R_th).
     const double dn_dT = materials::get("Si").thermo_optic;
     const double r_th = 1550e-9 / (2.0 * 61.6e-6 * dn_dT * 24.77e-3);
+    // Zeitkonstante: einige µs für Si-Heizer ohne Unterätzung (Größenordnung, Annahme); frei hängende
+    // (unterätzte) Arme brauchen etwa 0,5 mW für pi und sind entsprechend träger, etwa 100 µs (Größenordnung
+    // nach Fang u. a., IEEE Photon. Technol. Lett. 23, 525 (2011)).
+    const ParamSpec thermal_time = {"thermal_time", "Thermische Zeitkonstante", 4e-6, 1e-9, 1.0, "µs", 1e-6};
+    // Knöpfe: P_pi über den Wärmewiderstand auf eine der beiden Bauformen stellen (Länge und dn/dT bleiben)
+    auto set_p_pi = [](ParamMap& p, double wavelength, double p_pi, double tau, const char* name) {
+      p["thermal_resistance"] = wavelength / (2.0 * p.at("length") * p.at("dn_dT") * p_pi);
+      p["thermal_time"] = tau;
+      char text[200];
+      std::snprintf(text, sizeof text,
+                    "%s: P_pi = %.2f mW bei %.1f nm, Zeitkonstante %.0f µs. Bit-1-Werte der Logik anpassen "
+                    "(Fenster Logik).",
+                    name, p_pi / 1e-3, wavelength / 1e-9, tau / 1e-6);
+      return std::string(text);
+    };
+    const std::vector<ComponentAction> heater_actions = {
+        {"Unterätzt (frei hängend)", "Wärmewiderstand für P_pi = 0,49 mW, Zeitkonstante 100 µs (Fang u. a. 2011).",
+         [set_p_pi](ParamMap& p, double w) { return set_p_pi(p, w, 0.49e-3, 100e-6, "Unterätzt"); }},
+        {"Standard (nicht unterätzt)", "Wärmewiderstand für P_pi = 24,8 mW, Zeitkonstante 4 µs (Harris u. a. 2014).",
+         [set_p_pi](ParamMap& p, double w) { return set_p_pi(p, w, 24.77e-3, 4e-6, "Standard"); }}};
     std::vector<ParamSpec> params = {
         {"length", "Länge", 61.6e-6, 1e-6, 1e-2, "µm", 1e-6},
         {"power_el", "Heizleistung", 0.0, 0.0, 0.2, "mW", 1e-3},
         {"thermal_resistance", "Wärmewiderstand", r_th, 1.0, 1e7, "K/mW", 1e3},
-        {"dn_dT", "Thermo-optischer Koeffizient", dn_dT, -1e-3, 1e-3, "1e-4/K", 1e-4}};
+        {"dn_dT", "Thermo-optischer Koeffizient", dn_dT, -1e-3, 1e-3, "1e-4/K", 1e-4},
+        thermal_time};
     params.insert(params.end(), guided.begin(), guided.end());
-    registry.add({"heater",
+    ComponentType heater_type{"heater",
                   "Heizer",
-                  "Wellenleiter mit Heizer: Phase 2 pi/lambda dn/dT R_th P L; stationär (keine thermische "
-                  "Zeitkonstante), gleichmäßige Erwärmung, kein Übersprechen.",
+                  "Wellenleiter mit Heizer: Phase 2 pi/lambda dn/dT R_th P L; stationär (die Zeitkonstante "
+                  "geht nur in die Schaltzeit ein), gleichmäßige Erwärmung.",
                   {"in", "out"},
                   params,
-                  make<Heater>});
+                  make<Heater>};
+    heater_type.actions = heater_actions;
+    registry.add(std::move(heater_type));
     // MZI-Schalter aus denselben Heizern (P_pi = 24,8 mW je Arm); Koppler wie der Richtkoppler.
     std::vector<ParamSpec> mzi = {
         {"power_a", "Heizer Arm 1", 0.0, 0.0, 0.2, "mW", 1e-3},
@@ -817,15 +851,19 @@ void register_builtin_components(ComponentRegistry& registry) {
         {"thermal_resistance", "Wärmewiderstand", r_th, 1.0, 1e7, "K/mW", 1e3},
         {"dn_dT", "Thermo-optischer Koeffizient", dn_dT, -1e-3, 1e-3, "1e-4/K", 1e-4},
         {"power_coupling", "Kreuzkopplung der Koppler", 0.5, 0.0, 1.0, "", 1.0},
-        {"excess_loss_db", "Zusatzverlust je Koppler", 0.0, 0.0, 60.0, "dB", 1.0}};
+        {"excess_loss_db", "Zusatzverlust je Koppler", 0.0, 0.0, 60.0, "dB", 1.0},
+        {"crosstalk", "Thermisches Übersprechen", 0.0, 0.0, 0.9, "", 1.0},
+        thermal_time};
     mzi.insert(mzi.end(), guided.begin(), guided.end());
     ComponentType type{"mzi_switch",
                        "MZI-Schalter (2 Heizer)",
                        "Koppler, zwei Arme mit Heizer, Koppler. Gleiche Heizleistung: Kreuz (in1 -> out2), "
-                       "Unterschied P_pi: Durchgang (in1 -> out1). Stationär, kein Übersprechen der Heizer.",
+                       "Unterschied P_pi: Durchgang (in1 -> out1). Übersprechen: jeder Arm erhält den Anteil "
+                       "chi der Phase des Nachbarn. Stationär.",
                        {"in1", "in2", "out1", "out2"},
                        mzi,
                        make<MziSwitch>};
+    type.actions = heater_actions;
     registry.add(std::move(type));
   }
   // PN-Übergang: Dotierung 5e17 cm^-3 auf beiden Seiten, Gamma = 0,8, 500 x 220 nm (übliche Werte für

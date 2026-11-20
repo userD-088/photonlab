@@ -118,7 +118,8 @@ Materialbibliothek bei der Wellenlänge der ersten Quelle.
   ist höchstens so dick wie die der 2D-Szene, damit Quellen und Monitore außerhalb liegen.
 - **Modenquellen**: Stromfläche quer zur Linie über den ganzen Querschnitt außerhalb der Randschicht, Profil =
   dominante E-Komponente der **echten Querschnittsmode** aus dem eigenen Modenlöser (`fde.cpp`, quasi-TE bei
-  Hz-Szenen, quasi-TM bei Ez-Szenen) auf dem 3D-Gitter; nur ohne geführte Mode das getrennte Profil
+  Hz-Szenen, quasi-TM bei Ez-Szenen) auf dem 3D-Gitter, mit der Brechzahl, die das FDTD am Ort der
+  eingespeisten Komponente sieht (Mittel über die Zelle); nur ohne geführte Mode das getrennte Profil
   (2D-Mode mal Schichtmode). Gewicht 2 n_eff c dt/(ε dx) · A wie in 2D, einseitig ebenfalls wie in 2D mit dem
   n_eff des Modenlösers. Linienquellen: gleichmäßig bzw. Gauß quer, Schichtmode senkrecht. Punktquellen:
   ein Dipol der Hauptkomponente in der Mitte der Schicht.
@@ -130,10 +131,11 @@ Materialbibliothek bei der Wellenlänge der ersten Quelle.
   Grafikkarte.
 
 **Prüfung** (`tests/test_extrude3d.cpp`): Brechzahlen des Aufbaus an Kern, Mantel, Substrat; gerader
-Si-Wellenleiter 500 × 220 nm (Gitter 50 nm): Fluss B/A = 0,98 (Toleranz 3 %) zwischen zwei Flächen 1,6 und
+Si-Wellenleiter 500 × 220 nm (Gitter 50 nm): Fluss B/A = 0,99 (Toleranz 2 %) zwischen zwei Flächen 1,6 und
 2,8 µm hinter der Quelle. Der Rest ist Streulicht der Quelle, das nach oben und unten abstrahlt: B/A steigt
-von 0,93 auf 0,98, wenn A von 0,6 auf 1,6 µm Abstand rückt, unabhängig von Zelle (40/50 nm) und Laufzeit.
-Monitore deshalb mindestens 1,5 µm hinter Quellen legen.
+von 0,96 auf 0,99, wenn A von 0,6 auf 1,6 µm Abstand rückt, unabhängig von der Laufzeit; rückwärts laufen
+1,5 %. Mit der Brechzahl der Zellmitten statt der des Gitters waren es 0,93 / 0,98 und 2,4 %. Monitore
+deshalb mindestens 1,5 µm hinter Quellen legen.
 
 ## Grenzen
 

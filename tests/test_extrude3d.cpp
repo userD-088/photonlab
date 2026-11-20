@@ -73,5 +73,5 @@ TEST_CASE("3D-Szene: gerader Wellenleiter führt die Leistung verlustfrei von Mo
   const double a = sim.monitors()[0].mean, b = sim.monitors()[1].mean;
   MESSAGE("Fluss A ", a, " W, B ", b, " W, B/A ", b / a);
   CHECK(a > 0.0);
-  CHECK(b / a == doctest::Approx(1.0).epsilon(0.03));
+  CHECK(b / a == doctest::Approx(1.0).epsilon(0.02));
 }

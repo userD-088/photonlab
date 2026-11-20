@@ -235,5 +235,6 @@ echter Chip baubar), Bauteil-Labor aufräumen, eigene Bauteile in den Chip-Desig
 - [ ] #165 3D-FDTD auf der Grafikkarte (OpenCL-Kerne wie in 2D, bitgleich zum Prozessor)
 - [ ] #166 Vom Chip-Designer zum Layout: Bauteile als Zellen (MZI-Schalter, Koppler, Gitterkoppler, Photodiode) platzieren, Wellenleiter routen, Heizer-Pads; GDSII für die Fertigung
 - [ ] #167 Hierarchie im Chip-Designer: Unterschaltungen (Volladdierer-Zelle 8-mal), Steuerleitungen als eigene Netze
-- [ ] #168 Heizer realistischer: thermisches Übersprechen benachbarter Arme, Zeitkonstante, unterätzte Heizer (P_pi unter 1 mW) als Variante
-- [ ] #169 3D: Streulicht der Quelle verringern (Quelle auf der Yee-Mode des Gitters statt der FDE-Mode), Abschätzung der Rechenzeit vor dem Start
+- [x] #168 (Übersprechen, Schaltzeit als Messwert, Knöpfe Standard/unterätzt, Heizleistung und P_pi-Prüfung im Logik-Fenster; Zeitverhalten bleibt stationär) Heizer realistischer: thermisches Übersprechen benachbarter Arme, Zeitkonstante, unterätzte Heizer (P_pi unter 1 mW) als Variante
+- [x] #169 (Quelle auf der Brechzahl des Gitters: B/A 0,99, rückwärts 1,5 %; Zeitschätzung aus der letzten Rechnung) 3D: Streulicht der Quelle verringern (Quelle auf der Yee-Mode des Gitters statt der FDE-Mode), Abschätzung der Rechenzeit vor dem Start
+- [x] #170 Echte 3D-Umgebung: Szene als Chip im Raum (Körper, Substrat, Mantel, Flächen der Quellen/Monitore/Ports), drehbar, Auswahl und Verschieben, Feldschnitte als Ebenen (`viewport3d.cpp`)

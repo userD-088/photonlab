@@ -29,6 +29,17 @@ Wellenleiterverlust; die Phase π gilt bei 1550 nm und skaliert mit 1/λ (breitb
 modelliert: thermisches Übersprechen zwischen den Armen, Zeitkonstante (einige µs), Erwärmung des Nachbarn.
 Test: Kreuz/Durchgang, Zwischenwert sin²(0,15π), Unitarität (`test_circuit_components.cpp`).
 
+**Übersprechen und Bauform.** Thermisches Übersprechen χ: jeder Arm erhält den Anteil χ der Phase des
+Nachbarn, φ_a' = φ_a + χ φ_b; damit Δφ = (1 − χ)(φ_a − φ_b) und P_π,eff = P_π / (1 − χ) (Messwert „P_pi“).
+Voreinstellung χ = 0; einige Prozent sind ohne Gräben zwischen den Armen eine realistische Größenordnung
+(Annahme). Die thermische Zeitkonstante τ geht nur in den Messwert „Schaltzeit (10-90 %)“ = 2,2 τ ein (das
+Modell bleibt stationär); Voreinstellung 4 µs (Größenordnung, Annahme). Zwei Knöpfe stellen den
+Wärmewiderstand auf eine Bauform: **Standard** P_π = 24,8 mW, τ = 4 µs (Harris u. a. 2014) und
+**unterätzt** (frei hängende Arme) P_π = 0,49 mW, τ = 100 µs (Größenordnung nach Fang u. a., IEEE Photon.
+Technol. Lett. 23, 525 (2011)). Test: Δφ mit χ = 0,2, nach „Unterätzt“ ergibt 0,49 mW genau π.
+Heizer und MZI-Schalter melden ihre Heizleistung; das Fenster Logik summiert sie und prüft, ob Bit 1 der
+Heizer-Eingänge zu P_π passt (Knopf „Bit-1-Werte auf P_pi stellen“).
+
 ## PN-Phasenschieber (Plasma-Dispersion, Verarmung)
 
 Soref-Bennett bei 1550 nm (Soref und Bennett, *IEEE JQE* 23, 123 (1987)), N in cm⁻³:

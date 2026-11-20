@@ -115,3 +115,37 @@ TEST_CASE("MZI-Schalter: Kreuz bei gleicher Heizleistung, Durchgang bei P_pi Unt
   const CMatrix s = transfer(0.3 * p_pi, 0.0);
   CHECK(std::norm(s(2, 0)) == doctest::Approx(std::pow(std::sin(0.15 * constants::pi), 2)).epsilon(1e-6));
 }
+
+TEST_CASE("MZI-Schalter: Übersprechen verkleinert die Phasendifferenz, Knopf 'Unterätzt' stellt P_pi") {
+  const double p_pi = 24.77e-3;
+  const double chi = 0.2;
+  const auto mzi = reg().create("mzi_switch", {{"power_a", p_pi}, {"crosstalk", chi}, {"loss_db_per_cm", 0.0}});
+  // dphi = (1 - chi) pi  =>  |S(out1, in1)|² = sin²((1 - chi) pi / 2)
+  CHECK(std::norm(mzi->s_matrix(lambda0)(2, 0)) ==
+        doctest::Approx(std::pow(std::sin((1.0 - chi) * constants::pi / 2.0), 2)).epsilon(1e-6));
+  const auto measurements = mzi->measure(CVector::Zero(4), CVector::Zero(4));
+  for (const auto& m : measurements)
+    if (m.name == "P_pi") CHECK(m.value == doctest::Approx(p_pi / (1.0 - chi)).epsilon(1e-3));
+
+  // Knopf "Unterätzt": danach ergibt 0,49 mW genau die Phase pi (Heizer und MZI-Schalter)
+  for (const char* name : {"heater", "mzi_switch"}) {
+    const ComponentType& type = *reg().find(name);
+    REQUIRE(type.actions.size() == 2);
+    ParamMap params = type.default_params();
+    type.actions[0].apply(params, lambda0);
+    params[std::string(name) == "heater" ? "power_el" : "power_a"] = 0.49e-3;
+    params["loss_db_per_cm"] = 0.0;
+    const auto component = type.create(params);
+    const auto reference = type.create([&] {
+      ParamMap cold = params;
+      cold[std::string(name) == "heater" ? "power_el" : "power_a"] = 0.0;
+      return cold;
+    }());
+    if (std::string(name) == "heater") {
+      const double dphi = std::arg(component->s_matrix(lambda0)(1, 0) / reference->s_matrix(lambda0)(1, 0));
+      CHECK(std::abs(std::abs(dphi) - constants::pi) < 1e-9);
+    } else {
+      CHECK(std::norm(component->s_matrix(lambda0)(2, 0)) == doctest::Approx(1.0).epsilon(1e-9));  // Durchgang
+    }
+  }
+}

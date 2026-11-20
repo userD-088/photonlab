@@ -416,6 +416,37 @@ void LogicView::draw_live() {
   }
   if (!complete) ImGui::TextDisabled("Ohne Schwelle kein Bit: Schwelle in der Definition setzen.");
 
+  // Heizleistung der Schaltung bei diesen Bits; Bit 1 der Heizer-Eingänge gegen P_pi der Bauteile prüfen
+  double heating = 0.0;
+  for (const auto& m : measurements)
+    if (m.measurement.name == "Heizleistung") heating += m.measurement.value;
+  if (heating > 0.0) ImGui::TextDisabled("Heizleistung bei diesen Bits: %s", format_si(heating, "W").c_str());
+  std::vector<std::pair<std::size_t, double>> mismatched;  // Eingang, P_pi
+  for (std::size_t k = 0; k < gate.inputs.size(); ++k) {
+    const logic::LogicInput& in = gate.inputs[k];
+    if (in.param != "power_a" && in.param != "power_b" && in.param != "power_el") continue;
+    for (const auto& m : measurements)
+      if (m.instance == in.instance && m.measurement.name == "P_pi" &&
+          std::abs(in.value1 - m.measurement.value) > 0.01 * m.measurement.value)
+        mismatched.emplace_back(k, m.measurement.value);
+  }
+  if (!mismatched.empty()) {
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextColored(ui_color_limited, "Bit 1 von %s (%s) ist nicht P_pi der Heizer (%s).",
+                       gate.inputs[mismatched.front().first].name.c_str(),
+                       format_si(gate.inputs[mismatched.front().first].value1, "W").c_str(),
+                       format_si(mismatched.front().second, "W").c_str());
+    ImGui::PopTextWrapPos();
+    if (ImGui::SmallButton("Bit-1-Werte auf P_pi stellen")) {
+      for (const auto& [k, p_pi] : mismatched) {
+        const int bit = input_bit(k);
+        project.gate.inputs[k].value1 = p_pi;
+        set_input_bit(k, bit);
+      }
+      designer_.mark_dirty();
+    }
+  }
+
   if (!ImGui::TreeNodeEx("Leistungen und Schwellen",
                          gate.outputs.size() <= 3 ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None))
     return;

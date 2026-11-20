@@ -30,4 +30,8 @@ double heater_phase(double wavelength, double length, double dn_dT, double therm
   return 2.0 * constants::pi / wavelength * dn_dT * thermal_resistance * power * length;
 }
 
+double heater_p_pi(double wavelength, double length, double dn_dT, double thermal_resistance) {
+  return wavelength / (2.0 * length * dn_dT * thermal_resistance);
+}
+
 }  // namespace photonlab::circuit

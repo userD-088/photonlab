@@ -27,5 +27,6 @@ struct PnSection {
 
 // Heizer-Phasenschieber: dphi = 2 pi / lambda * dn/dT * R_th * P_el * L  =>  P_pi = lambda / (2 L dn/dT R_th)
 double heater_phase(double wavelength, double length, double dn_dT, double thermal_resistance, double power);
+double heater_p_pi(double wavelength, double length, double dn_dT, double thermal_resistance);
 
 }  // namespace photonlab::circuit

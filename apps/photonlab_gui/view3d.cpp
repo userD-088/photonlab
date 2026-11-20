@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdio>
 #include <exception>
+#include <thread>
 
 #include "implot.h"
 #include "photonlab/core/units.hpp"
@@ -246,6 +247,24 @@ void View3d::draw_settings() {
     if (ImGui::Button("3D rechnen", ImVec2(ImGui::GetFontSize() * 6.0f, 0.0f))) start();
     ImGui::EndDisabled();
   }
+  // Rechenzeit: mit der Rate der letzten Rechnung, sonst grob 50 Mio. Zell-Schritte je Sekunde und Kern
+  if (snapshot_) {
+    std::lock_guard lock(snapshot_->mutex);
+    if (snapshot_->seconds > 1.0 && snapshot_->step > 0)
+      rate_ = static_cast<double>(snapshot_->nx) * snapshot_->ny * snapshot_->nz *
+              static_cast<double>(snapshot_->step) / snapshot_->seconds;
+  }
+  const double rate = rate_ > 0.0 ? rate_ : 50e6 * std::max(1u, std::thread::hardware_concurrency());
+  const double estimate = cells * static_cast<double>(e.steps) / rate;
+  ImGui::SameLine();
+  if (estimate < 90.0)
+    ImGui::TextDisabled("etwa %.0f s", estimate);
+  else
+    ImGui::TextDisabled("etwa %.0f min", estimate / 60.0);
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    ImGui::SetTooltip(rate_ > 0.0 ? "geschätzt mit der Geschwindigkeit der letzten 3D-Rechnung"
+                                  : "grobe Schätzung (50 Mio. Zell-Schritte je Sekunde und Kern); nach der "
+                                    "ersten Rechnung genauer");
   ImGui::SameLine();
   ImGui::TextDisabled("%d x %d x %d = %.1f Mio. Zellen, %.2f GB, %zu Schritte bis %.0f fs", e.nx, e.ny, e.nz,
                       cells / 1e6, e.memory_bytes / 1e9, e.steps, scene.duration / units::fs);

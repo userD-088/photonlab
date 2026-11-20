@@ -73,6 +73,7 @@ class View3d {
   std::future<void> future_;
   field::FieldScene computed_scene_;  // Szene der letzten Rechnung (für "Szene geändert")
   bool has_run_ = false;
+  double rate_ = 0.0;  // gemessene Zellen * Schritte je Sekunde der letzten Rechnung (Zeitschätzung)
   std::uint64_t shown_serial_ = 0;
   bool shown_intensity_ = false;
   Picture top_, side_, top3d_, side3d_;

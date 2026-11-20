@@ -186,15 +186,15 @@ Extruded3d::Extruded3d(const FieldScene& input, const Stack3d& stack)
       grid.nx = count, grid.ny = k_hi - k_lo;
       grid.dx = grid.dy = dx;
       grid.index.resize(static_cast<std::size_t>(grid.nx) * static_cast<std::size_t>(grid.ny));
+      // Brechzahl am Ort der eingespeisten Komponente, so wie das FDTD sie sieht (gemittelt über die Zelle):
+      // dann passt das Profil zur Mode des Gitters und es streut weniger (fdtd3d.md)
+      const int i_line = cell_index(source.x1, f.nx()), j_line = cell_index(source.y1, f.ny());
       for (int k = 0; k < grid.ny; ++k)
-        for (int c = 0; c < count; ++c) {
-          const double t = ((vertical ? j1 : i1) + c + half) * dx, z = (k_lo + k + 0.5) * dx;
+        for (int c = 0; c < count; ++c)
           grid.index[static_cast<std::size_t>(c) +
                      static_cast<std::size_t>(count) * static_cast<std::size_t>(k)] =
-              z < layer_z0_   ? indices_.substrate
-              : z > layer_z1_ ? indices_.cladding
-                              : (vertical ? index_in_layer(source.x1, t) : index_in_layer(t, source.y1));
-        }
+              std::sqrt(f.permittivity(
+                  s.component, f.at(vertical ? i_line : i1 + c, vertical ? j1 + c : j_line, k_lo + k)));
       modes::FdeSettings settings;
       settings.wavelength = source.wavelength;
       settings.polarization = ez ? modes::FdePolarization::quasi_tm : modes::FdePolarization::quasi_te;
